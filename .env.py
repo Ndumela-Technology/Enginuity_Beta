@@ -1,0 +1,1 @@
+OPEN_AI_KEY = "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"
