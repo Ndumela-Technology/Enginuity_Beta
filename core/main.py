@@ -1,6 +1,7 @@
 from core.ai_engine import generate_project
 from user_input import get_user_input
 
+
 def main():
     user_description = get_user_input()
     project = generate_project(user_description)
