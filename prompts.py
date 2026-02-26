@@ -53,6 +53,7 @@ Students (18–25) & Adults:
 STEP FORMAT RULES (IMPORTANT)
 --------------------------------
 Steps should be easy to read.
+Steps should be longer and more descriptive in case of complicated steps
 
 For advanced users:
 - Use subsection titles inside steps
@@ -90,6 +91,8 @@ Example:
 $$ F = m \\cdot a $$
 
 Formulas should appear centered and clear.
+Formulas MUST always be placed on their own line
+between $$ symbols, never inside sentences.
 
 --------------------------------
 JSON FORMAT

@@ -1,9 +1,48 @@
 import streamlit as st
 from core.input_builder import build_user_description
 from core.ai_engine import generate_project
+import re
 
+if "generated" not in st.session_state:
+    st.session_state.generated = False
+
+if "projects" not in st.session_state:
+    st.session_state.projects = None
+
+if "selected_project" not in st.session_state:
+    st.session_state.selected_project = 0
+
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = []
+
+def render_physics_explanation(text):
+    """
+    Renders markdown normally,
+    but displays $$ LaTeX $$ formulas
+    as large centered equations.
+    """
+
+    # Split text into parts: normal text and LaTeX blocks
+    parts = re.split(r"(\$\$.*?\$\$)", text, flags=re.DOTALL)
+
+    for part in parts:
+        if part.startswith("$$") and part.endswith("$$"):
+            # Remove $$ symbols
+            formula = part.strip("$")
+            st.latex(formula)
+        else:
+            st.markdown(part)
 
 def show_base_page(topic):
+
+    mode = st.radio(
+        "Select your choice of interaction:",
+    ["Text-Mode💬", "Chat-Mode🗣️"],
+    horizontal=True,
+    )
 
     global project_response
     st.title(topic)
@@ -21,16 +60,16 @@ def show_base_page(topic):
     )
 
     if education == "Middle-Schooler(10-14 years old)🖍️":
-        difficulty = st.selectbox("What difficulty do you have?",
+        difficulty = st.selectbox("What difficulty do you want?",
                                   ["Easy: 5–10 min", "Medium: 15–30 min", "Hard: 30–45 min"])
     elif education == "High-Schooler(15-18 years old)🏫":
-        difficulty = st.selectbox("What difficulty do you have?",
+        difficulty = st.selectbox("What difficulty do you want?",
                                   ["Easy: 10–30 min", "Medium: 45–60 min", "Hard: 60–90 min"])
     elif education == "Student(18-25 years old)🎓":
-        difficulty = st.selectbox("What difficulty do you have?",
+        difficulty = st.selectbox("What difficulty do you want?",
                                   ["Easy: 30–60 min", "Medium: 60–120 min", "Hard: 2 days–1 week"])
     else:  # Adult
-        difficulty = st.selectbox("What difficulty do you have?",
+        difficulty = st.selectbox("What difficulty do you want?",
                                   ["Easy: 30–60 min", "Medium: 60–180 min", "Hard: 5 days–2 weeks"])
 
     # ------------------------
@@ -132,32 +171,42 @@ def show_base_page(topic):
 
         """
 
+
         # Call AI engine
-        project_response = generate_project(user_description)
+        with st.spinner("Creating Your Project...💭"):
+            project_response = generate_project(user_description)
+
+        if "error" not in project_response:
+            st.session_state.projects = project_response["projects"]
+            st.session_state.generated = True
+        else:
+            st.error(project_response["error"])
+
+
+
+
+
 
         # ------------------------
         # Display results safely
-    if project_response is not None:
-        if "error" in project_response:
-            st.error(project_response["error"])
-        else:
-            # Save projects so Streamlit remembers them
-            projects = project_response["projects"]
+    if mode == "Text-Mode":
+        if st.session_state.generated and st.session_state.projects:
+            projects = st.session_state.projects
 
-            # ------------------------
-            # Project selector
             project_names = [
                 f"{i + 1}. {proj['project_name']}"
                 for i, proj in enumerate(projects)
             ]
 
             selected_project_name = st.selectbox(
-                "Choose a project to explore:",
-                project_names
-            )
+                    "Choose a project to explore:",
+                    project_names,
+                    index=st.session_state.selected_project,
+                    key="project_selector"
+             )
 
-            selected_index = project_names.index(selected_project_name)
-            proj = projects[selected_index]
+            st.session_state.selected_project = project_names.index(selected_project_name)
+            proj = projects[st.session_state.selected_project]
 
             # ------------------------
             # Project Title + Description
@@ -181,23 +230,10 @@ def show_base_page(topic):
             # ------------------------
             # Physics Explanation
             st.subheader("🧪 Physics Explanation")
+            render_physics_explanation(proj["physics_explanation"])
 
             # Center + enlarge formulas automatically
             physics_text = proj["physics_explanation"]
-
-            centered_physics = f"""
-            <style>
-            .formula {{
-                text-align: center;
-                font-size: 22px;
-                font-weight: bold;
-                margin: 20px 0;
-            }}
-             </style>
-            {physics_text}
-            """
-
-            st.markdown(centered_physics, unsafe_allow_html=True)
 
             # ------------------------
             # Steps (NOW SUPPORTS SUBSECTIONS)
@@ -216,3 +252,86 @@ def show_base_page(topic):
                     st.markdown(f"### {section}")
                     for i, step in enumerate(section_steps, 1):
                         st.write(f"{i}. {step}")
+
+
+
+
+
+            # ------------------------
+            # Chat Mode
+    else:
+        # Project selection inside Chat Mode
+        selection = st.selectbox(
+            "Choose a project option:",
+            ["Your Project", "ForgeAI's Project"]
+        )
+
+        # ForgeAI's project: general Q&A
+        if selection == "ForgeAI's Project":
+            st.divider()
+            st.subheader("💬 Talk with ForgeAI")
+
+            # Show chat history
+            for msg in st.session_state.chat_history:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+
+            # User input
+            user_msg = st.chat_input("Ask ForgeAI anything about your project...")
+            if user_msg:
+                st.session_state.chat_history.append({"role": "user", "content": user_msg})
+                with st.chat_message("user"):
+                    st.markdown(user_msg)
+
+                # AI call
+                chat_messages = [{"role": "system", "content": "You are ForgeAI helping with an engineering project."}]
+                if st.session_state.generated and st.session_state.projects:
+                    proj = st.session_state.projects[st.session_state.selected_project]
+                    chat_messages.append({
+                        "role": "system",
+                        "content": f"Current project: {proj['project_name']}. Description: {proj['description']}"
+                    })
+
+                chat_messages += st.session_state.chat_history
+                ai_reply = generate_project(chat_messages, chat_mode=True)
+                st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
+
+                with st.chat_message("assistant"):
+                    st.markdown(ai_reply)
+
+        # Customization of a project
+        else:
+            user_input = st.chat_input("Describe or improve your project idea...")
+            if user_input:
+                with st.chat_message("user"):
+                    st.markdown(user_input)
+
+                # Append to chat_messages for AI
+                st.session_state.chat_messages.append({"role": "user", "content": user_input})
+
+                chat_messages = [
+                    {"role": "system",
+                     "content": "You are ForgeAI, helping to adapt engineering projects to user specifications."}
+                ]
+
+                if st.session_state.generated and st.session_state.projects:
+                    proj = st.session_state.projects[st.session_state.selected_project]
+                    chat_messages.append({
+                        "role": "system",
+                        "content": (
+                            f"Current project: {proj['project_name']}\n"
+                            f"Description: {proj['description']}\n"
+                            f"Materials needed: {', '.join(proj['materials_needed'])}\n"
+                            f"Steps: {proj['steps']}"
+                        )
+                    })
+
+                # Add full chat context
+                chat_messages += st.session_state.chat_messages
+
+                # Call AI
+                ai_reply = generate_project(chat_messages, chat_mode=True)
+                st.session_state.chat_messages.append({"role": "assistant", "content": ai_reply})
+
+                with st.chat_message("assistant"):
+                    st.markdown(ai_reply)

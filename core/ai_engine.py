@@ -43,6 +43,22 @@ def generate_project(user_description):
     except Exception as e:
         return {"error": str(e)}
 
+def generate_chat_project(messages):
+
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            temperature=0.7
+        )
+
+        reply = completion.choices[0].message.content
+
+        return {"reply": reply}
+
+    except Exception as e:
+        return {"reply": f"Error: {str(e)}"}
+
 
 
 
