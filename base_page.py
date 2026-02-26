@@ -2,6 +2,7 @@ import streamlit as st
 from core.input_builder import build_user_description
 from core.ai_engine import generate_project
 import re
+from core.forge_ai_helper import forge_chat
 
 if "generated" not in st.session_state:
     st.session_state.generated = False
@@ -38,300 +39,505 @@ def render_physics_explanation(text):
 
 def show_base_page(topic):
 
-    mode = st.radio(
-        "Select your choice of interaction:",
-    ["Text-Mode💬", "Chat-Mode🗣️"],
-    horizontal=True,
-    )
-
     global project_response
     st.title(topic)
 
     # ------------------------
-    # Difficulty settings
-    education = st.selectbox(
-        "What form of education do you have?",
+    # Experience Mode (MAIN APP ARCHITECTURE)
+    experience = st.segmented_control(
+        "Choose your path  :",
         [
-            "Middle-Schooler(10-14 years old)🖍️",
-            "High-Schooler(15-18 years old)🏫",
-            "Student(18-25 years old)🎓",
-            "Adult(25+ years old)🧔🏻"
+            "Apprentice🌱",
+            "Associate🧩",
+            "Innovator💡"
         ]
     )
 
-    if education == "Middle-Schooler(10-14 years old)🖍️":
-        difficulty = st.selectbox("What difficulty do you want?",
-                                  ["Easy: 5–10 min", "Medium: 15–30 min", "Hard: 30–45 min"])
-    elif education == "High-Schooler(15-18 years old)🏫":
-        difficulty = st.selectbox("What difficulty do you want?",
-                                  ["Easy: 10–30 min", "Medium: 45–60 min", "Hard: 60–90 min"])
-    elif education == "Student(18-25 years old)🎓":
-        difficulty = st.selectbox("What difficulty do you want?",
-                                  ["Easy: 30–60 min", "Medium: 60–120 min", "Hard: 2 days–1 week"])
-    else:  # Adult
-        difficulty = st.selectbox("What difficulty do you want?",
-                                  ["Easy: 30–60 min", "Medium: 60–180 min", "Hard: 5 days–2 weeks"])
+    # =========================================================
+    # APPRENTICE 🌱
+    # =========================================================
+    if experience == "Apprentice🌱":
+            st.subheader("Learning Phase")
+            st.caption("Have ForgeAI teach you the basics to become your own engineer.")
 
-    # ------------------------
-    # Materials selector
-    materials = st.text_area(
-        "What materials do you have at home?",
-        placeholder="Example: cardboard, tape, plastic bottle, DC motor..."
-    )
+            # ------------------------
+            # Difficulty settings
+            education = st.selectbox(
+                "What form of education do you have?",
+                [
+                    "Middle-Schooler(10-14 years old)🖍️",
+                    "High-Schooler(15-18 years old)🏫",
+                    "Student(18-25 years old)🎓",
+                    "Adult(25+ years old)🧔🏻"
+                ]
+            )
 
-    # ------------------------
-    # Generate button
-    project_response = None  # initialize so it exists in the scope
+            if education == "Middle-Schooler(10-14 years old)🖍️":
+                difficulty = st.selectbox("What difficulty do you want?",
+                                          ["Easy: 5–10 min", "Medium: 15–30 min", "Hard: 30–45 min"])
+            elif education == "High-Schooler(15-18 years old)🏫":
+                difficulty = st.selectbox("What difficulty do you want?",
+                                          ["Easy: 10–30 min", "Medium: 45–60 min", "Hard: 60–90 min"])
+            elif education == "Student(18-25 years old)🎓":
+                difficulty = st.selectbox("What difficulty do you want?",
+                                          ["Easy: 30–60 min", "Medium: 60–120 min", "Hard: 2 days–1 week"])
+            else:  # Adult
+                difficulty = st.selectbox("What difficulty do you want?",
+                                          ["Easy: 30–60 min", "Medium: 60–180 min", "Hard: 5 days–2 weeks"])
 
-    if st.button(f"Generate {topic} Project"):
-        # Add physics/technical lecture for high school+ ages
-        if education == "High-Schooler(15-18 years old)🏫":
-            lecture_level = "brief, high-school physics explanation"
-        elif education == "Student(18-25 years old)🎓":
-            lecture_level = "detailed, university-level physics explanation"
-        elif education == "Adult(25+ years old)🧔🏻":
-            lecture_level = "technical physics lecture with more complex formulas"
-        else:  # Middle Schooler
-            lecture_level = "simple, beginner-friendly physics explanation"
+            # ------------------------
+            # Materials selector
+            materials = st.text_area(
+                "What materials do you have at home?",
+                placeholder="Example: cardboard, tape, plastic bottle, DC motor..."
+            )
 
-        # Build user description with 3 project request
-        user_description = build_user_description(
-            topic=topic,
-            education=education,
-            difficulty=difficulty,
-            materials=materials
-        )
-        user_description += f"\nInclude a {lecture_level} level explanation for the project."
+            # ------------------------
+            # Generate button
+            project_response = None  # initialize so it exists in the scope
 
-        user_description += """
-        Please create 3 different project options in VALID JSON ONLY.
+            if st.button(f"Generate {topic} Project"):
+                # Add physics/technical lecture for high school+ ages
+                if education == "High-Schooler(15-18 years old)🏫":
+                    lecture_level = "brief, high-school physics explanation"
+                elif education == "Student(18-25 years old)🎓":
+                    lecture_level = "detailed, university-level physics explanation"
+                elif education == "Adult(25+ years old)🧔🏻":
+                    lecture_level = "technical physics lecture with more complex formulas"
+                else:  # Middle Schooler
+                    lecture_level = "simple, beginner-friendly physics explanation"
 
-        IMPORTANT RULES:
-        - Return ONLY JSON.
-        - Do NOT include markdown, comments, or extra text.
-        - The response must start with { and end with }.
-        - All strings must use double quotes.
-        - Ensure the JSON is parseable with json.loads().
+                # Build user description with 3 project request
+                user_description = build_user_description(
+                    topic=topic,
+                    education=education,
+                    difficulty=difficulty,
+                    materials=materials
+                )
+                user_description += f"\nInclude a {lecture_level} level explanation for the project."
 
-        Return a JSON object with a single key "projects",
-        which contains a list of exactly 3 project objects.
+                user_description += """
+                    Please create 3 different project options in VALID JSON ONLY.
 
-        Each project object MUST include:
+                    IMPORTANT RULES:
+                    - Return ONLY JSON.
+                    - Do NOT include markdown, comments, or extra text.
+                    - The response must start with { and end with }.
+                    - All strings must use double quotes.
+                    - Ensure the JSON is parseable with json.loads().
 
-        - project_name (string)
-        - description (string)
-        - materials_needed (array of strings)
-        - materials_suggested (array of strings, optional cheap upgrades)
-        - engineering_explanation (string)
-        - physics_explanation (string, include formulas when relevant)
-        - steps (EITHER:
-              a simple array of strings
-              OR
-              an object where keys are section titles and values are arrays of steps)
+                    Return a JSON object with a single key "projects",
+                    which contains a list of exactly 3 project objects.
 
-        Example format:
+                    Each project object MUST include:
 
-        {
-          "projects": [
-            {
-              "project_name": "Balloon Rocket",
-              "description": "A fun experiment demonstrating thrust.",
-              "materials_needed": ["balloon", "straw", "tape"],
-              "materials_suggested": ["measuring tape", "lighter balloon"],
-              "engineering_explanation": "Engineers analyze thrust-to-mass ratio...",
-              "physics_explanation": "Newton's Third Law explains motion. <div class=\\"formula\\">F = m × a</div>",
-              "steps": [
-                "Thread the straw onto a string.",
-                "Attach balloon with tape.",
-                "Release and observe motion."
-              ]
-            }
-          ]
-        }
-        
-        Additional Instruction (Educational Formatting):
+                    - project_name (string)
+                    - description (string)
+                    - materials_needed (array of strings)
+                    - materials_suggested (array of strings, optional cheap upgrades)
+                    - engineering_explanation (string)
+                    - physics_explanation (string, include formulas when relevant)
+                    - steps (EITHER:
+                          a simple array of strings
+                          OR
+                          an object where keys are section titles and values are arrays of steps)
 
-        Adapt how physics explanations are presented depending on lecture level:
+                    Example format:
 
-        - For "Middle School" and "High School":
-            • Integrate short physics explanations directly INTO the steps.
-            • Integrate physics formulas for "High School" within the physics explanations.
-            • Steps should briefly explain WHY something happens while the user performs it.
-            • Keep explanations simple and intuitive.
-            • The physics_explanation section should still exist, but act as a short summary.
+                    {
+                      "projects": [
+                        {
+                          "project_name": "Balloon Rocket",
+                          "description": "A fun experiment demonstrating thrust.",
+                          "materials_needed": ["balloon", "straw", "tape"],
+                          "materials_suggested": ["measuring tape", "lighter balloon"],
+                          "engineering_explanation": "Engineers analyze thrust-to-mass ratio...",
+                          "physics_explanation": "Newton's Third Law explains motion. <div class=\\"formula\\">F = m × a</div>",
+                          "steps": [
+                            "Thread the straw onto a string.",
+                            "Attach balloon with tape.",
+                            "Release and observe motion."
+                          ]
+                        }
+                      ]
+                    }
 
-        - For "University" and "Adult":
-            • Keep steps focused only on actions.
-            • Place detailed physics and engineering explanations AFTER the steps.
-            • Use formulas and deeper technical reasoning in the physics_explanation section.
+                    Additional Instruction (Educational Formatting):
 
-        IMPORTANT:
-        Do not change the JSON structure.
-        Only adapt HOW explanations are written.
+                    Adapt how physics explanations are presented depending on lecture level:
 
-        """
+                    - For "Middle School" and "High School":
+                        • Integrate short physics explanations directly INTO the steps.
+                        • Integrate physics formulas for "High School" within the physics explanations.
+                        • Steps should briefly explain WHY something happens while the user performs it.
+                        • Keep explanations simple and intuitive.
+                        • The physics_explanation section should still exist, but act as a short summary.
+
+                    - For "University" and "Adult":
+                        • Keep steps focused only on actions.
+                        • Place detailed physics and engineering explanations AFTER the steps.
+                        • Use formulas and deeper technical reasoning in the physics_explanation section.
+
+                    IMPORTANT:
+                    Do not change the JSON structure.
+                    Only adapt HOW explanations are written.
+
+                    """
+
+                # Call AI engine
+                with st.spinner("Creating Your Project...💭"):
+                    project_response = generate_project(user_description)
+
+                if "error" not in project_response:
+                    st.session_state.projects = project_response["projects"]
+                    st.session_state.generated = True
+                else:
+                    st.error(project_response["error"])
+
+            if st.session_state.generated and st.session_state.projects:
+
+                projects = st.session_state.projects
+
+                project_names = [
+                    f"{i + 1}. {proj['project_name']}"
+                    for i, proj in enumerate(projects)
+                ]
+
+                selected_project_name = st.selectbox(
+                    "Choose a project to explore:",
+                    project_names,
+                    index=st.session_state.selected_project,
+                    key="project_selector_apprentice"
+                )
+
+                st.session_state.selected_project = project_names.index(selected_project_name)
+                proj = projects[st.session_state.selected_project]
+
+                # ------------------------
+                # Project Title + Description
+                st.header(proj["project_name"])
+                st.write(proj["description"])
+
+                # ------------------------
+                # Materials Needed
+                st.subheader("🧰 Materials Needed")
+                for item in proj["materials_needed"]:
+                    st.write("-", item)
+
+                # ------------------------
+                # Suggested Materials (NEW)
+                if "materials_suggested" in proj and proj["materials_suggested"]:
+                    st.subheader("🛒 Suggested Upgrades (Optional)")
+                    st.caption("Cheap household items you could buy to improve the project.")
+                    for item in proj["materials_suggested"]:
+                        st.write("-", item)
+
+                # ------------------------
+                # Physics Explanation
+                st.subheader("🧪 Physics Explanation")
+                render_physics_explanation(proj["physics_explanation"])
+
+                # ------------------------
+                # Steps
+                st.subheader("🛠️ Build Steps")
+
+                steps = proj["steps"]
+
+                if isinstance(steps, list):
+                    for i, step in enumerate(steps, 1):
+                        st.write(f"{i}. {step}")
+
+                elif isinstance(steps, dict):
+                    for section, section_steps in steps.items():
+                        st.markdown(f"### {section}")
+                        for i, step in enumerate(section_steps, 1):
+                            st.write(f"{i}. {step}")
 
 
-        # Call AI engine
-        with st.spinner("Creating Your Project...💭"):
-            project_response = generate_project(user_description)
+    # =========================================================
+    # ASSOCIATE🧩
+    # =========================================================
+    elif experience == "Associate🧩":
 
-        if "error" not in project_response:
-            st.session_state.projects = project_response["projects"]
-            st.session_state.generated = True
-        else:
-            st.error(project_response["error"])
+            st.subheader("Development Phase")
+            st.caption("From basic instructor to you personal engineering tutor.")
 
+            # ------------------------
+            # Difficulty settings
+            education = st.selectbox(
+                "What form of education do you have?",
+                [
+                    "Middle-Schooler(10-14 years old)🖍️",
+                    "High-Schooler(15-18 years old)🏫",
+                    "Student(18-25 years old)🎓",
+                    "Adult(25+ years old)🧔🏻"
+                ]
+            )
 
+            if education == "Middle-Schooler(10-14 years old)🖍️":
+                difficulty = st.selectbox("What difficulty do you want?",
+                                          ["Easy: 5–10 min", "Medium: 15–30 min", "Hard: 30–45 min"])
+            elif education == "High-Schooler(15-18 years old)🏫":
+                difficulty = st.selectbox("What difficulty do you want?",
+                                          ["Easy: 10–30 min", "Medium: 45–60 min", "Hard: 60–90 min"])
+            elif education == "Student(18-25 years old)🎓":
+                difficulty = st.selectbox("What difficulty do you want?",
+                                          ["Easy: 30–60 min", "Medium: 60–120 min", "Hard: 2 days–1 week"])
+            else:  # Adult
+                difficulty = st.selectbox("What difficulty do you want?",
+                                          ["Easy: 30–60 min", "Medium: 60–180 min", "Hard: 5 days–2 weeks"])
 
+            # ------------------------
+            # Materials selector
+            materials = st.text_area(
+                "What materials do you have at home?",
+                placeholder="Example: cardboard, tape, plastic bottle, DC motor..."
+            )
 
+            # ------------------------
+            # Generate button
+            project_response = None  # initialize so it exists in the scope
 
+            if st.button(f"Generate {topic} Project"):
+                # Add physics/technical lecture for high school+ ages
+                if education == "High-Schooler(15-18 years old)🏫":
+                    lecture_level = "brief, high-school physics explanation"
+                elif education == "Student(18-25 years old)🎓":
+                    lecture_level = "detailed, university-level physics explanation"
+                elif education == "Adult(25+ years old)🧔🏻":
+                    lecture_level = "technical physics lecture with more complex formulas"
+                else:  # Middle Schooler
+                    lecture_level = "simple, beginner-friendly physics explanation"
 
-        # ------------------------
-        # Display results safely
-    if mode == "Text-Mode":
-        if st.session_state.generated and st.session_state.projects:
-            projects = st.session_state.projects
+                # Build user description with 3 project request
+                user_description = build_user_description(
+                    topic=topic,
+                    education=education,
+                    difficulty=difficulty,
+                    materials=materials
+                )
+                user_description += f"\nInclude a {lecture_level} level explanation for the project."
 
-            project_names = [
+                user_description += """
+                    Please create 3 different project options in VALID JSON ONLY.
+
+                    IMPORTANT RULES:
+                    - Return ONLY JSON.
+                    - Do NOT include markdown, comments, or extra text.
+                    - The response must start with { and end with }.
+                    - All strings must use double quotes.
+                    - Ensure the JSON is parseable with json.loads().
+
+                    Return a JSON object with a single key "projects",
+                    which contains a list of exactly 3 project objects.
+
+                    Each project object MUST include:
+
+                    - project_name (string)
+                    - description (string)
+                    - materials_needed (array of strings)
+                    - materials_suggested (array of strings, optional cheap upgrades)
+                    - engineering_explanation (string)
+                    - physics_explanation (string, include formulas when relevant)
+                    - steps (EITHER:
+                          a simple array of strings
+                          OR
+                          an object where keys are section titles and values are arrays of steps)
+
+                    Example format:
+
+                    {
+                      "projects": [
+                        {
+                          "project_name": "Balloon Rocket",
+                          "description": "A fun experiment demonstrating thrust.",
+                          "materials_needed": ["balloon", "straw", "tape"],
+                          "materials_suggested": ["measuring tape", "lighter balloon"],
+                          "engineering_explanation": "Engineers analyze thrust-to-mass ratio...",
+                          "physics_explanation": "Newton's Third Law explains motion. <div class=\\"formula\\">F = m × a</div>",
+                          "steps": [
+                            "Thread the straw onto a string.",
+                            "Attach balloon with tape.",
+                            "Release and observe motion."
+                          ]
+                        }
+                      ]
+                    }
+
+                    Additional Instruction (Educational Formatting):
+
+                    Adapt how physics explanations are presented depending on lecture level:
+
+                    - For "Middle School" and "High School":
+                        • Integrate short physics explanations directly INTO the steps.
+                        • Integrate physics formulas for "High School" within the physics explanations.
+                        • Steps should briefly explain WHY something happens while the user performs it.
+                        • Keep explanations simple and intuitive.
+                        • The physics_explanation section should still exist, but act as a short summary.
+
+                    - For "University" and "Adult":
+                        • Keep steps focused only on actions.
+                        • Place detailed physics and engineering explanations AFTER the steps.
+                        • Use formulas and deeper technical reasoning in the physics_explanation section.
+
+                    IMPORTANT:
+                    Do not change the JSON structure.
+                    Only adapt HOW explanations are written.
+
+                    """
+
+                # Call AI engine
+                with st.spinner("Creating Your Project...💭"):
+                    project_response = generate_project(user_description)
+
+                if "error" not in project_response:
+                    st.session_state.projects = project_response["projects"]
+                    st.session_state.generated = True
+                else:
+                    st.error(project_response["error"])
+
+            if st.session_state.generated and st.session_state.projects:
+                projects = st.session_state.projects
+
+                project_names = [
                 f"{i + 1}. {proj['project_name']}"
                 for i, proj in enumerate(projects)
             ]
 
-            selected_project_name = st.selectbox(
-                    "Choose a project to explore:",
+                selected_project_name = st.selectbox(
+                "Choose a project to explore:",
                     project_names,
                     index=st.session_state.selected_project,
-                    key="project_selector"
-             )
+                    key="project_selector_associate"
+                )
 
-            st.session_state.selected_project = project_names.index(selected_project_name)
-            proj = projects[st.session_state.selected_project]
+                st.session_state.selected_project = project_names.index(selected_project_name)
+                proj = projects[st.session_state.selected_project]
 
-            # ------------------------
-            # Project Title + Description
-            st.header(proj["project_name"])
-            st.write(proj["description"])
+                # ------------------------
+                # Project Title + Description
+                st.header(proj["project_name"])
+                st.write(proj["description"])
 
-            # ------------------------
-            # Materials Needed
-            st.subheader("🧰 Materials Needed")
-            for item in proj["materials_needed"]:
-                st.write("-", item)
-
-            # ------------------------
-            # Suggested Materials (NEW)
-            if "materials_suggested" in proj and proj["materials_suggested"]:
-                st.subheader("🛒 Suggested Upgrades (Optional)")
-                st.caption("Cheap household items you could buy to improve the project.")
-                for item in proj["materials_suggested"]:
+                # ------------------------
+                # Materials Needed
+                st.subheader("🧰 Materials Needed")
+                for item in proj["materials_needed"]:
                     st.write("-", item)
 
-            # ------------------------
-            # Physics Explanation
-            st.subheader("🧪 Physics Explanation")
-            render_physics_explanation(proj["physics_explanation"])
+                # ------------------------
+                # Suggested Materials
+                if "materials_suggested" in proj and proj["materials_suggested"]:
+                    st.subheader("🛒 Suggested Upgrades (Optional)")
+                    st.caption("Cheap household items you could buy to improve the project.")
+                    for item in proj["materials_suggested"]:
+                        st.write("-", item)
 
-            # Center + enlarge formulas automatically
-            physics_text = proj["physics_explanation"]
+                # ------------------------
+                # Physics Explanation
+                st.subheader("🧪 Physics Explanation")
+                render_physics_explanation(proj["physics_explanation"])
 
-            # ------------------------
-            # Steps (NOW SUPPORTS SUBSECTIONS)
-            st.subheader("🛠️ Build Steps")
+                # ------------------------
+                # Steps
+                st.subheader("🛠️ Build Steps")
+                steps = proj["steps"]
 
-            steps = proj["steps"]
-
-            # Case 1: simple list (younger users)
-            if isinstance(steps, list):
-                for i, step in enumerate(steps, 1):
-                    st.write(f"{i}. {step}")
-
-            # Case 2: subsection format (older users)
-            elif isinstance(steps, dict):
-                for section, section_steps in steps.items():
-                    st.markdown(f"### {section}")
-                    for i, step in enumerate(section_steps, 1):
+                if isinstance(steps, list):
+                    for i, step in enumerate(steps, 1):
                         st.write(f"{i}. {step}")
 
+                elif isinstance(steps, dict):
+                    for section, section_steps in steps.items():
+                        st.markdown(f"### {section}")
+                        for i, step in enumerate(section_steps, 1):
+                            st.write(f"{i}. {step}")
 
+                # ------------------------
+                # User collaboration input
+                st.divider()
+                st.subheader("💡 Contribute to the project")
 
+                user_input = st.text_area(
+                    "Add your ideas or modifications to this project:",
+                    placeholder="Add something small or big..."
+            )
 
+                if st.button("Update Project with My Ideas") and user_input.strip():
+                    # Save user input to chat_messages
+                    st.session_state.chat_messages.append({"role": "user", "content": user_input})
 
-            # ------------------------
-            # Chat Mode
-    else:
-        # Project selection inside Chat Mode
-        selection = st.selectbox(
-            "Choose a project option:",
-            ["Your Project", "ForgeAI's Project"]
-        )
-
-        # ForgeAI's project: general Q&A
-        if selection == "ForgeAI's Project":
-            st.divider()
-            st.subheader("💬 Talk with ForgeAI")
-
-            # Show chat history
-            for msg in st.session_state.chat_history:
-                with st.chat_message(msg["role"]):
-                    st.markdown(msg["content"])
-
-            # User input
-            user_msg = st.chat_input("Ask ForgeAI anything about your project...")
-            if user_msg:
-                st.session_state.chat_history.append({"role": "user", "content": user_msg})
-                with st.chat_message("user"):
-                    st.markdown(user_msg)
-
-                # AI call
-                chat_messages = [{"role": "system", "content": "You are ForgeAI helping with an engineering project."}]
-                if st.session_state.generated and st.session_state.projects:
-                    proj = st.session_state.projects[st.session_state.selected_project]
-                    chat_messages.append({
-                        "role": "system",
-                        "content": f"Current project: {proj['project_name']}. Description: {proj['description']}"
-                    })
-
-                chat_messages += st.session_state.chat_history
-                ai_reply = generate_project(chat_messages, chat_mode=True)
-                st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
-
-                with st.chat_message("assistant"):
-                    st.markdown(ai_reply)
-
-        # Customization of a project
-        else:
-            user_input = st.chat_input("Describe or improve your project idea...")
-            if user_input:
-                with st.chat_message("user"):
-                    st.markdown(user_input)
-
-                # Append to chat_messages for AI
-                st.session_state.chat_messages.append({"role": "user", "content": user_input})
-
-                chat_messages = [
+                    # Prepare AI message to adapt project
+                    chat_messages = [
                     {"role": "system",
-                     "content": "You are ForgeAI, helping to adapt engineering projects to user specifications."}
+                     "content": "You are ForgeAI, helping to adapt engineering projects to user specifications."},
+                    {"role": "system",
+                     "content": (
+                         f"Current project: {proj['project_name']}\n"
+                         f"Description: {proj['description']}\n"
+                         f"Materials needed: {', '.join(proj['materials_needed'])}\n"
+                         f"Steps: {proj['steps']}"
+                     )
+                     }
                 ]
 
-                if st.session_state.generated and st.session_state.projects:
-                    proj = st.session_state.projects[st.session_state.selected_project]
-                    chat_messages.append({
-                        "role": "system",
-                        "content": (
-                            f"Current project: {proj['project_name']}\n"
-                            f"Description: {proj['description']}\n"
-                            f"Materials needed: {', '.join(proj['materials_needed'])}\n"
-                            f"Steps: {proj['steps']}"
-                        )
-                    })
+                    # Add all previous chat contributions
+                    chat_messages += st.session_state.chat_messages
 
-                # Add full chat context
-                chat_messages += st.session_state.chat_messages
+                    # Call AI to adapt project
+                    ai_reply = generate_project(chat_messages, chat_mode=True)
 
-                # Call AI
-                ai_reply = generate_project(chat_messages, chat_mode=True)
-                st.session_state.chat_messages.append({"role": "assistant", "content": ai_reply})
+                    # Append AI reply to session history
+                    st.session_state.chat_messages.append({"role": "assistant", "content": ai_reply})
 
-                with st.chat_message("assistant"):
-                    st.markdown(ai_reply)
+                    # Parse AI response (expecting same JSON structure as original)
+                    if "projects" in ai_reply:
+                        st.session_state.projects[st.session_state.selected_project] = ai_reply["projects"][0]
+
+                    # Rerender updated project
+                    st.experimental_rerun()
+
+
+    # =========================================================
+    # INNOVATOR 💡
+    # =========================================================
+    elif experience == "Innovator💡":
+
+        st.subheader("Tony Stark Mode")
+        st.caption("Have ForgeAI become your engineering assistant.")
+
+        for msg in st.session_state.chat_messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+
+        user_input = st.chat_input("Describe your invention idea...")
+
+        if user_input:
+            st.session_state.chat_messages.append(
+                {"role": "user", "content": user_input}
+            )
+
+            with st.chat_message("user"):
+                st.markdown(user_input)
+
+            chat_messages = [
+                {
+                    "role": "system",
+                    "content": "You are ForgeAI, an advanced engineering mentor helping invent new project ideas."
+                }
+            ]
+
+            chat_messages += st.session_state.chat_messages
+
+            ai_reply = forge_chat(
+                "innovator",
+                st.session_state.chat_messages,
+                user_input
+            )
+
+            st.session_state.chat_messages.append(
+                {"role": "assistant", "content": ai_reply}
+            )
+
+            with st.chat_message("assistant"):
+                st.markdown(ai_reply)
