@@ -1,4 +1,4 @@
-from core.ai_engine import generate_project
+from core.ai_engine import generate_projects, generate_helper_reply
 
 # =====================================
 # ForgeAI Personality System
@@ -30,14 +30,22 @@ def personality_layer(mode):
 # Main ForgeAI Chat Interface
 # =====================================
 
-def forge_chat(mode, chat_history, user_message):
+def forge_chat(mode, chat_history, user_message, memory):
 
     system_prompt = personality_layer(mode)
 
+    memory_context = f"""
+    USER MEMORY:
+    Goal: {memory['goal']}
+    Current Project: {memory['current_project']}
+    Constraints: {memory['constraints']}
+    Notes: {memory['notes']}
+    """
+
     messages = [{"role": "system", "content": system_prompt}]
     messages += chat_history
-    messages.append({"role": "user", "content": user_message})
+    messages.append({"role": "user", "content": memory_context})
 
-    reply = generate_project(messages, chat_mode=True)
+    reply = generate_helper_reply(messages)
 
     return reply

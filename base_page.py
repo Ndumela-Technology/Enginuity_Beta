@@ -1,11 +1,14 @@
 import streamlit as st
 from core.input_builder import build_user_description
-from core.ai_engine import generate_project
+from core.ai_engine import generate_projects
 import re
 from core.forge_ai_helper import forge_chat
 
 if "generated" not in st.session_state:
     st.session_state.generated = False
+
+if "helper_chat" not in st.session_state:
+    st.session_state.helper_chat = []
 
 if "projects" not in st.session_state:
     st.session_state.projects = None
@@ -18,6 +21,38 @@ if "chat_history" not in st.session_state:
 
 if "chat_messages" not in st.session_state:
     st.session_state.chat_messages = []
+
+if "project_board" not in st.session_state:
+    st.session_state.project_board = []
+
+with st.expander("📂 Project Board"):
+    if not st.session_state.project_board:
+        st.caption("No saved projects yet.")
+    else:
+        for i, saved_proj in enumerate(st.session_state.project_board):
+
+            st.markdown(f"### {saved_proj['project_name']}")
+            st.write(saved_proj["description"])
+
+            col1, col2 = st.columns(2)
+
+            if col1.button("Open", key=f"open_{i}"):
+                st.session_state.projects = [saved_proj]
+                st.session_state.selected_project = 0
+                st.session_state.generated = True
+                st.rerun()
+
+            if col2.button("Remove", key=f"remove_{i}"):
+                st.session_state.project_board.pop(i)
+                st.rerun()
+
+if "forge-memory" not in st.session_state:
+    st.session_state.forge_memory = {
+        "goal": "",
+        "current_project": "",
+        "constraints": "",
+        "notes": []
+    }
 
 def render_physics_explanation(text):
     """
@@ -186,7 +221,7 @@ def show_base_page(topic):
 
                 # Call AI engine
                 with st.spinner("Creating Your Project...💭"):
-                    project_response = generate_project(user_description)
+                    project_response = generate_projects(user_description)
 
                 if "error" not in project_response:
                     st.session_state.projects = project_response["projects"]
@@ -252,6 +287,55 @@ def show_base_page(topic):
                         st.markdown(f"### {section}")
                         for i, step in enumerate(section_steps, 1):
                             st.write(f"{i}. {step}")
+
+            # =========================================================
+            # ForgeAI Helper (Apprentice Mini Assistant)
+            # =========================================================
+            st.divider()
+            st.subheader("🧠 ForgeAI Helper")
+
+            # Show previous helper messages
+            for msg in st.session_state.helper_chat:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+
+            helper_input = st.chat_input(
+                "Stuck? Ask ForgeAI for help..."
+            )
+
+            if helper_input:
+                # Save user message
+                st.session_state.helper_chat.append(
+                    {"role": "user", "content": helper_input}
+                )
+
+                with st.chat_message("user"):
+                    st.markdown(helper_input)
+
+                # Call ForgeAI in apprentice personality
+                ai_reply = forge_chat(
+                    "innovator",
+                    st.session_state.chat_messages,
+                    helper_input,
+                    st.session_state.forge_memory
+                )
+
+                st.session_state.helper_chat.append(
+                    {"role": "assistant", "content": ai_reply}
+                )
+
+                with st.chat_message("assistant"):
+                    st.markdown(ai_reply)
+
+            if st.session_state.generated and st.session_state.projects:
+                if st.button("⭐ Save to Project Board"):
+                    proj = st.session_state.projects[st.session_state.selected_project]
+                    if proj not in st.session_state.project_board:
+                        st.session_state.project_board.append(proj)
+                        st.success("Project saved!")
+                    else:
+                        st.info("Project already saved.")
+
 
 
     # =========================================================
@@ -388,7 +472,7 @@ def show_base_page(topic):
 
                 # Call AI engine
                 with st.spinner("Creating Your Project...💭"):
-                    project_response = generate_project(user_description)
+                    project_response = generate_projects(user_description)
 
                 if "error" not in project_response:
                     st.session_state.projects = project_response["projects"]
@@ -485,7 +569,7 @@ def show_base_page(topic):
                     chat_messages += st.session_state.chat_messages
 
                     # Call AI to adapt project
-                    ai_reply = generate_project(chat_messages, chat_mode=True)
+                    ai_reply = generate_projects(chat_messages, chat_mode=True)
 
                     # Append AI reply to session history
                     st.session_state.chat_messages.append({"role": "assistant", "content": ai_reply})
@@ -495,7 +579,16 @@ def show_base_page(topic):
                         st.session_state.projects[st.session_state.selected_project] = ai_reply["projects"][0]
 
                     # Rerender updated project
-                    st.experimental_rerun()
+                    st.rerun()
+
+            if st.session_state.generated and st.session_state.projects:
+                if st.button("⭐ Save to Project Board"):
+                    proj = st.session_state.projects[st.session_state.selected_project]
+                    if proj not in st.session_state.project_board:
+                        st.session_state.project_board.append(proj)
+                        st.success("Project saved!")
+                    else:
+                        st.info("Project already saved.")
 
 
     # =========================================================
@@ -532,7 +625,8 @@ def show_base_page(topic):
             ai_reply = forge_chat(
                 "innovator",
                 st.session_state.chat_messages,
-                user_input
+                user_input,
+                st.session_state.forge_memory
             )
 
             st.session_state.chat_messages.append(
@@ -541,3 +635,11 @@ def show_base_page(topic):
 
             with st.chat_message("assistant"):
                 st.markdown(ai_reply)
+
+            if "goal" in user_input.lower():
+                st.session_state.forge_memory["goal"] = user_input
+
+            if "build" in user_input.lower() or "project" in user_input.lower():
+                st.session_state.forge_memory["current_project"] = user_input
+
+            st.session_state.forge_memory["notes"].append(user_input)

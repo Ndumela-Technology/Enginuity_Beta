@@ -13,7 +13,7 @@ print("DEBUG: OPENAI_API_KEY =", os.getenv("OPENAI_API_KEY"))
 # Only create client after loading env
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def generate_project(input_data, chat_mode=False):
+def generate_projects(input_data, chat_mode=False):
     # -----------------------------------
     # Normalize input into chat messages
     # -----------------------------------
@@ -52,21 +52,24 @@ def generate_project(input_data, chat_mode=False):
     except Exception as e:
         return {"error": str(e)}
 
-def generate_chat_project(messages):
+def generate_helper_reply(messages):
+    """
+    Pure conversational ForgeAI replies.
+    No JSON formatting.
+    """
 
     try:
-        completion = client.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
             temperature=0.7
         )
 
-        reply = completion.choices[0].message.content
-
-        return {"reply": reply}
+        return response.choices[0].message.content.strip()
 
     except Exception as e:
-        return {"reply": f"Error: {str(e)}"}
+        return f"Error: {str(e)}"
+
 
 
 
