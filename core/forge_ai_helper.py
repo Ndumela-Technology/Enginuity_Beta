@@ -30,22 +30,24 @@ def personality_layer(mode):
 # Main ForgeAI Chat Interface
 # =====================================
 
-def forge_chat(mode, chat_history, user_message, memory):
+def forge_chat(mode, chat_history, user_message, memory=None):
 
     system_prompt = personality_layer(mode)
 
-    memory_context = f"""
-    USER MEMORY:
-    Goal: {memory['goal']}
-    Current Project: {memory['current_project']}
-    Constraints: {memory['constraints']}
-    Notes: {memory['notes']}
-    """
+    # Inject memory into system context
+    if memory:
+        memory_context = f"""
+        Current Project: {memory.get('current_project', '')}
+        User Goal: {memory.get('goal', '')}
+        Notes: {memory.get('notes', [])}
+        """
+
+        system_prompt += "\n\n" + memory_context
 
     messages = [{"role": "system", "content": system_prompt}]
     messages += chat_history
-    messages.append({"role": "user", "content": memory_context})
+    messages.append({"role": "user", "content": user_message})
 
-    reply = generate_helper_reply(messages)
+    reply = generate_projects(messages, chat_mode=True)
 
     return reply

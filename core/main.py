@@ -1,10 +1,10 @@
-from core.ai_engine import generate_project
+from core.ai_engine import generate_projects
 from user_input import get_user_input
 
 
 def main():
     user_description = get_user_input()
-    project = generate_project(user_description)
+    project = generate_projects(user_description)
 
     if "error" in project:
         print("⚠️ Error:", project["error"])

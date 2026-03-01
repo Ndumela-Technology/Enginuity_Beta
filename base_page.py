@@ -25,6 +25,31 @@ if "chat_messages" not in st.session_state:
 if "project_board" not in st.session_state:
     st.session_state.project_board = []
 
+if "apprentice_state" not in st.session_state:
+    st.session_state.apprentice_state = {
+        "generated": False,
+        "projects": None,
+        "selected_project": 0,
+        "chat": []
+    }
+
+if "associate_state" not in st.session_state:
+    st.session_state.associate_state = {
+        "generated": False,
+        "projects": None,
+        "selected_project": 0,
+        "chat": []
+    }
+# Safety fallback
+if st.session_state.associate_state.get("projects") is None:
+    st.session_state.associate_state["projects"] = []
+
+if "innovator_state" not in st.session_state:
+    st.session_state.innovator_state = {
+        "chat": []
+    }
+
+
 with st.expander("📂 Project Board"):
     if not st.session_state.project_board:
         st.caption("No saved projects yet.")
@@ -226,16 +251,18 @@ def show_base_page(topic):
                 if "error" not in project_response:
                     st.session_state.projects = project_response["projects"]
                     st.session_state.generated = True
+                    st.session_state.apprentice_state["projects"] = project_response["projects"]
+                    st.session_state.apprentice_state["generated"] = True
                 else:
                     st.error(project_response["error"])
 
             if st.session_state.generated and st.session_state.projects:
 
-                projects = st.session_state.projects
+                state = st.session_state.apprentice_state
 
                 project_names = [
                     f"{i + 1}. {proj['project_name']}"
-                    for i, proj in enumerate(projects)
+                    for i, proj in enumerate(state["projects"])
                 ]
 
                 selected_project_name = st.selectbox(
@@ -246,7 +273,7 @@ def show_base_page(topic):
                 )
 
                 st.session_state.selected_project = project_names.index(selected_project_name)
-                proj = projects[st.session_state.selected_project]
+                proj = state["projects"][st.session_state.selected_project]
 
                 # ------------------------
                 # Project Title + Description
@@ -314,7 +341,7 @@ def show_base_page(topic):
 
                 # Call ForgeAI in apprentice personality
                 ai_reply = forge_chat(
-                    "innovator",
+                    "apprentice",
                     st.session_state.chat_messages,
                     helper_input,
                     st.session_state.forge_memory
@@ -477,15 +504,17 @@ def show_base_page(topic):
                 if "error" not in project_response:
                     st.session_state.projects = project_response["projects"]
                     st.session_state.generated = True
+                    st.session_state.apprentice_state["projects"] = project_response["projects"]
+                    st.session_state.apprentice_state["generated"] = True
                 else:
                     st.error(project_response["error"])
 
             if st.session_state.generated and st.session_state.projects:
-                projects = st.session_state.projects
+                state = st.session_state.associate_state
 
                 project_names = [
                 f"{i + 1}. {proj['project_name']}"
-                for i, proj in enumerate(projects)
+                for i, proj in enumerate(state["projects"])
             ]
 
                 selected_project_name = st.selectbox(
@@ -496,7 +525,7 @@ def show_base_page(topic):
                 )
 
                 st.session_state.selected_project = project_names.index(selected_project_name)
-                proj = projects[st.session_state.selected_project]
+                proj = state["projects"][st.session_state.selected_project]
 
                 # ------------------------
                 # Project Title + Description
@@ -599,43 +628,38 @@ def show_base_page(topic):
         st.subheader("Tony Stark Mode")
         st.caption("Have ForgeAI become your engineering assistant.")
 
-        for msg in st.session_state.chat_messages:
+        state = st.session_state.innovator_state
+
+        # Show chat history
+        for msg in state["chat"]:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
 
-        user_input = st.chat_input("Describe your invention idea...")
+
+        user_input = st.chat_input("Describe your invention or ask ForgeAI...")
 
         if user_input:
-            st.session_state.chat_messages.append(
-                {"role": "user", "content": user_input}
-            )
 
-            with st.chat_message("user"):
-                st.markdown(user_input)
+            # Save user message
+            state["chat"].append({
+                "role": "user",
+                "content": user_input
+            })
 
-            chat_messages = [
-                {
-                    "role": "system",
-                    "content": "You are ForgeAI, an advanced engineering mentor helping invent new project ideas."
-                }
-            ]
-
-            chat_messages += st.session_state.chat_messages
-
+            # Call Innovator AI
             ai_reply = forge_chat(
                 "innovator",
-                st.session_state.chat_messages,
-                user_input,
-                st.session_state.forge_memory
+                state["chat"],
+                user_input
             )
 
-            st.session_state.chat_messages.append(
-                {"role": "assistant", "content": ai_reply}
-            )
+            # Save AI reply
+            state["chat"].append({
+                "role": "assistant",
+                "content": ai_reply
+            })
 
-            with st.chat_message("assistant"):
-                st.markdown(ai_reply)
-
+            # Optional memory system
             if "goal" in user_input.lower():
                 st.session_state.forge_memory["goal"] = user_input
 
@@ -643,3 +667,5 @@ def show_base_page(topic):
                 st.session_state.forge_memory["current_project"] = user_input
 
             st.session_state.forge_memory["notes"].append(user_input)
+
+            st.rerun()
