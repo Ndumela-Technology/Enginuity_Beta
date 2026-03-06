@@ -3,28 +3,27 @@ from core.input_builder import build_user_description
 from core.ai_engine import generate_projects
 import re
 from core.forge_ai_helper import forge_chat
+import numpy as np
+import openai
+import base64
+import tempfile
+import queue
+import soundfile as sf
+from streamlit_webrtc import webrtc_streamer, AudioProcessorBase
 
-if "generated" not in st.session_state:
-    st.session_state.generated = False
+# Global queue to collect audio chunks
+audio_queue = queue.Queue()
 
-if "helper_chat" not in st.session_state:
-    st.session_state.helper_chat = []
+class AudioProcessor(AudioProcessorBase):
+    def recv(self, frame):
+        audio = frame.to_ndarray()
+        # Convert to mono if needed
+        if audio.ndim > 1:
+            audio = np.mean(audio, axis=1)
+        audio_queue.put(audio)
+        return frame
 
-if "projects" not in st.session_state:
-    st.session_state.projects = None
-
-if "selected_project" not in st.session_state:
-    st.session_state.selected_project = 0
-
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-
-if "chat_messages" not in st.session_state:
-    st.session_state.chat_messages = []
-
-if "project_board" not in st.session_state:
-    st.session_state.project_board = []
-
+# Individual states
 if "apprentice_state" not in st.session_state:
     st.session_state.apprentice_state = {
         "generated": False,
@@ -36,10 +35,46 @@ if "apprentice_state" not in st.session_state:
 if "associate_state" not in st.session_state:
     st.session_state.associate_state = {
         "generated": False,
-        "projects": None,
+        "projects": [],
         "selected_project": 0,
         "chat": []
     }
+
+if "innovator_state" not in st.session_state:
+    st.session_state.innovator_state = {"chat": []}
+
+if "forge_memory" not in st.session_state:
+    st.session_state.forge_memory = {
+        "goal": "",
+        "current_project": "",
+        "constraints": "",
+        "notes": []
+    }
+
+# -------------------------
+# SESSION STATE INITIALIZATION
+# -------------------------
+if "generated" not in st.session_state:
+    st.session_state.generated = False
+
+if "projects" not in st.session_state:
+    st.session_state.projects = []
+
+if "selected_project" not in st.session_state:
+    st.session_state.selected_project = 0
+
+if "project_board" not in st.session_state:
+    st.session_state.project_board = []
+
+if "helper_chat" not in st.session_state:
+    st.session_state.helper_chat = []
+
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = []
+
 # Safety fallback
 if st.session_state.associate_state.get("projects") is None:
     st.session_state.associate_state["projects"] = []
@@ -79,23 +114,80 @@ if "forge-memory" not in st.session_state:
         "notes": []
     }
 
+# ----------------- Utility Functions -----------------
+def speech_to_text(audio_file):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        tmp.write(audio_file.read())
+        tmp_path = tmp.name
+    with open(tmp_path, "rb") as audio:
+        transcript = openai.audio.transcriptions.create(model="whisper-1", file=audio)
+    return transcript.text
+
 def render_physics_explanation(text):
-    """
-    Renders markdown normally,
-    but displays $$ LaTeX $$ formulas
-    as large centered equations.
-    """
-
-    # Split text into parts: normal text and LaTeX blocks
     parts = re.split(r"(\$\$.*?\$\$)", text, flags=re.DOTALL)
-
     for part in parts:
         if part.startswith("$$") and part.endswith("$$"):
-            # Remove $$ symbols
-            formula = part.strip("$")
-            st.latex(formula)
+            st.latex(part.strip("$"))
         else:
             st.markdown(part)
+
+
+def speak_ai(text):
+    # Use a string path to avoid Path object issues
+    speech_file_path = "forge_voice.mp3"
+
+    # Generate speech from OpenAI
+    response = openai.audio.speech.create(
+        model="gpt-4o-mini-tts",
+        voice="alloy",
+        input=text
+    )
+
+    # Make sure we write bytes correctly
+    audio_content = getattr(response, "content", None)
+    if audio_content is None:
+        st.error("Failed to generate audio from AI.")
+        return
+
+    with open(speech_file_path, "wb") as f:
+        f.write(audio_content)
+
+    # Read audio and encode for Streamlit
+    with open(speech_file_path, "rb") as f:
+        audio_bytes = f.read()
+
+    b64 = base64.b64encode(audio_bytes).decode()
+
+    audio_html = f"""
+        <audio autoplay>
+        <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
+        </audio>
+    """
+    st.markdown(audio_html, unsafe_allow_html=True)
+
+# ----------------- User Input Function -----------------
+def get_user_input(interaction_mode):
+    if interaction_mode == "Text 💬":
+        return st.chat_input("Ask ForgeAI...")
+    elif interaction_mode == "Voice 🎙️":
+        webrtc_streamer(
+            key="voice_stream_live",
+            audio_processor_factory=AudioProcessor,
+            media_stream_constraints={"audio": True, "video": False},
+            async_processing=True
+        )
+        if not audio_queue.empty():
+            audio_data = []
+            while not audio_queue.empty():
+                audio_data.append(audio_queue.get())
+            audio_array = np.concatenate(audio_data).astype(np.float32)
+            tmp_file = "voice_input.wav"
+            sf.write(tmp_file, audio_array, 16000)
+            with open(tmp_file, "rb") as f:
+                transcript = speech_to_text(f)
+            st.caption(f"🗣 You said: {transcript}")
+            return transcript
+    return None
 
 def show_base_page(topic):
 
@@ -150,6 +242,11 @@ def show_base_page(topic):
             materials = st.text_area(
                 "What materials do you have at home?",
                 placeholder="Example: cardboard, tape, plastic bottle, DC motor..."
+            )
+
+            interaction_mode = st.segmented_control(
+                "Interaction Mode",
+                ["Text 💬", "Voice 🎙️"]
             )
 
             # ------------------------
@@ -243,6 +340,8 @@ def show_base_page(topic):
                     Only adapt HOW explanations are written.
 
                     """
+
+
 
                 # Call AI engine
                 with st.spinner("Creating Your Project...💭"):
@@ -321,14 +420,51 @@ def show_base_page(topic):
             st.divider()
             st.subheader("🧠 ForgeAI Helper")
 
+            st.caption("🎙️ Or ask using your voice")
+
+            class AudioProcessor(AudioProcessorBase):
+                def recv(self, frame):
+                    audio = frame.to_ndarray()
+                    # Convert to mono if needed
+                    if audio.ndim > 1:
+                        audio = np.mean(audio, axis=1)
+                    audio_queue.put(audio)
+                    return frame
+
+            webrtc_streamer(
+                key="voice_stream",
+                audio_processor_factory=AudioProcessor,
+                media_stream_constraints={"audio": True, "video": False},
+                async_processing=True
+            )
+
+
+
+            helper_input = get_user_input(interaction_mode)
+
+            if helper_input:
+                # Save user message
+                st.session_state.helper_chat.append({"role": "user", "content": helper_input})
+                with st.chat_message("user"):
+                    st.markdown(helper_input)
+
+                # Call ForgeAI
+                ai_reply = forge_chat("apprentice", st.session_state.chat_messages, helper_input,
+                                      st.session_state.forge_memory)
+
+                st.session_state.helper_chat.append({"role": "assistant", "content": ai_reply})
+                with st.chat_message("assistant"):
+                    st.markdown(ai_reply)
+
+                if interaction_mode == "Voice 🎙️":
+                    speak_ai(ai_reply)
+
             # Show previous helper messages
             for msg in st.session_state.helper_chat:
                 with st.chat_message(msg["role"]):
                     st.markdown(msg["content"])
 
-            helper_input = st.chat_input(
-                "Stuck? Ask ForgeAI for help..."
-            )
+            helper_input = get_user_input(interaction_mode)
 
             if helper_input:
                 # Save user message
@@ -353,6 +489,10 @@ def show_base_page(topic):
 
                 with st.chat_message("assistant"):
                     st.markdown(ai_reply)
+
+                if interaction_mode == "Voice 🎙️":
+                    speak_ai(ai_reply)
+
 
             if st.session_state.generated and st.session_state.projects:
                 if st.button("⭐ Save to Project Board"):
@@ -404,6 +544,71 @@ def show_base_page(topic):
                 "What materials do you have at home?",
                 placeholder="Example: cardboard, tape, plastic bottle, DC motor..."
             )
+
+            interaction_mode = st.segmented_control(
+                "Interaction Mode",
+                ["Text 💬", "Voice 🎙️"]
+            )
+
+            # Initialize queue for audio frames
+            audio_queue = queue.Queue()
+
+            class AudioProcessor(AudioProcessorBase):
+                def recv(self, frame):
+                    audio = frame.to_ndarray()
+                    if audio.ndim > 1:  # convert to mono
+                        audio = np.mean(audio, axis=1)
+                    audio_queue.put(audio)
+                    return frame
+
+            # Start streaming audio
+            webrtc_streamer(
+                key="associate_voice_stream",
+                audio_processor_factory=AudioProcessor,
+                media_stream_constraints={"audio": True, "video": False},
+                async_processing=True
+            )
+
+            # ------------------------
+            # Process queued audio when available
+            audio_data = []
+            while not audio_queue.empty():
+                audio_data.append(audio_queue.get())
+
+            if audio_data:
+                audio_array = np.concatenate(audio_data).astype(np.float32)
+                # Save temporary WAV
+                tmp_path = "associate_voice_input.wav"
+                sf.write(tmp_path, audio_array, 44100)
+                # Transcribe using Whisper
+                with open(tmp_path, "rb") as f:
+                    transcript = openai.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=f
+                    )
+                voice_text = transcript.text
+                st.caption(f"🗣 You said: {voice_text}")
+
+                user_input = None
+                if interaction_mode == "Text 💬":
+                    user_input = st.chat_input("Ask ForgeAI...")
+                elif voice_text:
+                    user_input = voice_text
+
+                if user_input:
+                    # Send to ForgeAI
+                    ai_reply = forge_chat(
+                        "associate",
+                        st.session_state.associate_state["chat"],
+                        user_input
+                    )
+                    st.session_state.associate_state["chat"].append({"role": "user", "content": user_input})
+                    st.session_state.associate_state["chat"].append({"role": "assistant", "content": ai_reply})
+                    st.markdown(f"**ForgeAI:** {ai_reply}")
+
+                    if interaction_mode == "Voice 🎙️":
+                        speak_ai(ai_reply)
+
 
             # ------------------------
             # Generate button
@@ -497,118 +702,105 @@ def show_base_page(topic):
 
                     """
 
+
                 # Call AI engine
                 with st.spinner("Creating Your Project...💭"):
                     project_response = generate_projects(user_description)
 
                 if "error" not in project_response:
+                    # Save all generated projects
                     st.session_state.projects = project_response["projects"]
                     st.session_state.generated = True
+
+                    # Also save into the Apprentice/Associate state
                     st.session_state.apprentice_state["projects"] = project_response["projects"]
                     st.session_state.apprentice_state["generated"] = True
-                else:
-                    st.error(project_response["error"])
+
+                    st.session_state.associate_state["projects"] = project_response["projects"]
+                    st.session_state.associate_state["generated"] = True
 
             if st.session_state.generated and st.session_state.projects:
                 state = st.session_state.associate_state
+                projects = state.get("projects") or []
 
-                project_names = [
-                f"{i + 1}. {proj['project_name']}"
-                for i, proj in enumerate(state["projects"])
-            ]
+                if projects:
+                    selected_index = min(state.get("selected_project", 0), len(projects) - 1)
+                    project_names = [f"{i + 1}. {p['project_name']}" for i, p in enumerate(projects)]
+                    selected_project_name = st.selectbox(
+                        "Choose a project to explore:",
+                        project_names,
+                        index=selected_index,
+                        key="project_selector_associate"
+                    )
 
-                selected_project_name = st.selectbox(
-                "Choose a project to explore:",
-                    project_names,
-                    index=st.session_state.selected_project,
-                    key="project_selector_associate"
-                )
+                    # Update selected project index
+                    state["selected_project"] = project_names.index(selected_project_name)
+                    proj = projects[state["selected_project"]]
 
-                st.session_state.selected_project = project_names.index(selected_project_name)
-                proj = state["projects"][st.session_state.selected_project]
-
-                # ------------------------
-                # Project Title + Description
-                st.header(proj["project_name"])
-                st.write(proj["description"])
-
-                # ------------------------
-                # Materials Needed
-                st.subheader("🧰 Materials Needed")
-                for item in proj["materials_needed"]:
-                    st.write("-", item)
-
-                # ------------------------
-                # Suggested Materials
-                if "materials_suggested" in proj and proj["materials_suggested"]:
-                    st.subheader("🛒 Suggested Upgrades (Optional)")
-                    st.caption("Cheap household items you could buy to improve the project.")
-                    for item in proj["materials_suggested"]:
+                    # ---- Render Project Details ----
+                    st.header(proj["project_name"])
+                    st.write(proj["description"])
+                    st.subheader("🧰 Materials Needed")
+                    for item in proj["materials_needed"]:
                         st.write("-", item)
 
-                # ------------------------
-                # Physics Explanation
-                st.subheader("🧪 Physics Explanation")
-                render_physics_explanation(proj["physics_explanation"])
+                    if "materials_suggested" in proj and proj["materials_suggested"]:
+                        st.subheader("🛒 Suggested Upgrades (Optional)")
+                        st.caption("Cheap household items you could buy to improve the project.")
+                        for item in proj["materials_suggested"]:
+                            st.write("-", item)
 
-                # ------------------------
-                # Steps
-                st.subheader("🛠️ Build Steps")
-                steps = proj["steps"]
+                    st.subheader("🧪 Physics Explanation")
+                    render_physics_explanation(proj["physics_explanation"])
 
-                if isinstance(steps, list):
-                    for i, step in enumerate(steps, 1):
-                        st.write(f"{i}. {step}")
-
-                elif isinstance(steps, dict):
-                    for section, section_steps in steps.items():
-                        st.markdown(f"### {section}")
-                        for i, step in enumerate(section_steps, 1):
+                    st.subheader("🛠️ Build Steps")
+                    steps = proj["steps"]
+                    if isinstance(steps, list):
+                        for i, step in enumerate(steps, 1):
                             st.write(f"{i}. {step}")
+                    elif isinstance(steps, dict):
+                        for section, section_steps in steps.items():
+                            st.markdown(f"### {section}")
+                            for i, step in enumerate(section_steps, 1):
+                                st.write(f"{i}. {step}")
 
-                # ------------------------
-                # User collaboration input
-                st.divider()
-                st.subheader("💡 Contribute to the project")
+                    # ---- User Collaboration ----
+                    st.divider()
+                    st.subheader("💡 Contribute to the project")
+                    user_input = get_user_input(interaction_mode)
 
-                user_input = st.text_area(
-                    "Add your ideas or modifications to this project:",
-                    placeholder="Add something small or big..."
-            )
+                    if st.button("Update Project with My Ideas") and user_input.strip():
+                        st.session_state.chat_messages.append({"role": "user", "content": user_input})
+                        chat_messages = [
+                            {"role": "system",
+                             "content": "You are ForgeAI, helping to adapt engineering projects to user specifications."},
+                            {"role": "system",
+                             "content": (
+                                 f"Current project: {proj['project_name']}\n"
+                                 f"Description: {proj['description']}\n"
+                                 f"Materials needed: {', '.join(proj['materials_needed'])}\n"
+                                 f"Steps: {proj['steps']}"
+                             )
+                             }
+                        ]
 
-                if st.button("Update Project with My Ideas") and user_input.strip():
-                    # Save user input to chat_messages
-                    st.session_state.chat_messages.append({"role": "user", "content": user_input})
-
-                    # Prepare AI message to adapt project
-                    chat_messages = [
-                    {"role": "system",
-                     "content": "You are ForgeAI, helping to adapt engineering projects to user specifications."},
-                    {"role": "system",
-                     "content": (
-                         f"Current project: {proj['project_name']}\n"
-                         f"Description: {proj['description']}\n"
-                         f"Materials needed: {', '.join(proj['materials_needed'])}\n"
-                         f"Steps: {proj['steps']}"
-                     )
-                     }
-                ]
 
                     # Add all previous chat contributions
-                    chat_messages += st.session_state.chat_messages
+                        chat_messages += st.session_state.chat_messages
 
                     # Call AI to adapt project
-                    ai_reply = generate_projects(chat_messages, chat_mode=True)
+                        ai_reply = generate_projects(chat_messages, chat_mode=False)
 
                     # Append AI reply to session history
-                    st.session_state.chat_messages.append({"role": "assistant", "content": ai_reply})
+                        st.session_state.chat_messages.append({"role": "assistant", "content": ai_reply})
 
                     # Parse AI response (expecting same JSON structure as original)
-                    if "projects" in ai_reply:
-                        st.session_state.projects[st.session_state.selected_project] = ai_reply["projects"][0]
+                        if "projects" in ai_reply:
+                            projects[state["selected_project"]] = ai_reply["projects"][0]
+                        st.rerun()
 
-                    # Rerender updated project
-                    st.rerun()
+                    else:
+                        st.info("No projects generated yet. Please generate a project first.")
 
             if st.session_state.generated and st.session_state.projects:
                 if st.button("⭐ Save to Project Board"):
@@ -627,6 +819,13 @@ def show_base_page(topic):
 
         st.subheader("Tony Stark Mode")
         st.caption("Have ForgeAI become your engineering assistant.")
+
+        st.title(topic)
+
+        interaction_mode = st.segmented_control(
+            "Interaction Mode",
+            ["Text 💬", "Voice 🎙️"]
+        )
 
         state = st.session_state.innovator_state
 
