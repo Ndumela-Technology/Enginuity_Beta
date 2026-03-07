@@ -15,13 +15,17 @@ from streamlit_webrtc import webrtc_streamer, AudioProcessorBase
 audio_queue = queue.Queue()
 
 class AudioProcessor(AudioProcessorBase):
-    def recv(self, frame):
-        audio = frame.to_ndarray()
-        # Convert to mono if needed
-        if audio.ndim > 1:
-            audio = np.mean(audio, axis=1)
-        audio_queue.put(audio)
-        return frame
+    def recv_queued(self, frames):
+
+        for frame in frames:
+            audio = frame.to_ndarray()
+
+            if audio.ndim > 1:
+                audio = np.mean(audio, axis=1)
+
+            audio_queue.put(audio)
+
+        return frames[-1]
 
 # Individual states
 if "apprentice_state" not in st.session_state:
@@ -122,9 +126,12 @@ def speech_to_text(audio_file):
     if audio_file is None:
         return None
 
-    audio_bytes = audio_file.getvalue()
+    # Handle both BytesIO and normal files
+    if hasattr(audio_file, "getvalue"):
+        audio_bytes = audio_file.getvalue()
+    else:
+        audio_bytes = audio_file.read()
 
-    # Prevent empty audio error
     if len(audio_bytes) < 2000:
         return None
 
@@ -274,9 +281,9 @@ def show_base_page(topic):
 
             interaction_mode = st.segmented_control(
                 "Interaction Mode",
-                ["Text 💬", "Voice 🎙️"]
+                ["Text 💬", "Voice 🎙️"],
+                key="interaction_mode_apprentice"
             )
-            key="interaction_mode_apprentice"
 
             # ------------------------
             # Generate button
@@ -451,23 +458,6 @@ def show_base_page(topic):
 
             st.caption("Here to be at your assistance")
 
-            class AudioProcessor(AudioProcessorBase):
-                def recv(self, frame):
-                    audio = frame.to_ndarray()
-                    # Convert to mono if needed
-                    if audio.ndim > 1:
-                        audio = np.mean(audio, axis=1)
-                    audio_queue.put(audio)
-                    return frame
-
-            webrtc_streamer(
-                key="voice_stream",
-                audio_processor_factory=AudioProcessor,
-                media_stream_constraints={"audio": True, "video": False},
-                async_processing=True
-            )
-
-
 
             helper_input = get_user_input(interaction_mode)
 
@@ -547,9 +537,9 @@ def show_base_page(topic):
 
             interaction_mode = st.segmented_control(
                 "Interaction Mode",
-                ["Text 💬", "Voice 🎙️"]
+                ["Text 💬", "Voice 🎙️"],
+                key="interaction_mode_associate"
             )
-            key="interaction_mode_associate"
 
             # Initialize queue for audio frames
             audio_queue = queue.Queue()
@@ -562,13 +552,6 @@ def show_base_page(topic):
                     audio_queue.put(audio)
                     return frame
 
-            # Start streaming audio
-            webrtc_streamer(
-                key="associate_voice_stream",
-                audio_processor_factory=AudioProcessor,
-                media_stream_constraints={"audio": True, "video": False},
-                async_processing=True
-            )
 
             # ------------------------
             # Process queued audio when available
@@ -825,33 +808,9 @@ def show_base_page(topic):
 
         interaction_mode = st.segmented_control(
             "Interaction Mode",
-            ["Text 💬", "Voice 🎙️"]
+            ["Text 💬", "Voice 🎙️"],
+            key="interaction_mode_innovator"
         )
-        key="interaction_mode_innovator"
-
-        helper_input = get_user_input(interaction_mode)
-
-        if helper_input:
-            st.session_state.chat_messages.append({
-                "role": "user",
-                "content": helper_input
-            })
-
-            ai_reply = forge_chat(
-                "innovator",
-                st.session_state.chat_messages,
-                helper_input,
-                st.session_state.forge_memory
-            )
-
-            st.session_state.chat_messages.append({
-                "role": "assistant",
-                "content": ai_reply
-            })
-
-            with st.chat_message("assistant"):
-                st.markdown(ai_reply)
-        
 
         state = st.session_state.innovator_state
 
@@ -860,10 +819,13 @@ def show_base_page(topic):
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
 
-
-        user_input = st.chat_input("Describe your invention or ask ForgeAI...")
+        user_input = get_user_input(interaction_mode)
 
         if user_input:
+
+            # Show user message
+            with st.chat_message("user"):
+                st.markdown(user_input)
 
             # Save user message
             state["chat"].append({
@@ -871,18 +833,27 @@ def show_base_page(topic):
                 "content": user_input
             })
 
-            # Call Innovator AI
+            # Call ForgeAI
             ai_reply = forge_chat(
                 "innovator",
                 state["chat"],
-                user_input
+                user_input,
+                st.session_state.forge_memory
             )
+
+            # Show AI reply
+            with st.chat_message("assistant"):
+                st.markdown(ai_reply)
 
             # Save AI reply
             state["chat"].append({
                 "role": "assistant",
                 "content": ai_reply
             })
+
+            # Voice response if user used voice mode
+            if interaction_mode == "Voice 🎙️":
+                speak_ai(ai_reply)
 
             # Optional memory system
             if "goal" in user_input.lower():
@@ -892,5 +863,3 @@ def show_base_page(topic):
                 st.session_state.forge_memory["current_project"] = user_input
 
             st.session_state.forge_memory["notes"].append(user_input)
-
-            st.rerun()
