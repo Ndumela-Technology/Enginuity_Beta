@@ -4,9 +4,9 @@ from core.ai_engine import generate_projects
 import re
 from core.forge_ai_helper import forge_chat
 import numpy as np
-import openai
+from openai import OpenAI
 import base64
-import tempfile
+import io
 import queue
 import soundfile as sf
 from streamlit_webrtc import webrtc_streamer, AudioProcessorBase
@@ -115,13 +115,38 @@ if "forge-memory" not in st.session_state:
     }
 
 # ----------------- Utility Functions -----------------
+client = OpenAI()
+
 def speech_to_text(audio_file):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        tmp.write(audio_file.read())
-        tmp_path = tmp.name
-    with open(tmp_path, "rb") as audio:
-        transcript = openai.audio.transcriptions.create(model="whisper-1", file=audio)
+
+    if audio_file is None:
+        return None
+
+    audio_bytes = audio_file.getvalue()
+
+    # Prevent empty audio error
+    if len(audio_bytes) < 2000:
+        return None
+
+    audio_buffer = io.BytesIO(audio_bytes)
+    audio_buffer.name = "speech.wav"
+
+    transcript = client.audio.transcriptions.create(
+        model="whisper-1",
+        file=audio_buffer
+    )
+
     return transcript.text
+
+def text_to_speech(text):
+
+    response = client.audio.speech.create(
+        model="gpt-4o-mini-tts",
+        voice="alloy",
+        input=text
+    )
+
+    return response
 
 def render_physics_explanation(text):
     parts = re.split(r"(\$\$.*?\$\$)", text, flags=re.DOTALL)
@@ -137,7 +162,7 @@ def speak_ai(text):
     speech_file_path = "forge_voice.mp3"
 
     # Generate speech from OpenAI
-    response = openai.audio.speech.create(
+    response = client.audio.speech.create(
         model="gpt-4o-mini-tts",
         voice="alloy",
         input=text
@@ -185,9 +210,12 @@ def get_user_input(interaction_mode):
             sf.write(tmp_file, audio_array, 16000)
             with open(tmp_file, "rb") as f:
                 transcript = speech_to_text(f)
-            st.caption(f"🗣 You said: {transcript}")
-            return transcript
-    return None
+
+                if transcript:
+                    st.caption(f"🗣 You said: {transcript}")
+                    return transcript
+                else:
+                    return None
 
 def show_base_page(topic):
 
@@ -248,6 +276,7 @@ def show_base_page(topic):
                 "Interaction Mode",
                 ["Text 💬", "Voice 🎙️"]
             )
+            key="interaction_mode_apprentice"
 
             # ------------------------
             # Generate button
@@ -420,7 +449,7 @@ def show_base_page(topic):
             st.divider()
             st.subheader("🧠 ForgeAI Helper")
 
-            st.caption("🎙️ Or ask using your voice")
+            st.caption("Here to be at your assistance")
 
             class AudioProcessor(AudioProcessorBase):
                 def recv(self, frame):
@@ -463,35 +492,6 @@ def show_base_page(topic):
             for msg in st.session_state.helper_chat:
                 with st.chat_message(msg["role"]):
                     st.markdown(msg["content"])
-
-            helper_input = get_user_input(interaction_mode)
-
-            if helper_input:
-                # Save user message
-                st.session_state.helper_chat.append(
-                    {"role": "user", "content": helper_input}
-                )
-
-                with st.chat_message("user"):
-                    st.markdown(helper_input)
-
-                # Call ForgeAI in apprentice personality
-                ai_reply = forge_chat(
-                    "apprentice",
-                    st.session_state.chat_messages,
-                    helper_input,
-                    st.session_state.forge_memory
-                )
-
-                st.session_state.helper_chat.append(
-                    {"role": "assistant", "content": ai_reply}
-                )
-
-                with st.chat_message("assistant"):
-                    st.markdown(ai_reply)
-
-                if interaction_mode == "Voice 🎙️":
-                    speak_ai(ai_reply)
 
 
             if st.session_state.generated and st.session_state.projects:
@@ -549,6 +549,7 @@ def show_base_page(topic):
                 "Interaction Mode",
                 ["Text 💬", "Voice 🎙️"]
             )
+            key="interaction_mode_associate"
 
             # Initialize queue for audio frames
             audio_queue = queue.Queue()
@@ -582,7 +583,7 @@ def show_base_page(topic):
                 sf.write(tmp_path, audio_array, 44100)
                 # Transcribe using Whisper
                 with open(tmp_path, "rb") as f:
-                    transcript = openai.audio.transcriptions.create(
+                    transcript = client.audio.transcriptions.create(
                         model="whisper-1",
                         file=f
                     )
@@ -826,6 +827,31 @@ def show_base_page(topic):
             "Interaction Mode",
             ["Text 💬", "Voice 🎙️"]
         )
+        key="interaction_mode_innovator"
+
+        helper_input = get_user_input(interaction_mode)
+
+        if helper_input:
+            st.session_state.chat_messages.append({
+                "role": "user",
+                "content": helper_input
+            })
+
+            ai_reply = forge_chat(
+                "innovator",
+                st.session_state.chat_messages,
+                helper_input,
+                st.session_state.forge_memory
+            )
+
+            st.session_state.chat_messages.append({
+                "role": "assistant",
+                "content": ai_reply
+            })
+
+            with st.chat_message("assistant"):
+                st.markdown(ai_reply)
+        
 
         state = st.session_state.innovator_state
 
