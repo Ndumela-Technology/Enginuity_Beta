@@ -1,4 +1,4 @@
-from core.ai_engine import generate_projects, generate_helper_reply
+from core.ai_engine import generate_projects
 import streamlit as st
 
 # =====================================
@@ -39,6 +39,9 @@ def personality_layer(mode, education=None):
 
 def forge_chat(mode, chat_history, user_message, memory=None, education=None):
 
+    if user_message is None:
+        return "I didn't receive a message. Please try again."
+
     system_prompt = personality_layer(mode, education)
 
     # Inject memory into system context
@@ -51,9 +54,29 @@ def forge_chat(mode, chat_history, user_message, memory=None, education=None):
 
         system_prompt += "\n\n" + memory_context
 
-    messages = [{"role": "system", "content": system_prompt}]
-    messages += chat_history
-    messages.append({"role": "user", "content": user_message})
+    messages = []
+
+
+    if system_prompt:
+        messages.append({
+            "role": "system",
+            "content": str(system_prompt)
+        })
+
+
+    for msg in chat_history:
+        if msg.get("content") is not None:
+            messages.append({
+                "role": msg.get("role", "user"),
+                "content": str(msg["content"])
+            })
+
+
+    if user_message:
+        messages.append({
+            "role": "user",
+            "content": str(user_message)
+        })
 
     reply = generate_projects(messages, chat_mode=True)
 
