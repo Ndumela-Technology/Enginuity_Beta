@@ -13,38 +13,33 @@ print("DEBUG: OPENAI_API_KEY =", os.getenv("OPENAI_API_KEY"))
 # Only create client after loading env
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def generate_projects(input_data, chat_mode=False):
+
+def generate_projects(input_data):
     # -----------------------------------
     # Normalize input into chat messages
     # -----------------------------------
-    if chat_mode:
-        messages = input_data  # already formatted chat messages
-    else:
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": input_data}
-        ]
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": input_data}
+    ]
 
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
             temperature=0.7,
-            response_format={"type": "json_object"} if not chat_mode else None
+            response_format={"type": "json_object"}
         )
 
         content = response.choices[0].message.content.strip()
 
         # JSON projects mode
-        if not chat_mode:
-            start = content.find("{")
-            end = content.rfind("}") + 1
-            content = content[start:end]
-            project_data = json.loads(content)
-            return project_data
+        start = content.find("{")
+        end = content.rfind("}") + 1
+        content = content[start:end]
 
-        # Chat mode → return raw reply
-        return content
+        project_data = json.loads(content)
+        return project_data
 
     except json.JSONDecodeError:
         return {"error": "AI response was not valid JSON. Try again."}
@@ -52,10 +47,10 @@ def generate_projects(input_data, chat_mode=False):
     except Exception as e:
         return {"error": str(e)}
 
-def generate_helper_reply(messages):
+
+def generate_chat_reply(messages):
     """
-    Pure conversational ForgeAI replies.
-    No JSON formatting.
+    Pure conversational replies (chat system)
     """
 
     try:
@@ -69,7 +64,6 @@ def generate_helper_reply(messages):
 
     except Exception as e:
         return f"Error: {str(e)}"
-
 
 
 

@@ -1,6 +1,9 @@
+from fastapi import FastAPI
+
 from core.ai_engine import generate_projects
 from user_input import get_user_input
 
+app = FastAPI()
 
 def main():
     user_description = get_user_input()
