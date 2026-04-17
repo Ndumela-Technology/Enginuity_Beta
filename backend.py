@@ -1,11 +1,20 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Optional
-from core.ai_engine import generate_projects,generate_chat_reply
+from core.ai_engine import generate_projects, generate_chat_reply, run_safety_check
 from core.forge_ai_helper import forge_chat
+from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # allow all for now (MVP)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 client = OpenAI()
 
@@ -50,7 +59,7 @@ def personality_layer(mode: str, education: str = None, age_group: str = None):
         "You are an AI assistant that helps users learn, build, and create projects."
     ]
 
-    # -----------------------------
+    # --------------------------nd-
     # 1. ROLE / MODE (MOST IMPORTANT)
     # -----------------------------
     mode_rules = {
@@ -121,19 +130,50 @@ def personality_layer(mode: str, education: str = None, age_group: str = None):
     # -----------------------------
     return " ".join(instructions)
 
+# -------------------------------
+# Helper Functions
+# -------------------------------
+def is_dangerous_input(text: str):
+    dangerous_keywords = [
+        # Explosives / weapons
+        "bomb", "explosive", "gunpowder", "detonator",
+
+        # Toxic combinations
+        "bleach and ammonia", "toxic gas", "chlorine gas",
+
+        # Harm intent
+        "poison", "acid attack",
+
+        # Strong chemicals (keep minimal)
+        "sulfuric acid", "nitric acid",
+
+        # Fire-related (ONLY extreme cases)
+        "how to start a fire indoors", "arson"
+    ]
+
+    text_lower = text.lower()
+
+    for keyword in dangerous_keywords:
+        if keyword in text_lower:
+            return True
+
+    return False
+
 # ------------------------
 # Request Models
 # ------------------------
 
-class ChatRequest(BaseModel):
-    mode: str
-    message: str
-    history: List[dict] = []
-    memory: Optional[dict] = None
-
-
 class ProjectRequest(BaseModel):
     description: str
+    difficulty: str = "beginner"
+    age: str = ""
+    materials: str = ""
+
+class ChatRequest(BaseModel):
+    message: str
+    mode: str
+    history: List[dict] = []
+    education: Optional[str] = None
 
 
 # ------------------------
@@ -179,7 +219,44 @@ def chat(request: ChatRequest):
     # -------------------------------
     # 5. Return Clean Response
     # -------------------------------
-    return {"reply": reply}@app.post("/chat")
+    return {"reply": reply}
+
+@app.post("/generate-project")
+def generate_project(request: ProjectRequest):
+
+    # -------------------------------
+    # 1. Input Safety Check
+    # -------------------------------
+    if is_dangerous_input(request.description):
+        return {
+            "error": "⚠️ This request may be unsafe. Please try a different project idea."
+        }
+
+    # -------------------------------
+    # 2. Generate Projects
+    # -------------------------------
+    full_input = f"""
+    Project idea: {request.description}
+
+    User difficulty level: {request.difficulty}
+    User age: {request.age}
+    Available materials: {request.materials}
+
+    Generate suitable engineering projects based on this.
+    """
+
+    projects = generate_projects(full_input)
+
+    @app.get("/")
+    def root():
+        return {"status": "ForgeAI loading....."}
+
+    # -------------------------------
+    # 3. Output Safety Check
+    # -------------------------------
+    safe_projects = run_safety_check(projects)
+
+    return {"projects": safe_projects}
 
 def chat(request: ChatRequest):
 
@@ -215,3 +292,4 @@ def chat(request: ChatRequest):
     # 5. Return Clean Response
     # -------------------------------
     return {"reply": reply}
+

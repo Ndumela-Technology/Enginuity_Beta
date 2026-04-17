@@ -1,50 +1,120 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
+    <meta charset="UTF-8" />
     <title>ForgeAI</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 24px;
+            margin: 0;
+            background: #ffffff;
+            color: #111;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 34px;
+        }
+
+        .subtitle {
+            margin: 0 0 22px;
+            color: #333;
+            max-width: 720px;
+            line-height: 1.4;
+        }
+
+        .mode-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .mode-card {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            border: 1px solid #e6e6e6;
+            border-radius: 14px;
+            padding: 16px;
+            background: #fafafa;
+            transition: transform 120ms ease, box-shadow 120ms ease;
+        }
+
+        .mode-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+        }
+
+        .mode-title {
+            font-weight: 800;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .mode-desc {
+            margin: 0 0 12px;
+            color: #333;
+            line-height: 1.4;
+            min-height: 72px;
+        }
+
+        .mode-cta {
+            display: inline-block;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: #111;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .footer-note {
+            margin-top: 18px;
+            color: #555;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 800px) {
+            .mode-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>ForgeAI </h1>
+        <p class="subtitle">
+            Turning dreams into a reality.
+        </p>
 
-    <h1>ForgeAI Chat</h1>
+        <div class="mode-grid">
+            <a class="mode-card" href="apprentice.html">
+                <div class="mode-title">🌱 Apprentice</div>
+                <p class="mode-desc">Fully guided, step-by-step building with ForgeAI.</p>
+                <span class="mode-cta">Start Apprentice</span>
+            </a>
 
-    <button onclick="setMode('apprentice')">Apprentice</button>
-    <button onclick="setMode('associate')">Associate</button>
-    <button onclick="setMode('innovator')">Innovator</button>
+            <a class="mode-card" href="associate.html">
+                <div class="mode-title">🧩 Associate</div>
+                <p class="mode-desc">Semi-guided: collaborate with the assistant and iterate together.</p>
+                <span class="mode-cta">Start Associate</span>
+            </a>
 
-    <label for="userInput">Ask ForgeAI:</label>
-    <input id="userInput" placeholder="Ask ForgeAI..." />
-    <button onclick="sendMessage()">Send</button>
+            <a class="mode-card" href="innovator.html">
+                <div class="mode-title">💡 Innovator</div>
+                <p class="mode-desc">You lead, ForgeAI acts as a technical assistant for open-ended builds.</p>
+                <span class="mode-cta">Start Innovator</span>
+            </a>
+        </div>
 
-    <div id="chat"></div>
-
-    <script>
-        async function sendMessage() {
-
-            const input = document.getElementById("userInput");
-            const message = input.value;
-
-            const response = await fetch("http://127.0.0.1:8000/chat", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    mode: "innovator",
-                    message: message,
-                    history: [],
-                    memory: {}
-                })
-            });
-
-            const data = await response.json();
-
-            document.getElementById("chat").innerHTML +=
-                "<p><b>You:</b> " + message + "</p>" +
-                "<p><b>AI:</b> " + data.reply + "</p>";
-
-            input.value = "";
-        }
-    </script>
-
+        <div class="footer-note">
+            MVP tip: This project generator is the same across modes for now; More updates planned in the future.
+        </div>
+    </div>
 </body>
 </html>

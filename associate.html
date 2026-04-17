@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>ForgeAI - Associate</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 24px;
+            margin: 0;
+            background: #ffffff;
+            color: #111;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 12px;
+            color: #111;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 34px;
+        }
+
+        .subtitle {
+            margin: 0 0 22px;
+            color: #333;
+            max-width: 720px;
+            line-height: 1.4;
+        }
+
+        .generator {
+            border: 1px solid #e6e6e6;
+            border-radius: 14px;
+            background: #fafafa;
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+
+        .generator h2 {
+            margin: 0 0 14px;
+            font-size: 18px;
+        }
+
+        label {
+            display: block;
+            margin: 12px 0 6px;
+            font-weight: 700;
+            color: #222;
+        }
+
+        textarea, select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid #d9d9d9;
+            font-size: 14px;
+            background: #fff;
+        }
+
+        textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+
+        .actions {
+            margin-top: 14px;
+        }
+
+        button {
+            border: none;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: #111;
+            color: #fff;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.95;
+        }
+
+        .project {
+            border: 1px solid #e6e6e6;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            background: #fff;
+        }
+
+        .title {
+            font-weight: 900;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .section {
+            margin-top: 10px;
+        }
+
+        .pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 8px 0 0;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            background: #fcfcfc;
+            font-family: inherit;
+            line-height: 1.4;
+        }
+
+        .safety {
+            border: 1px solid #ffd2a8;
+            background: #fff7ef;
+            color: #6a3b00;
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .error {
+            border: 1px solid #ffb3b3;
+            background: #fff0f0;
+            color: #8a0000;
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a class="back" href="index.html">← Back</a>
+
+        <h1>ForgeAI - Associate</h1>
+        <p class="subtitle">
+            Semi-guided collaboration: ForgeAI helps you think, you can modify decisions.
+        </p>
+
+        <div class="generator">
+            <h2>Project Generator</h2>
+
+            <label for="customization">Customization (what should ForgeAI change/focus on?)</label>
+            <textarea id="customization" placeholder="Example: keep it low-cost, add more electronics, make it outdoor-safe, or avoid soldering."></textarea>
+
+            <label for="engineeringField">Field of engineering you are most interested in</label>
+            <select id="engineeringField">
+                <option value="">Select a field (optional)</option>
+                <option value="Mechanical Engineering">Mechanical Engineering</option>
+                <option value="Electrical Engineering">Electrical Engineering</option>
+                <option value="Civil Engineering">Civil Engineering</option>
+                <option value="Aerospace Engineering">Aerospace Engineering</option>
+                <option value="Robotics">Robotics</option>
+                <option value="AI and Software Engineering">AI and Software Engineering</option>
+                <option value="Biomedical Engineering">Biomedical Engineering</option>
+                <option value="Environmental Engineering">Environmental Engineering</option>
+                <option value="Other">Other</option>
+            </select>
+
+            <label for="education">Education / age</label>
+            <select id="education" onchange="updateDifficulty()">
+                <option value="middle">Middle-Schooler (10–14)</option>
+                <option value="high">High-Schooler (15–18)</option>
+                <option value="student">Student (18–25)</option>
+                <option value="adult">Adult (25+)</option>
+            </select>
+            <input type="hidden" id="age" value="" />
+
+            <label for="difficulty">Difficulty (estimated time)</label>
+            <select id="difficulty"></select>
+
+            <label for="materials">What materials do you have?</label>
+            <textarea id="materials" placeholder="List what you already have (be as specific as you can)"></textarea>
+
+            <div class="actions">
+                <button onclick="generateProject()">Generate Project</button>
+            </div>
+        </div>
+
+        <hr />
+        <div id="output"></div>
+        <pre id="rawOutput" class="pre" style="margin-top:12px; display:none;"></pre>
+    </div>
+
+    <script>
+        const MODE = "Associate";
+        localStorage.setItem("forge_mode", MODE);
+
+        function escapeHtml(str) {
+            return String(str)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll("\"", "&quot;")
+                .replaceAll("'", "&#39;");
+        }
+
+        function nlToBr(escaped) {
+            return escaped.replace(/\n/g, "<br>");
+        }
+
+        function updateDifficulty() {
+            const education = document.getElementById("education").value;
+            const difficulty = document.getElementById("difficulty");
+            const ageHidden = document.getElementById("age");
+
+            let options = [];
+            let ageValue = "";
+
+            if (education === "middle") {
+                options = ["Easy (5–10 min)", "Medium (15–30 min)", "Hard (30–45 min)"];
+                ageValue = "10-14";
+            } else if (education === "high") {
+                options = ["Easy (10–30 min)", "Medium (45–60 min)", "Hard (60–90 min)"];
+                ageValue = "15-18";
+            } else if (education === "student") {
+                options = ["Easy (30–60 min)", "Medium (60–120 min)", "Hard (2 days–1 week)"];
+                ageValue = "18-25";
+            } else {
+                options = ["Easy (30–60 min)", "Medium (60–180 min)", "Hard (5 days–2 weeks)"];
+                ageValue = "25+";
+            }
+
+            ageHidden.value = ageValue;
+            difficulty.innerHTML = options.map(o => `<option>${o}</option>`).join("");
+        }
+
+        async function generateProject() {
+            const output = document.getElementById("output");
+            output.innerHTML = "";
+
+            const customization = document.getElementById("customization").value.trim();
+            const engineeringField = document.getElementById("engineeringField").value;
+            const difficulty = document.getElementById("difficulty").value;
+            const age = document.getElementById("age").value;
+            const materials = document.getElementById("materials").value;
+
+            try {
+                output.innerHTML = "ForgeAI is thinking...";
+                const descriptionWithField = [
+                    "Generate 3 engineering project options for Associate mode.",
+                    engineeringField ? `Engineering focus field: ${engineeringField}.` : null,
+                    customization ? `User customization request: ${customization}` : "User customization request: Keep projects practical and easy to personalize."
+                ].filter(Boolean).join("\n");
+
+                const response = await fetch("http://127.0.0.1:8000/generate-project", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        description: descriptionWithField,
+                        difficulty: difficulty,
+                        age: age,
+                        materials: materials
+                    })
+                });
+
+                const data = await response.json();
+                console.log(data);
+                const rawOutput = document.getElementById("rawOutput");
+                rawOutput.style.display = "none";
+                rawOutput.textContent = "";
+                window.lastProjectData = data;
+                displayProjects(data);
+            } catch (e) {
+                output.innerHTML = `<div class="error">Request failed: ${escapeHtml(e && e.message ? e.message : String(e))}</div>`;
+            }
+        }
+
+        function displayProjects(data) {
+            const output = document.getElementById("output");
+            output.innerHTML = "";
+
+            const payload = data && data.projects ? data.projects : null;
+
+            if (payload && payload.error) {
+                output.innerHTML = `<div class="error">${escapeHtml(payload.error)}</div>`;
+                return;
+            }
+
+            const normalized = normalizeProjects(data);
+            const projects = normalized.projects;
+            const safetyWarnings = normalized.safetyWarnings;
+
+            if (!projects.length) {
+                output.innerHTML = `<div class="error">No projects returned.</div>`;
+                return;
+            }
+
+            window.allProjects = projects;
+
+            if (safetyWarnings.length) {
+                const safetyDiv = document.createElement("div");
+                safetyDiv.className = "safety";
+                safetyDiv.innerHTML = `<strong>⚠️ Safety:</strong><div>${safetyWarnings.map(w => escapeHtml(w)).join("<br>")}</div>`;
+                output.appendChild(safetyDiv);
+            }
+
+            projects.forEach((proj, index) => {
+                const card = document.createElement("div");
+                card.style.marginBottom = "10px";
+                card.innerHTML = `
+                    <button onclick="showProject(${index})">
+                        ${escapeHtml(proj.title || "Project " + (index + 1))}
+                    </button>
+                `;
+                output.appendChild(card);
+            });
+
+            const helper = document.createElement("div");
+            helper.style.marginTop = "8px";
+            helper.textContent = "Pick one project to view full instructions.";
+            output.appendChild(helper);
+        }
+
+        function showProject(index) {
+            const proj = (window.allProjects || [])[index];
+            if (!proj) return;
+
+            const output = document.getElementById("output");
+            const materials = Array.isArray(proj.materials) ? proj.materials : [];
+            const steps = Array.isArray(proj.steps) ? proj.steps : [];
+            const materialsSuggested = Array.isArray(proj.materialsSuggested) ? proj.materialsSuggested : [];
+
+            const stepsHtml = steps.map(s => `<div>${nlToBr(escapeHtml(s))}</div>`).join("<br>");
+            const materialsHtml = materials.length
+                ? `<ul>${materials.map(m => `<li>${escapeHtml(m)}</li>`).join("")}</ul>`
+                : "<p>Not provided.</p>";
+            const suggestedHtml = materialsSuggested.length
+                ? `<div class="section"><strong>Materials Suggested:</strong><ul>${materialsSuggested.map(m => `<li>${escapeHtml(m)}</li>`).join("")}</ul></div>`
+                : "";
+
+            output.innerHTML = `
+                <div class="project">
+                    <div class="title">${escapeHtml(proj.title || "Untitled Project")}</div>
+                    <div class="section"><strong>Description:</strong><pre class="pre">${escapeHtml(proj.description || "Not provided.")}</pre></div>
+                    <div class="section"><strong>Materials Needed:</strong>${materialsHtml}</div>
+                    ${suggestedHtml}
+                    <div class="section"><strong>Steps:</strong><div>${stepsHtml || "Not provided."}</div></div>
+                    <div class="section"><strong>Engineering Explanation:</strong><pre class="pre">${escapeHtml(proj.engineeringExplanation || "Not provided.")}</pre></div>
+                    <div class="section"><strong>Physics Explanation:</strong><pre class="pre">${escapeHtml(proj.physicsExplanation || "Not provided.")}</pre></div>
+                </div>
+                <button onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>
+            `;
+        }
+
+        function normalizeProjects(data) {
+            const source = data || {};
+            const directPayload = source.projects || {};
+            const safetyWarnings = Array.isArray(directPayload.safety_warnings) ? directPayload.safety_warnings : [];
+
+            // Shape A: backend-style payload => { projects: { projects: [...] } }
+            if (directPayload && Array.isArray(directPayload.projects)) {
+                return {
+                    projects: directPayload.projects.map((proj) => ({
+                        title: proj.project_name || proj.title || "Untitled",
+                        description: proj.description || "",
+                        materials: proj.materials_needed || proj.materials || [],
+                        materialsSuggested: proj.materials_suggested || [],
+                        steps: proj.steps || [],
+                        engineeringExplanation: proj.engineering_explanation || "",
+                        physicsExplanation: proj.physics_explanation || ""
+                    })),
+                    safetyWarnings
+                };
+            }
+
+            // Shape B: suggestion object => { suggestion: { "Name": { ... } } }
+            if (source.suggestion && typeof source.suggestion === "object" && !Array.isArray(source.suggestion)) {
+                const projects = Object.entries(source.suggestion).map(([name, proj]) => ({
+                    title: name,
+                    description: proj && proj.description ? proj.description : "",
+                    materials: proj && Array.isArray(proj.materials_needed) ? proj.materials_needed : [],
+                    materialsSuggested: proj && Array.isArray(proj.materials_suggested) ? proj.materials_suggested : [],
+                    steps: proj && Array.isArray(proj.steps) ? proj.steps : [],
+                    engineeringExplanation: proj && proj.engineering_explanation ? proj.engineering_explanation : "",
+                    physicsExplanation: proj && proj.physics_explanation ? proj.physics_explanation : ""
+                }));
+
+                return { projects, safetyWarnings: [] };
+            }
+
+            return { projects: [], safetyWarnings };
+        }
+
+        updateDifficulty();
+    </script>
+</body>
+</html>
