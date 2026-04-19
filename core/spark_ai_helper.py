@@ -1,8 +1,8 @@
-from core.ai_engine import generate_projects
+from core.ai_engine import generate_chat_reply
 import streamlit as st
 
 # =====================================
-# ForgeAI Personality System
+# SparkAI personality system
 # =====================================
 
 def personality_layer(mode, education=None):
@@ -13,7 +13,7 @@ def personality_layer(mode, education=None):
 
         if education and "Middle-Schooler" in education:
             return """
-    You are ForgeAI.
+    You are SparkAI.
     Explain using very simple words.
     Maximum 3 short sentences.
     No technical vocabulary.
@@ -21,23 +21,23 @@ def personality_layer(mode, education=None):
 
         elif education and "High-Schooler" in education:
             return """
-    You are ForgeAI.
+    You are SparkAI.
     Explain clearly with light technical words.
     Keep answers under 6 sentences.
     """
 
         else:
             return """
-    You are ForgeAI.
+    You are SparkAI.
     Explain with correct engineering terminology.
     Encourage deeper thinking.
     """
 
 # =====================================
-# Main ForgeAI Chat Interface
+# SparkAI chat interface
 # =====================================
 
-def forge_chat(mode, chat_history, user_message, memory=None, education=None):
+def spark_chat(mode, chat_history, user_message, memory=None, education=None):
 
     if user_message is None:
         return "I didn't receive a message. Please try again."
@@ -78,6 +78,6 @@ def forge_chat(mode, chat_history, user_message, memory=None, education=None):
             "content": str(user_message)
         })
 
-    reply = generate_projects(messages, chat_mode=True)
+    reply = generate_chat_reply(messages)
 
     return reply

@@ -2,7 +2,7 @@ import streamlit as st
 from core.input_builder import build_user_description
 from core.ai_engine import generate_projects
 import re
-from core.forge_ai_helper import forge_chat
+from core.spark_ai_helper import spark_chat
 import numpy as np
 from openai import OpenAI
 import base64
@@ -47,8 +47,8 @@ if "associate_state" not in st.session_state:
 if "innovator_state" not in st.session_state:
     st.session_state.innovator_state = {"chat": []}
 
-if "forge_memory" not in st.session_state:
-    st.session_state.forge_memory = {
+if "spark_memory" not in st.session_state:
+    st.session_state.spark_memory = {
         "goal": "",
         "current_project": "",
         "constraints": "",
@@ -110,14 +110,6 @@ with st.expander("📂 Project Board"):
                 st.session_state.project_board.pop(i)
                 st.rerun()
 
-if "forge-memory" not in st.session_state:
-    st.session_state.forge_memory = {
-        "goal": "",
-        "current_project": "",
-        "constraints": "",
-        "notes": []
-    }
-
 # ----------------- Utility Functions -----------------
 client = OpenAI()
 
@@ -166,7 +158,7 @@ def render_physics_explanation(text):
 
 def speak_ai(text):
     # Use a string path to avoid Path object issues
-    speech_file_path = "forge_voice.mp3"
+    speech_file_path = "spark_voice.mp3"
 
     # Generate speech from OpenAI
     response = client.audio.speech.create(
@@ -200,7 +192,7 @@ def speak_ai(text):
 # ----------------- User Input Function -----------------
 def get_user_input(interaction_mode):
     if interaction_mode == "Text 💬":
-        return st.chat_input("Ask ForgeAI...")
+        return st.chat_input("Ask SparkAI...")
     elif interaction_mode == "Voice 🎙️":
         webrtc_streamer(
             key="voice_stream_live",
@@ -213,7 +205,7 @@ def get_user_input(interaction_mode):
             while not audio_queue.empty():
                 audio_data.append(audio_queue.get())
             audio_array = np.concatenate(audio_data).astype(np.float32)
-            tmp_file = "voice_input.wav"
+            tmp_file = "voice/voice_input.wav"
             sf.write(tmp_file, audio_array, 16000)
             with open(tmp_file, "rb") as f:
                 transcript = speech_to_text(f)
@@ -245,7 +237,7 @@ def show_base_page(topic):
     # =========================================================
     if experience == "Apprentice🌱":
             st.subheader("Learning Phase")
-            st.caption("Have ForgeAI teach you the basics to become your own engineer.")
+            st.caption("Have SparkAI teach you the basics to become your own engineer.")
 
             # ------------------------
             # Difficulty settings
@@ -451,10 +443,10 @@ def show_base_page(topic):
                             st.write(f"{i}. {step}")
 
             # =========================================================
-            # ForgeAI Helper (Apprentice Mini Assistant)
+            # SparkAI Helper (Apprentice Mini Assistant)
             # =========================================================
             st.divider()
-            st.subheader("🧠 ForgeAI Helper")
+            st.subheader("🧠 SparkAI Helper")
 
             st.caption("Here to be at your assistance")
 
@@ -467,9 +459,9 @@ def show_base_page(topic):
                 with st.chat_message("user"):
                     st.markdown(helper_input)
 
-                # Call ForgeAI
-                ai_reply = forge_chat("apprentice", st.session_state.chat_messages, helper_input,
-                                      st.session_state.forge_memory)
+                # Call SparkAI
+                ai_reply = spark_chat("apprentice", st.session_state.chat_messages, helper_input,
+                                      st.session_state.spark_memory)
 
                 st.session_state.helper_chat.append({"role": "assistant", "content": ai_reply})
                 with st.chat_message("assistant"):
@@ -575,20 +567,20 @@ def show_base_page(topic):
 
                 user_input = None
                 if interaction_mode == "Text 💬":
-                    user_input = st.chat_input("Ask ForgeAI...")
+                    user_input = st.chat_input("Ask SparkAI...")
                 elif voice_text:
                     user_input = voice_text
 
                 if user_input:
-                    # Send to ForgeAI
-                    ai_reply = forge_chat(
+                    # Send to SparkAI
+                    ai_reply = spark_chat(
                         "associate",
                         st.session_state.associate_state["chat"],
                         user_input
                     )
                     st.session_state.associate_state["chat"].append({"role": "user", "content": user_input})
                     st.session_state.associate_state["chat"].append({"role": "assistant", "content": ai_reply})
-                    st.markdown(f"**ForgeAI:** {ai_reply}")
+                    st.markdown(f"**SparkAI:** {ai_reply}")
 
                     if interaction_mode == "Voice 🎙️":
                         speak_ai(ai_reply)
@@ -757,7 +749,7 @@ def show_base_page(topic):
                         st.session_state.chat_messages.append({"role": "user", "content": user_input})
                         chat_messages = [
                             {"role": "system",
-                             "content": "You are ForgeAI, helping to adapt engineering projects to user specifications."},
+                             "content": "You are SparkAI, helping to adapt engineering projects to user specifications."},
                             {"role": "system",
                              "content": (
                                  f"Current project: {proj['project_name']}\n"
@@ -802,7 +794,7 @@ def show_base_page(topic):
     elif experience == "Innovator💡":
 
         st.subheader("Tony Stark Mode")
-        st.caption("Have ForgeAI become your engineering assistant.")
+        st.caption("Have SparkAI become your engineering assistant.")
 
         st.title(topic)
 
@@ -833,12 +825,12 @@ def show_base_page(topic):
                 "content": user_input
             })
 
-            # Call ForgeAI
-            ai_reply = forge_chat(
+            # Call SparkAI
+            ai_reply = spark_chat(
                 "innovator",
                 state["chat"],
                 user_input,
-                st.session_state.forge_memory
+                st.session_state.spark_memory
             )
 
             # Show AI reply
@@ -857,9 +849,9 @@ def show_base_page(topic):
 
             # Optional memory system
             if "goal" in user_input.lower():
-                st.session_state.forge_memory["goal"] = user_input
+                st.session_state.spark_memory["goal"] = user_input
 
             if "build" in user_input.lower() or "project" in user_input.lower():
-                st.session_state.forge_memory["current_project"] = user_input
+                st.session_state.spark_memory["current_project"] = user_input
 
-            st.session_state.forge_memory["notes"].append(user_input)
+            st.session_state.spark_memory["notes"].append(user_input)

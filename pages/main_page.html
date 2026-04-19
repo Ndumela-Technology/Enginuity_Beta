@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Enginuity</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles/enginuity.css" />
+    <style>
+        .site-header {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.25rem 0.5rem;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .brand-mark {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            transform: rotate(-1.2deg);
+        }
+
+        .brand-mark img {
+            width: clamp(52px, 12vw, 72px);
+            height: auto;
+            display: block;
+            filter: drop-shadow(1px 2px 0 rgba(180, 20, 20, 0.12));
+        }
+
+        .site-title {
+            margin: 0;
+            flex: 1;
+            text-align: center;
+            font-family: "Special Elite", "Courier New", Courier, monospace;
+            font-size: clamp(1.85rem, 5vw, 2.75rem);
+            color: var(--ink);
+            letter-spacing: 0.06em;
+            text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.6);
+            transform: rotate(0.35deg);
+        }
+
+        .btn-signin {
+            display: inline-block;
+            padding: 0.45rem 1rem 0.5rem;
+            border: 2.5px solid var(--eng-red);
+            border-radius: 4px 12px 6px 14px / 10px 5px 14px 8px;
+            color: var(--eng-red-deep);
+            font-family: "Special Elite", "Courier New", Courier, monospace;
+            font-size: 0.95rem;
+            text-decoration: none;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 2px 3px 0 rgba(60, 0, 0, 0.1);
+            transform: rotate(1deg);
+            white-space: nowrap;
+        }
+
+        .btn-signin:hover {
+            background: #fff;
+            transform: rotate(0deg) translateY(-1px);
+        }
+
+        .home-wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 1rem 2.5rem;
+        }
+
+        .home-tagline {
+            text-align: center;
+            margin: 0.25rem 0 1.25rem;
+            font-family: "Special Elite", "Courier New", Courier, monospace;
+            font-size: clamp(0.95rem, 2.4vw, 1.1rem);
+            color: var(--eng-red-ink);
+            opacity: 0.92;
+        }
+
+        .home-path {
+            position: relative;
+            min-height: clamp(520px, 78vh, 720px);
+            margin-top: 0.5rem;
+        }
+
+        .path-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: visible;
+        }
+
+        .path-layer svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .path-main {
+            fill: none;
+            stroke: var(--eng-red);
+            stroke-width: 5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            filter: url(#path-rough);
+            opacity: 0.95;
+        }
+
+        .path-shadow {
+            fill: none;
+            stroke: rgba(0, 0, 0, 0.07);
+            stroke-width: 7;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .path-head {
+            fill: var(--eng-red);
+            stroke: var(--eng-red-deep);
+            stroke-width: 1.2;
+            stroke-linejoin: round;
+        }
+
+        .mode-node {
+            position: absolute;
+            z-index: 1;
+            display: block;
+            width: min(300px, 86vw);
+            padding: 1rem 1.1rem 1.15rem;
+            border: 3px solid var(--eng-red);
+            border-radius: 6px 18px 8px 22px / 14px 8px 20px 10px;
+            background: rgba(255, 255, 255, 0.94);
+            color: var(--eng-red-deep);
+            text-decoration: none;
+            box-shadow:
+                3px 4px 0 rgba(120, 10, 10, 0.12),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+            transition: transform 0.14s ease, box-shadow 0.14s ease;
+        }
+
+        .mode-node:hover {
+            transform: scale(1.02) rotate(0deg) !important;
+            box-shadow: 4px 6px 0 rgba(120, 10, 10, 0.14);
+        }
+
+        .mode-node--apprentice {
+            top: 4%;
+            right: 2%;
+            transform: rotate(-0.8deg);
+        }
+
+        .mode-node--associate {
+            top: 38%;
+            left: 1%;
+            transform: rotate(0.9deg);
+        }
+
+        .mode-node--innovator {
+            bottom: 6%;
+            right: 3%;
+            transform: rotate(-1.1deg);
+        }
+
+        .mode-node__label {
+            font-family: "Special Elite", "Courier New", Courier, monospace;
+            font-size: 1.35rem;
+            margin: 0 0 0.35rem;
+            color: var(--eng-red);
+        }
+
+        .mode-node__desc {
+            margin: 0 0 0.65rem;
+            font-size: 0.92rem;
+            line-height: 1.45;
+            color: var(--ink);
+        }
+
+        .mode-node__cta {
+            display: inline-block;
+            font-weight: 800;
+            font-size: 0.82rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--eng-red-deep);
+        }
+
+        .footer-note {
+            position: relative;
+            z-index: 2;
+            max-width: 640px;
+            margin: 2rem auto 0;
+            padding: 0 0.5rem;
+            font-size: 0.82rem;
+            line-height: 1.45;
+            color: rgba(30, 30, 30, 0.65);
+            text-align: center;
+        }
+
+        @media (max-width: 720px) {
+            .path-layer {
+                display: none;
+            }
+
+            .home-path {
+                min-height: 640px;
+            }
+
+            .mode-node--apprentice {
+                top: 2%;
+                right: auto;
+                left: 50%;
+                transform: translateX(-50%) rotate(-0.5deg);
+            }
+
+            .mode-node--associate {
+                top: 36%;
+                left: 50%;
+                transform: translateX(-50%) rotate(0.5deg);
+            }
+
+            .mode-node--innovator {
+                bottom: 4%;
+                right: auto;
+                left: 50%;
+                transform: translateX(-50%) rotate(-0.6deg);
+            }
+        }
+    </style>
+</head>
+<body class="enginuity-paper">
+    <header class="site-header">
+        <a class="brand-mark" href="main_page.html" data-no-loader="true" aria-label="Enginuity home">
+            <img src="../assets/logo.svg" width="72" height="62" alt="" />
+        </a>
+        <h1 class="site-title">Enginuity</h1>
+        <a class="btn-signin" href="#" data-no-loader="true">Sign In</a>
+    </header>
+
+    <div class="home-wrap">
+        <p class="home-tagline">Turning dreams into a reality.</p>
+
+        <main class="home-path" aria-label="Choose your learning path">
+            <div class="path-layer" aria-hidden="true">
+                <svg viewBox="0 0 400 620" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <filter id="path-rough" x="-5%" y="-5%" width="110%" height="110%">
+                            <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="t" />
+                            <feDisplacementMap in="SourceGraphic" in2="t" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
+                        </filter>
+                    </defs>
+                    <!-- sketchy double stroke feel -->
+                    <path
+                        class="path-shadow"
+                        d="M 402 118 C 352 98 318 78 288 88 C 248 102 228 168 188 198 C 148 228 88 248 72 288 C 58 322 88 358 128 378 C 188 408 268 418 298 448 C 322 472 312 512 268 538 C 228 562 198 568 202 598"
+                    />
+                    <path
+                        class="path-main"
+                        d="M 400 115 C 350 95 316 75 286 85 C 246 99 226 165 186 195 C 146 225 86 245 70 285 C 56 319 86 355 126 375 C 186 405 266 415 296 445 C 320 469 310 509 266 535 C 226 559 196 565 200 595"
+                    />
+                    <polygon class="path-head" points="200,595 188,582 212,582" />
+                </svg>
+            </div>
+
+            <a class="mode-node mode-node--apprentice" href="apprentice.html">
+                <div class="mode-node__label">Apprentice</div>
+                <p class="mode-node__desc">Fully guided, step-by-step building with SparkAI.</p>
+                <span class="mode-node__cta">Start →</span>
+            </a>
+
+            <a class="mode-node mode-node--associate" href="associate.html">
+                <div class="mode-node__label">Associate</div>
+                <p class="mode-node__desc">Semi-guided: you and SparkAI iterate together.</p>
+                <span class="mode-node__cta">Start →</span>
+            </a>
+
+            <a class="mode-node mode-node--innovator" href="innovator.html">
+                <div class="mode-node__label">Innovator</div>
+                <p class="mode-node__desc">You lead; SparkAI is your technical assistant.</p>
+                <span class="mode-node__cta">Start →</span>
+            </a>
+        </main>
+
+        <p class="footer-note">
+            MVP: the project generator is shared across modes for now. More SparkAI-powered paths are planned.
+        </p>
+    </div>
+
+    <script src="../js/enginuity-loading%20screen.js" defer></script>
+</body>
+</html>

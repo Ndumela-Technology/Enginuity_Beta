@@ -1,0 +1,143 @@
+/* Enginuity — workshop sketch theme (red / white / graph paper) */
+
+:root {
+  --eng-red: #d81f26;
+  --eng-red-deep: #a81418;
+  --eng-red-ink: #8f0f14;
+  --paper: #f7f3eb;
+  --grid-line: rgba(120, 145, 170, 0.28);
+  --grid-line-strong: rgba(100, 125, 155, 0.22);
+  --ink: #1a1a1a;
+  --eng-loader-red: #d81f26;
+}
+
+/* ---- Graph paper ---- */
+body.enginuity-paper {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(var(--grid-line-strong) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line-strong) 1px, transparent 1px);
+  background-size:
+    28px 28px,
+    28px 28px,
+    7px 7px,
+    7px 7px;
+  background-position: 0 0, 0 0, 0 0, 0 0;
+}
+
+/* ---- Type (typewriter / workshop labels) ---- */
+.enginuity-typewriter {
+  font-family: "Special Elite", "Courier New", Courier, monospace;
+  letter-spacing: 0.04em;
+}
+
+/* ---- Full-screen loader ---- */
+.enginuity-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.75rem;
+  padding: 2rem 1.5rem 3rem;
+  background: var(--eng-loader-red);
+  color: #fff;
+  text-align: center;
+  overflow: hidden;
+}
+
+.enginuity-loader.is-active {
+  display: flex;
+}
+
+.enginuity-loader__logo {
+  width: clamp(72px, 18vw, 104px);
+  height: auto;
+  /* Red artwork → white line art on loader red */
+  filter: brightness(0) invert(1) drop-shadow(0 1px 0 rgba(0, 0, 0, 0.12));
+}
+
+.enginuity-loader__tagline {
+  margin: 0;
+  max-width: 22rem;
+  font-family: "Special Elite", "Courier New", Courier, monospace;
+  font-size: clamp(1rem, 3.5vw, 1.35rem);
+  line-height: 1.45;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+}
+
+.enginuity-loader__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+.enginuity-loader__dots {
+  font-size: 1.4rem;
+  letter-spacing: 0.15em;
+  line-height: 1;
+  opacity: 0.95;
+  animation: enginuity-dots 1.2s steps(4, end) infinite;
+}
+
+@keyframes enginuity-dots {
+  0% { opacity: 0.35; }
+  100% { opacity: 1; }
+}
+
+.enginuity-gear {
+  width: 44px;
+  height: 44px;
+  color: #fff;
+  animation: enginuity-spin 1.15s linear infinite;
+}
+
+@keyframes enginuity-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enginuity-gear {
+    animation: none;
+  }
+
+  .enginuity-loader__dots {
+    animation: none;
+  }
+}
+
+/* ---- Inner pages: back link ---- */
+body.enginuity-paper .back {
+  display: inline-block;
+  margin-bottom: 14px;
+  padding: 0.35rem 0.75rem;
+  border: 2.5px solid var(--eng-red);
+  border-radius: 3px 10px 5px 12px / 8px 4px 12px 6px;
+  color: var(--eng-red-deep);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 2px 3px 0 rgba(40, 0, 0, 0.08);
+  transform: rotate(-0.4deg);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+body.enginuity-paper .back:hover {
+  transform: rotate(0deg) translateY(-1px);
+  box-shadow: 3px 4px 0 rgba(40, 0, 0, 0.1);
+}
+
+body.enginuity-paper .container {
+  position: relative;
+  z-index: 1;
+}

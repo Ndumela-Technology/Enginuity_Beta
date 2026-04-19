@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Optional
 from core.ai_engine import generate_projects, generate_chat_reply, run_safety_check
-from core.forge_ai_helper import forge_chat
 from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
 
@@ -56,7 +55,7 @@ Rules:
 def personality_layer(mode: str, education: str = None, age_group: str = None):
     # Core identity (stable foundation)
     instructions = [
-        "You are an AI assistant that helps users learn, build, and create projects."
+        "You are SparkAI, the assistant on Enginuity — you help users learn, build, and create safe engineering projects."
     ]
 
     # --------------------------nd-
@@ -182,7 +181,7 @@ class ChatRequest(BaseModel):
 
 @app.get("/")
 def root():
-    return {"status": "ForgeAI backend running"}
+    return {"status": "Enginuity API — SparkAI ready"}
 
 
 @app.post("/chat")
@@ -216,7 +215,7 @@ def chat(request: ChatRequest):
     # -------------------------------
     reply = generate_chat_reply(messages)
 
-    # -------------------------------
+    # -----------------------------
     # 5. Return Clean Response
     # -------------------------------
     return {"reply": reply}
@@ -247,49 +246,9 @@ def generate_project(request: ProjectRequest):
 
     projects = generate_projects(full_input)
 
-    @app.get("/")
-    def root():
-        return {"status": "ForgeAI loading....."}
-
     # -------------------------------
     # 3. Output Safety Check
     # -------------------------------
     safe_projects = run_safety_check(projects)
 
     return {"projects": safe_projects}
-
-def chat(request: ChatRequest):
-
-    messages = []
-
-    # -------------------------------
-    # 1. System Prompt (mode-based)
-    # -------------------------------
-    system_prompt = personality_layer(request.mode, request.education)
-    messages.append({"role": "system", "content": system_prompt})
-
-    # -------------------------------
-    # 2. Chat History
-    # -------------------------------
-    for msg in request.history:
-        if msg.get("content"):  # prevents null errors
-            messages.append(msg)
-
-    # -------------------------------
-    # 3. Current User Message
-    # -------------------------------
-    messages.append({
-        "role": "user",
-        "content": request.message
-    })
-
-    # -------------------------------
-    # 4. Generate Reply
-    # -------------------------------
-    reply = generate_chat_reply(messages)
-
-    # -------------------------------
-    # 5. Return Clean Response
-    # -------------------------------
-    return {"reply": reply}
-

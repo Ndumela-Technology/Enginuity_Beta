@@ -2,7 +2,7 @@ import os
 from openai import OpenAI
 import json
 from dotenv import load_dotenv, find_dotenv
-from prompts import SYSTEM_PROMPT
+from prompt.prompts import SYSTEM_PROMPT
 
 # Load .env
 load_dotenv(find_dotenv())

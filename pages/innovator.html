@@ -2,13 +2,16 @@
 <html>
 <head>
     <meta charset="UTF-8" />
-    <title>ForgeAI - Innovator</title>
+    <title>Enginuity · Innovator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../styles/enginuity.css" />
     <style>
         body {
             font-family: Arial, Helvetica, sans-serif;
             padding: 24px;
             margin: 0;
-            background: #ffffff;
             color: #111;
         }
 
@@ -171,13 +174,13 @@
         }
     </style>
 </head>
-<body>
+<body class="enginuity-paper">
     <div class="container">
-        <a class="back" href="index.html">← Back</a>
+        <a class="back" href="main_page.html">← Back</a>
 
-        <h1>ForgeAI - Innovator</h1>
+        <h1>Enginuity · Innovator</h1>
         <p class="subtitle">
-            You lead the project—ForgeAI acts as a technical assistant for open-ended builds.
+            You lead the project—SparkAI acts as a technical assistant for open-ended builds.
         </p>
 
         <div class="generator">
@@ -218,19 +221,19 @@
             <div class="chat-messages" id="chatMessages"></div>
 
             <div class="chat-compose">
-                <textarea id="chatInput" class="chat-input" placeholder="Ask ForgeAI for help. For example: 'Help me choose a sensor and design the steps.'" ></textarea>
+                <textarea id="chatInput" class="chat-input" placeholder="Ask SparkAI for help. For example: 'Help me choose a sensor and design the steps.'" ></textarea>
                 <button id="sendBtn" style="height: 54px;">Send</button>
             </div>
-            <div id="chatThinking" class="thinking" style="display:none;">ForgeAI is thinking...</div>
+            <div id="chatThinking" class="thinking" style="display:none;">SparkAI is thinking...</div>
             <div class="footer-note" id="chatHint" style="margin-top: 10px;">
-                Tip: set your preferences above, then chat naturally and iterate your build with ForgeAI.
+                Tip: set your preferences above, then chat naturally and iterate your build with SparkAI.
             </div>
         </div>
     </div>
 
     <script>
         const MODE = "Innovator";
-        localStorage.setItem("forge_mode", MODE);
+        localStorage.setItem("enginuity_mode", MODE);
 
         // -------------------------
         // Chat state
@@ -388,8 +391,9 @@
         // Initial assistant nudge (no backend call).
         appendChatMessage(
             "assistant",
-            "Hi! I'm your Innovator assistant. You lead the build—tell me your next decision (materials, design, steps) and I'll help you refine it."
+            "Hi! I'm SparkAI in Innovator mode. You lead the build—tell me your next decision (materials, design, steps) and I'll help you refine it."
         );
     </script>
+    <script src="../js/enginuity-loading%20screen.js" defer></script>
 </body>
 </html>

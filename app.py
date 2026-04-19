@@ -2,10 +2,10 @@ import streamlit as st
 
 
 #Main Page Title
-st.set_page_config("Bored For Engineers", page_icon="🛠️")
+st.set_page_config("Enginuity", page_icon="🛠️")
 st.page_link("app.py", label= "home", icon= "🏠")
 
-st.title("🛠️Bored For Engineers"),
+st.title("🛠️ Enginuity"),
 st.subheader("Build what you have. master what you make")
 
 st.write("Your AI sidekick for Hands-On Discovery")
