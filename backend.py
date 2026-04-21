@@ -244,6 +244,7 @@ def generate_project(request: ProjectRequest):
     Generate suitable engineering projects based on this.
     """
 
+
     projects = generate_projects(full_input)
 
     # -------------------------------

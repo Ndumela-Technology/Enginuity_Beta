@@ -24,7 +24,7 @@
     wrap.setAttribute("aria-live", "polite");
     wrap.setAttribute("aria-busy", "false");
     wrap.innerHTML =
-      '<img class="enginuity-loader__logo" src="assets/logo.svg" alt="" width="104" height="90" />' +
+      '<img class="enginuity-loader__logo" src="/assets/logo-white.svg" alt="" width="104" height="90" />' +
       '<p class="enginuity-loader__tagline">Turning dreams into a reality....</p>' +
       '<div class="enginuity-loader__bottom">' +
       GEAR_SVG +

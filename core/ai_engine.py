@@ -13,6 +13,22 @@ print("DEBUG: OPENAI_API_KEY =", os.getenv("OPENAI_API_KEY"))
 # Only create client after loading env
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+def _extract_first_json_object(text: str):
+    """
+    Best-effort: pull the first JSON object from a string.
+    Handles cases where the model accidentally adds extra text.
+    """
+    if not text:
+        raise json.JSONDecodeError("Empty response", "", 0)
+
+    start = text.find("{")
+    if start == -1:
+        raise json.JSONDecodeError("No JSON object start found", text, 0)
+
+    decoder = json.JSONDecoder()
+    obj, _ = decoder.raw_decode(text[start:])
+    return obj
+
 
 def generate_projects(input_data):
     # -----------------------------------
@@ -31,15 +47,8 @@ def generate_projects(input_data):
             response_format={"type": "json_object"}
         )
 
-        content = response.choices[0].message.content.strip()
-
-        # JSON projects mode
-        start = content.find("{")
-        end = content.rfind("}") + 1
-        content = content[start:end]
-
-        project_data = json.loads(content)
-        return project_data
+        content = (response.choices[0].message.content or "").strip()
+        return _extract_first_json_object(content)
 
     except json.JSONDecodeError:
         return {"error": "AI response was not valid JSON. Try again."}
@@ -81,9 +90,9 @@ def run_safety_check(project_data):
                 "- HIGH: dangerous and should be blocked\n\n"
                 "Respond in JSON:\n"
                 "{\n"
-                "  'risk_level': 'LOW' | 'MEDIUM' | 'HIGH',\n"
-                "  'warnings': [list of safety concerns],\n"
-                "  'fix': 'only if HIGH risk'\n"
+                "  \"risk_level\": \"LOW\" | \"MEDIUM\" | \"HIGH\",\n"
+                "  \"warnings\": [list of safety concerns],\n"
+                "  \"fix\": \"only if HIGH risk\"\n"
                 "}\n\n"
                 "IMPORTANT:\n"
                 "- DO NOT mark simple materials (cardboard, glue, tape) as HIGH risk\n"
@@ -101,17 +110,12 @@ def run_safety_check(project_data):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=safety_prompt,
-            temperature=0
+            temperature=0,
+            response_format={"type": "json_object"}
         )
 
-        content = response.choices[0].message.content.strip()
-
-        # Extract JSON safely
-        start = content.find("{")
-        end = content.rfind("}") + 1
-        content = content[start:end]
-
-        safety_result = json.loads(content)
+        content = (response.choices[0].message.content or "").strip()
+        safety_result = _extract_first_json_object(content)
 
         # -------------------------------
         # Handle Safety Levels

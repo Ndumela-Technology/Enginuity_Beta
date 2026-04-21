@@ -152,19 +152,16 @@
         </p>
 
         <div class="generator">
-            <h2>Project Generator</h2>
+            <h2>Spark Generator</h2>
 
             <label for="engineeringField">Field of engineering you are most interested in</label>
             <select id="engineeringField">
                 <option value="">Select a field (optional)</option>
-                <option value="Mechanical Engineering">Mechanical Engineering</option>
-                <option value="Electrical Engineering">Electrical Engineering</option>
-                <option value="Civil Engineering">Civil Engineering</option>
-                <option value="Aerospace Engineering">Aerospace Engineering</option>
-                <option value="Robotics">Robotics</option>
-                <option value="AI and Software Engineering">AI and Software Engineering</option>
-                <option value="Biomedical Engineering">Biomedical Engineering</option>
-                <option value="Environmental Engineering">Environmental Engineering</option>
+                <option value="Mechanical Engineering⚙️">Mechanical Engineering</option>
+                <option value="Electrical Engineering⚡">Electrical Engineering</option>
+                <option value="Civil Engineering🏗️">Civil Engineering</option>
+                <option value="Aerospace Engineering✈️">Aerospace Engineering</option>
+                <option value="AI and Software Engineering💻">AI and Software Engineering</option>
                 <option value="Other">Other</option>
             </select>
 
@@ -348,6 +345,7 @@
                     <div class="section"><strong>Steps:</strong><div>${stepsHtml || "Not provided."}</div></div>
                     <div class="section"><strong>Engineering Explanation:</strong><pre class="pre">${escapeHtml(proj.engineeringExplanation || "Not provided.")}</pre></div>
                     <div class="section"><strong>Physics Explanation:</strong><pre class="pre">${escapeHtml(proj.physicsExplanation || "Not provided.")}</pre></div>
+                    <button onclick="saveProject(${index})">💾 Save Project</button>
                 </div>
                 <button onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>
             `;
@@ -395,6 +393,7 @@
         // initialize once page loads
         updateDifficulty();
     </script>
+    <script src="../js/saved-projects.js" defer></script>
     <script src="../js/enginuity-loading%20screen.js" defer></script>
 </body>
 </html>
