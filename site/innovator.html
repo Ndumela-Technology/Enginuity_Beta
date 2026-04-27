@@ -252,6 +252,55 @@
             return escaped.replace(/\n/g, "<br>");
         }
 
+        function extractBalancedJsonSubstring(s) {
+            const t = String(s).trim();
+            if (!t.length) return null;
+            const firstObj = t.indexOf("{");
+            const firstArr = t.indexOf("[");
+            let i0 = -1;
+            if (firstObj === -1) i0 = firstArr;
+            else if (firstArr === -1) i0 = firstObj;
+            else i0 = Math.min(firstObj, firstArr);
+            if (i0 === -1) return null;
+
+            const stack = [];
+            let inString = false;
+            let escape = false;
+            for (let i = i0; i < t.length; i++) {
+                const ch = t[i];
+                if (inString) {
+                    if (escape) {
+                        escape = false;
+                        continue;
+                    }
+                    if (ch === "\\") {
+                        escape = true;
+                        continue;
+                    }
+                    if (ch === '"') inString = false;
+                    continue;
+                }
+                if (ch === '"') {
+                    inString = true;
+                    continue;
+                }
+                if (ch === "{") {
+                    stack.push("}");
+                    continue;
+                }
+                if (ch === "[") {
+                    stack.push("]");
+                    continue;
+                }
+                if (ch === "}" || ch === "]") {
+                    if (!stack.length || ch !== stack[stack.length - 1]) continue;
+                    stack.pop();
+                    if (!stack.length) return t.slice(i0, i + 1);
+                }
+            }
+            return null;
+        }
+
         function explanationToText(value) {
             if (value == null || value === "") return "";
 
@@ -261,12 +310,12 @@
                     .replace(/^```(?:json)?\s*/i, "")
                     .replace(/```$/i, "")
                     .trim();
-                const jsonLike = ((withoutFence.startsWith("{") && withoutFence.endsWith("}")) || (withoutFence.startsWith("[") && withoutFence.endsWith("]")))
-                    ? withoutFence
-                    : (() => {
-                        const match = withoutFence.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-                        return match ? match[1] : null;
-                    })();
+                let jsonLike = null;
+                if ((withoutFence.startsWith("{") && withoutFence.endsWith("}")) || (withoutFence.startsWith("[") && withoutFence.endsWith("]"))) {
+                    jsonLike = withoutFence;
+                } else {
+                    jsonLike = extractBalancedJsonSubstring(withoutFence);
+                }
 
                 if (jsonLike) {
                     try {
@@ -283,7 +332,7 @@
             }
 
             if (typeof value === "object") {
-                const preferredKeys = ["reply", "explanation", "physics_explanation", "physicsExplanation", "engineering_explanation", "engineeringExplanation", "text", "summary"];
+                const preferredKeys = ["reply", "message", "response", "answer", "content", "explanation", "physics_explanation", "physicsExplanation", "engineering_explanation", "engineeringExplanation", "text", "summary"];
                 for (const key of preferredKeys) {
                     if (Object.prototype.hasOwnProperty.call(value, key) && value[key]) {
                         return explanationToText(value[key]);
@@ -301,13 +350,30 @@
                     lines.push(`${label}: ${explanationToText(val)}`);
                 });
                 if (lines.length) return lines.join("\n\n");
+                try {
+                    return JSON.stringify(value, null, 2);
+                } catch (_) {
+                    return String(value);
+                }
             }
 
             return String(value);
         }
 
+        function stripDisplayMathDelimiters(text) {
+            let t = String(text);
+            t = t.replace(/([0-9A-Za-z]+)\$\$\$\$+([0-9A-Za-z]+)/g, "$1 $2");
+            while (t.includes("$$$$")) {
+                t = t.replace(/\$\$\$\$/g, "$$");
+            }
+            t = t.replace(/\$\$\s*([\s\S]*?)\s*\$\$/g, "\n$1\n");
+            t = t.replace(/(?<=[0-9A-Za-z])\$\$(?=[0-9A-Za-z])/g, " ");
+            t = t.replace(/\$\$/g, "");
+            return t;
+        }
+
         function formatAssistantText(rawText) {
-            const normalized = explanationToText(rawText);
+            const normalized = stripDisplayMathDelimiters(explanationToText(rawText));
             const latexCleaned = normalized
                 .replace(/\\\[\s*/g, "\n")
                 .replace(/\s*\\\]/g, "\n")
@@ -516,14 +582,40 @@
                 }
 
                 const data = await response.json();
-                if (!data || !data.reply) {
+                function pickChatReply(d) {
+                    if (!d || typeof d !== "object") return "";
+                    const keys = ["reply", "message", "response", "answer", "text", "content"];
+                    for (const k of keys) {
+                        if (!Object.prototype.hasOwnProperty.call(d, k)) continue;
+                        const v = d[k];
+                        if (v == null || v === "") continue;
+                        if (typeof v === "string" && !v.trim()) continue;
+                        return v;
+                    }
+                    return "";
+                }
+                let replyPayload = pickChatReply(data);
+                if (!replyPayload && data && data.error) {
+                    replyPayload = typeof data.error === "string" ? data.error : JSON.stringify(data.error);
+                }
+                let replyText =
+                    typeof replyPayload === "object"
+                        ? explanationToText(replyPayload)
+                        : typeof replyPayload === "string"
+                          ? explanationToText(replyPayload)
+                          : replyPayload != null
+                            ? String(replyPayload)
+                            : "";
+                replyText = String(replyText || "").trim();
+
+                if (!replyText) {
                     appendChatMessage("assistant", "Sorry, I couldn't generate a reply. Please try again.");
                     return;
                 }
 
-                appendChatMessage("assistant", data.reply);
+                appendChatMessage("assistant", replyText);
 
-                chatHistory.push({ role: "assistant", content: data.reply });
+                chatHistory.push({ role: "assistant", content: replyText });
             } catch (e) {
                 appendChatMessage("assistant", `Request failed: ${e && e.message ? e.message : String(e)}`);
             } finally {
