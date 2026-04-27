@@ -645,7 +645,10 @@
 
         const name = localStorage.getItem("user_name");
         if (name) {
-            document.getElementById("welcome").innerText = `Welcome, ${name}`;
+            var welcomeEl = document.getElementById("welcome");
+            if (welcomeEl) {
+                welcomeEl.innerText = `Welcome, ${name}`;
+}
 
             const btn = document.querySelector(".g_id_signin");
             if (btn) btn.style.display = "none";
