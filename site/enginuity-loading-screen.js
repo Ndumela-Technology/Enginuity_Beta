@@ -59,17 +59,21 @@
   }
 
   document.addEventListener(
-    "click",
-    function (e) {
-      var a = e.target.closest && e.target.closest("a[href]");
-      if (!shouldInterceptAnchor(a, e)) return;
-      e.preventDefault();
-      showLoader();
-      var url = a.href;
-      window.setTimeout(function () {
-        window.location.href = url;
-      }, 420);
+  "click",
+  function (e) {
+    var a = e.target.closest && e.target.closest("a[href]");
+
+    console.log("CLICKED LINK:", a?.getAttribute("href"));
+
+    if (!shouldInterceptAnchor(a, e)) return;
+    e.preventDefault();
+    showLoader();
+
+    var url = a.href;
+    window.setTimeout(function () {
+      window.location.href = url;
+    }, 420);
     },
     true
-  );
+);
 })();
