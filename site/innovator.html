@@ -375,6 +375,32 @@
             // Scroll to bottom after render.
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
+        
+        function updateDifficulty() {
+            const education = document.getElementById("education").value;
+            const difficulty = document.getElementById("difficulty");
+            const ageHidden = document.getElementById("age");
+
+            let options = [];
+            let ageValue = "";
+
+            if (education === "middle") {
+                options = ["Easy: 10–20 min", "Medium: 25–45 min", "Hard: 45–70 min"];
+                ageValue = "10-14";
+            } else if (education === "high") {
+                options = ["Easy: 20–40 min", "Medium: 40–75 min", "Hard: 75–120 min"];
+                ageValue = "15-18";
+            } else if (education === "student") {
+                options = ["Easy: 45–90 min", "Medium: 90–180 min", "Hard: 1–3 days"];
+                ageValue = "18-25";
+            } else {
+                options = ["Easy: 60–120 min", "Medium: 2–4 hours", "Hard: 3–7 days"];
+                ageValue = "25+";
+            }
+
+            ageHidden.value = ageValue;
+            difficulty.innerHTML = options.map(o => `<option>${o}</option>`).join("");
+        }
 
         function saveSession() {
             if (typeof window.saveProjectWithMeta !== "function") {
