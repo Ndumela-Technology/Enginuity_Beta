@@ -376,32 +376,6 @@
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
         
-        function updateDifficulty() {
-            const education = document.getElementById("education").value;
-            const difficulty = document.getElementById("difficulty");
-            const ageHidden = document.getElementById("age");
-
-            let options = [];
-            let ageValue = "";
-
-            if (education === "middle") {
-                options = ["Easy: 10–20 min", "Medium: 25–45 min", "Hard: 45–70 min"];
-                ageValue = "10-14";
-            } else if (education === "high") {
-                options = ["Easy: 20–40 min", "Medium: 40–75 min", "Hard: 75–120 min"];
-                ageValue = "15-18";
-            } else if (education === "student") {
-                options = ["Easy: 45–90 min", "Medium: 90–180 min", "Hard: 1–3 days"];
-                ageValue = "18-25";
-            } else {
-                options = ["Easy: 60–120 min", "Medium: 2–4 hours", "Hard: 3–7 days"];
-                ageValue = "25+";
-            }
-
-            ageHidden.value = ageValue;
-            difficulty.innerHTML = options.map(o => `<option>${o}</option>`).join("");
-        }
-
         function saveSession() {
             if (typeof window.saveProjectWithMeta !== "function") {
                 alert("Save service is unavailable.");
@@ -413,7 +387,7 @@
             const age = document.getElementById("age").value;
             const summary = chatHistory.length
                 ? "Saved Innovator session with your chat history."
-                 "Saved Innovator session with your current preferences.";
+                : "Saved Innovator session with your current preferences.";
 
             const project = {
                 title: lastSelectedProjectName || "Innovator Session",
@@ -438,24 +412,35 @@
             const saved = window.consumeResumeProject();
             if (!saved) return;
             if (saved.page && saved.page !== "innovator.html") return;
-
-            if (Array.isArray(saved.steps) && saved.steps.length) {
-                chatHistory = [];
-                document.getElementById("chatMessages").innerHTML = "";
-                saved.steps.forEach((line) => {
-                    if (typeof line !== "string") return;
-                    if (line.startsWith("USER: ")) {
-                        const text = line.slice(6);
-                        chatHistory.push({ role: "user", content: text });
-                        appendChatMessage("user", text);
-                    } else if (line.startsWith("ASSISTANT: ")) {
-                        const text = line.slice(11);
-                        chatHistory.push({ role: "assistant", content: text });
-                        appendChatMessage("assistant", text);
-                    }
-                });
-            }
+            hydrateChatFromSaved(saved);
         }
+
+        function hydrateChatFromSaved(saved) {
+            if (!saved || !Array.isArray(saved.steps) || !saved.steps.length) return;
+            chatHistory = [];
+            document.getElementById("chatMessages").innerHTML = "";
+            if (saved.title) {
+                lastSelectedProjectName = saved.title;
+            }
+            saved.steps.forEach((line) => {
+                if (typeof line !== "string") return;
+                if (line.startsWith("USER: ")) {
+                    const text = line.slice(6);
+                    chatHistory.push({ role: "user", content: text });
+                    appendChatMessage("user", text);
+                } else if (line.startsWith("ASSISTANT: ")) {
+                    const text = line.slice(11);
+                    chatHistory.push({ role: "assistant", content: text });
+                    appendChatMessage("assistant", text);
+                }
+            });
+        }
+
+        function renderSavedProject(project) {
+            hydrateChatFromSaved(project);
+        }
+
+        window.renderSavedProject = renderSavedProject;
 
         function updateDifficulty() {
             const education = document.getElementById("education").value;
@@ -466,16 +451,16 @@
             let ageValue = "";
 
             if (education === "middle") {
-                options = ["Easy: 20–35 min", "Medium: 35–70 min", "Hard: 70–120 min"];
+                options = ["Easy: 5–10 min", "Medium: 15–30 min", "Hard: 30–45 min"];
                 ageValue = "10-14";
             } else if (education === "high") {
-                options = ["Easy: 30–60 min", "Medium: 60–120 min", "Hard: 2–4 hours"];
+                options = ["Easy: 8–20 min", "Medium: 30–50 min", "Hard: 50–75 min"];
                 ageValue = "15-18";
             } else if (education === "student") {
-                options = ["Easy: 60–120 min", "Medium: 2–5 hours", "Hard: 1–5 days"];
+                options = ["Easy: 20–45 min", "Medium: 45–90 min", "Hard: 90–150 min"];
                 ageValue = "18-25";
             } else {
-                options = ["Easy: 2–4 hours", "Medium: 4–8 hours", "Hard: 1–2 weeks"];
+                options = ["Easy: 25–50 min", "Medium: 50–120 min", "Hard: 2–4 days"];
                 ageValue = "25+";
             }
 
@@ -490,6 +475,7 @@
 
             // Optimistically render user message.
             appendChatMessage("user", userText);
+            chatHistory.push({ role: "user", content: userText });
             inputEl.value = "";
 
             const sendBtn = document.getElementById("sendBtn");
@@ -525,6 +511,10 @@
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}`);
+                }
+
                 const data = await response.json();
                 if (!data || !data.reply) {
                     appendChatMessage("assistant", "Sorry, I couldn't generate a reply. Please try again.");
@@ -533,8 +523,6 @@
 
                 appendChatMessage("assistant", data.reply);
 
-                // Update local history for next turn.
-                chatHistory.push({ role: "user", content: userText });
                 chatHistory.push({ role: "assistant", content: data.reply });
             } catch (e) {
                 appendChatMessage("assistant", `Request failed: ${e && e.message ? e.message : String(e)}`);

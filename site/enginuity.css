@@ -134,24 +134,26 @@ body.enginuity-paper {
   color: rgba(30, 30, 30, 0.72);
 }
 
-#savedProjects .project {
-  display: flex;
+#savedProjects .saved-project-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.3rem 0;
-  border-bottom: 1px dashed rgba(0, 0, 0, 0.1);
-  font-family: "Special Elite", "Courier New", Courier, monospace;
-  letter-spacing: 0.02em;
+  gap: 0.6rem;
+  margin-bottom: 0.55rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(216, 31, 38, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.95);
 }
 
-#savedProjects .project strong {
+#savedProjects .saved-project-card:last-child {
+  margin-bottom: 0;
+}
+
+#savedProjects .saved-project-card__title {
+  font-family: "Special Elite", "Courier New", Courier, monospace;
   font-weight: 800;
   color: rgba(20, 20, 20, 0.92);
-}
-
-#savedProjects .project:last-child {
-  border-bottom: none;
 }
 
 #savedProjects button {

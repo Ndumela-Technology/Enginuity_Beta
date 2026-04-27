@@ -532,9 +532,9 @@
             try {
                 if (btn) {
                     btn.disabled = true;
-                    btn.textContent = "Refreshing...";
+                    btn.textContent = "Loading...";
                 }
-                if (statusEl) statusEl.textContent = "Updating your selected project with your additions...";
+                if (statusEl) statusEl.textContent = "Loading...";
 
                 const baseMaterials = Array.isArray(proj.materials) ? proj.materials.join(", ") : "";
                 const baseSteps = Array.isArray(proj.steps) ? proj.steps.join(" | ") : "";
@@ -550,7 +550,7 @@
                     `User requested additions: ${contribution}`
                 ].filter(Boolean).join("\n");
 
-                const response = await fetch("http://127.0.0.1:8000/generate-project", {
+                const response = await fetch("https://enginuity-cpl1.onrender.com/generate-project", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -560,6 +560,10 @@
                         materials: materials
                     })
                 });
+
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}`);
+                }
 
                 const data = await response.json();
                 const normalized = normalizeProjects(data);
@@ -610,6 +614,15 @@
             window.lastProjectData = { projects: { projects: [saved] } };
             showProject(0);
         }
+
+        function renderSavedProject(project) {
+            if (!project) return;
+            window.allProjects = [project];
+            window.lastProjectData = { projects: { projects: [project] } };
+            showProject(0);
+        }
+
+        window.renderSavedProject = renderSavedProject;
 
         function normalizeProjects(data) {
             const source = data || {};

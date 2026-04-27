@@ -20,14 +20,28 @@
 
   function normalizeProjectForSave(project) {
     if (!project || typeof project !== "object") return null;
+    var normalizedMaterials = Array.isArray(project.materials || project.materials_needed)
+      ? (project.materials || project.materials_needed)
+      : [];
+    var normalizedSteps = Array.isArray(project.steps) ? project.steps : [];
     return {
       title: project.title || project.project_name || "Project",
       description: project.description || "",
-      materials: project.materials || project.materials_needed || [],
+      materials: normalizedMaterials,
       materialsSuggested: project.materialsSuggested || project.materials_suggested || [],
-      steps: project.steps || [],
+      steps: normalizedSteps,
       engineeringExplanation: project.engineeringExplanation || project.engineering_explanation || "",
-      physicsExplanation: project.physicsExplanation || project.physics_explanation || ""
+      physicsExplanation: project.physicsExplanation || project.physics_explanation || "",
+      // Keep the full normalized project shape for exact replay in UI.
+      fullProject: {
+        title: project.title || project.project_name || "Project",
+        description: project.description || "",
+        materials: normalizedMaterials,
+        materialsSuggested: project.materialsSuggested || project.materials_suggested || [],
+        steps: normalizedSteps,
+        engineeringExplanation: project.engineeringExplanation || project.engineering_explanation || "",
+        physicsExplanation: project.physicsExplanation || project.physics_explanation || ""
+      }
     };
   }
 
@@ -55,17 +69,32 @@
   function startSavedProject(savedIndex) {
     var list = Array.isArray(window.savedProjects) ? window.savedProjects : [];
     var proj = list[savedIndex];
-    if (!proj || !proj.page) return;
+    if (!proj) return;
 
-    var email = getEmail();
-    if (!email) return;
+    if (typeof window.renderSavedProject === "function") {
+      window.renderSavedProject(proj.fullProject || proj);
+      return;
+    }
 
-    localStorage.setItem(buildResumeKey(email), JSON.stringify({
-      savedIndex: savedIndex,
-      project: proj
-    }));
+    // Fallback renderer for pages without a custom project renderer.
+    var container = document.getElementById("savedProjects");
+    if (!container) return;
+    var safeTitle = String(proj.title || "Project").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    var safeDescription = String(proj.description || "Not provided.")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    var steps = Array.isArray(proj.steps) ? proj.steps : [];
+    var materials = Array.isArray(proj.materials) ? proj.materials : [];
 
-    window.location.href = proj.page;
+    container.innerHTML =
+      '<div class="saved-project-preview">' +
+      "<h3>" + safeTitle + "</h3>" +
+      "<p><strong>Description:</strong> " + safeDescription + "</p>" +
+      "<p><strong>Materials:</strong> " + (materials.length ? materials.map(function (m) { return String(m).replace(/</g, "&lt;").replace(/>/g, "&gt;"); }).join(", ") : "Not provided.") + "</p>" +
+      "<p><strong>Steps:</strong></p>" +
+      "<ol>" + steps.map(function (s) { return "<li>" + String(s).replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</li>"; }).join("") + "</ol>" +
+      '<button type="button" onclick="loadSavedProjects()">Back to saved projects</button>' +
+      "</div>";
   }
 
   function consumeResumeProject() {
@@ -172,15 +201,15 @@
 
     projects.forEach(function (proj, index) {
       var row = document.createElement("div");
-      row.className = "project";
+      row.className = "saved-project-card";
       var safeTitle = String(proj.title || "Project").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       row.innerHTML =
-        "<strong>" +
+        '<div class="saved-project-card__title">' +
         safeTitle +
-        "</strong>" +
+        "</div>" +
         '<button type="button" onclick="viewSavedProject(' +
         index +
-        ')">Resume</button>';
+        ')">Open Project</button>';
       container.appendChild(row);
     });
 

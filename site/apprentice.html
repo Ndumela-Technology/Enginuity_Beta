@@ -639,6 +639,15 @@
         showProject(0);
     }
 
+    function renderSavedProject(project) {
+        if (!project) return;
+        window.allProjects = [project];
+        window.lastProjectData = { projects: { projects: [project] } };
+        showProject(0);
+    }
+
+    window.renderSavedProject = renderSavedProject;
+
     window.onload = function () {
         updateDifficulty();
         loadSavedProjects();
