@@ -58,22 +58,19 @@
     return true;
   }
 
-  document.addEventListener(
-  "click",
-  function (e) {
-    var a = e.target.closest && e.target.closest("a[href]");
+  document.addEventListener("click", function (e) {
+      var a = e.target.closest("a[href]");
 
-    console.log("CLICKED LINK:", a?.getAttribute("href"));
+      console.log("CLICKED ELEMENT:", a);
+      console.log("HREF:", a?.getAttribute("href"));
 
-    if (!shouldInterceptAnchor(a, e)) return;
-    e.preventDefault();
-    showLoader();
+      if (!shouldInterceptAnchor(a, e)) return;
 
-    var url = a.href;
-    window.setTimeout(function () {
-      window.location.href = url;
-    }, 420);
-    },
-    true
-);
+      e.preventDefault();
+      showLoader();
+
+      setTimeout(function () {
+        window.location.href = a.href;
+      }, 420);
+  }, true);
 })();
