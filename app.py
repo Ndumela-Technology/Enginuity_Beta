@@ -13,13 +13,13 @@ st.write("Your AI sidekick for Hands-On Discovery")
 #User Input
 st.write("Which topic do you want to do a project on?: ")
 
-st.page_link("pages/aerospace.py", label= "Aerospace✈️")
-st.page_link("pages/chemical.py", label= "Chemical🧪")
-st.page_link("pages/mechanical.py", label= "Mechanical🔧")
-st.page_link("pages/electrical.py", label= "Electrical💡")
-st.page_link("pages/ai_coding.py", label= "Computer Science💻")
-st.page_link("pages/robotics.py", label= "Robotics🤖")
-st.page_link("pages/civil.py", label= "Civil🏗️")
+st.page_link("frontend/aerospace.py", label="Aerospace✈️")
+st.page_link("frontend/chemical.py", label="Chemical🧪")
+st.page_link("frontend/mechanical.py", label="Mechanical🔧")
+st.page_link("frontend/electrical.py", label="Electrical💡")
+st.page_link("frontend/ai_coding.py", label="Computer Science💻")
+st.page_link("frontend/robotics.py", label="Robotics🤖")
+st.page_link("frontend/civil.py", label="Civil🏗️")
 
 
 

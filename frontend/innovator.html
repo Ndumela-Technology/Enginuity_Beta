@@ -6,7 +6,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="../styles/enginuity.css" />
+    <link rel="stylesheet" href="../site/enginuity.css" />
     <style>
         body {
             font-family: Arial, Helvetica, sans-serif;
@@ -176,7 +176,7 @@
 </head>
 <body class="enginuity-paper">
     <div class="container">
-        <a class="back" href="main_page.html">← Back</a>
+        <a class="back" href="../site/index.html">← Back</a>
 
         <h1>Enginuity · Innovator</h1>
         <p class="subtitle">
@@ -485,7 +485,7 @@
             const messageToSend = context ? `${context}\n\n${userText}` : userText;
 
             try {
-                const response = await fetch("http://127.0.0.1:8000/chat", {
+                const response = await fetch("https://enginuity-cpl1.onrender.com/chat", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -538,7 +538,7 @@
         );
         resumeSavedProjectIfAny();
     </script>
-    <script src="../js/saved-projects.js" defer></script>
+    <script src="../site/saved-projects.js" defer></script>
     <script src="../js/enginuity-loading%20screen.js" defer></script>
 </body>
 </html>
