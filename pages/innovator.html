@@ -217,6 +217,7 @@
             <div class="chat-compose">
                 <textarea id="chatInput" class="chat-input" placeholder="Ask SparkAI for help. For example: 'Help me choose a sensor and design the steps.'" ></textarea>
                 <button id="sendBtn" style="height: 54px;">Send</button>
+                <button id="saveSessionBtn" style="height: 54px;">Save Session</button>
             </div>
             <div id="chatThinking" class="thinking" style="display:none;">SparkAI is thinking...</div>
             <div class="footer-note" id="chatHint" style="margin-top: 10px;">
@@ -248,6 +249,81 @@
             return escaped.replace(/\n/g, "<br>");
         }
 
+        function explanationToText(value) {
+            if (value == null || value === "") return "";
+
+            if (typeof value === "string") {
+                const trimmed = value.trim();
+                const withoutFence = trimmed
+                    .replace(/^```(?:json)?\s*/i, "")
+                    .replace(/```$/i, "")
+                    .trim();
+                const jsonLike = ((withoutFence.startsWith("{") && withoutFence.endsWith("}")) || (withoutFence.startsWith("[") && withoutFence.endsWith("]")))
+                    ? withoutFence
+                    : (() => {
+                        const match = withoutFence.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+                        return match ? match[1] : null;
+                    })();
+
+                if (jsonLike) {
+                    try {
+                        return explanationToText(JSON.parse(jsonLike));
+                    } catch (_) {
+                        return withoutFence || value;
+                    }
+                }
+                return withoutFence || value;
+            }
+
+            if (Array.isArray(value)) {
+                return value.map((item) => explanationToText(item)).join("\n");
+            }
+
+            if (typeof value === "object") {
+                const preferredKeys = ["reply", "explanation", "physics_explanation", "physicsExplanation", "engineering_explanation", "engineeringExplanation", "text", "summary"];
+                for (const key of preferredKeys) {
+                    if (Object.prototype.hasOwnProperty.call(value, key) && value[key]) {
+                        return explanationToText(value[key]);
+                    }
+                }
+                const lines = [];
+                Object.entries(value).forEach(([key, val]) => {
+                    if (val == null || val === "") return;
+                    const label = key
+                        .replace(/_/g, " ")
+                        .replace(/([a-z])([A-Z])/g, "$1 $2")
+                        .replace(/\s+/g, " ")
+                        .trim()
+                        .replace(/^./, (c) => c.toUpperCase());
+                    lines.push(`${label}: ${explanationToText(val)}`);
+                });
+                if (lines.length) return lines.join("\n\n");
+            }
+
+            return String(value);
+        }
+
+        function formatAssistantText(rawText) {
+            const normalized = explanationToText(rawText);
+            const latexCleaned = normalized
+                .replace(/\\\[\s*/g, "\n")
+                .replace(/\s*\\\]/g, "\n")
+                .replace(/\\text\{([^}]*)\}/g, "$1")
+                .replace(/\\rightarrow/g, " -> ")
+                .replace(/\\,/g, " ")
+                .replace(/\{([^}]*)\}/g, "$1")
+                .replace(/\s{2,}/g, " ")
+                .trim();
+            const escaped = escapeHtml(latexCleaned);
+            const withBold = escaped.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+            const withSubscripts = withBold.replace(/_([0-9]+)/g, "<sub>$1</sub>");
+            const normalizedMarkdown = withSubscripts
+                .replace(/^#{1,6}\s*(.+)$/gm, "<strong>$1</strong>")
+                .replace(/^\s*[-*]\s+/gm, "• ")
+                .replace(/^\s*>\s?/gm, "");
+            return nlToBr(normalizedMarkdown);
+        }
+
         function getEducationLabel() {
             const education = document.getElementById("education").value;
             const labels = {
@@ -260,7 +336,8 @@
         }
 
         function buildChatContext() {
-            const materials = document.getElementById("materials").value.trim();
+            const materialsEl = document.getElementById("materials");
+            const materials = materialsEl ? materialsEl.value.trim() : "";
             const difficulty = document.getElementById("difficulty").value;
             const age = document.getElementById("age").value;
             const engineeringField = document.getElementById("engineeringField").value;
@@ -283,14 +360,72 @@
 
             const bubble = document.createElement("div");
             bubble.className = "bubble";
-            // Use textContent to avoid HTML injection; pre-wrap styling preserves newlines.
-            bubble.textContent = text;
+            if (role === "assistant") {
+                bubble.innerHTML = formatAssistantText(text);
+            } else {
+                bubble.textContent = text;
+            }
 
             row.appendChild(bubble);
             messagesEl.appendChild(row);
 
             // Scroll to bottom after render.
             messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        function saveSession() {
+            if (typeof window.saveProjectWithMeta !== "function") {
+                alert("Save service is unavailable.");
+                return;
+            }
+
+            const engineeringField = document.getElementById("engineeringField").value;
+            const difficulty = document.getElementById("difficulty").value;
+            const age = document.getElementById("age").value;
+            const summary = chatHistory.length
+                ? "Saved Innovator session with your chat history."
+                : "Saved Innovator session with your current preferences.";
+
+            const project = {
+                title: lastSelectedProjectName || "Innovator Session",
+                description: summary,
+                materials: [],
+                steps: chatHistory.map((entry) => `${entry.role.toUpperCase()}: ${entry.content}`),
+                engineeringExplanation: `Field: ${engineeringField || "Not set"}`,
+                physicsExplanation: `Difficulty: ${difficulty || "Not set"} | Age: ${age || "Not set"}`
+            };
+
+            const saved = window.saveProjectWithMeta(project, {
+                mode: MODE,
+                page: "innovator.html"
+            });
+            if (saved && typeof window.showSavedToast === "function") {
+                window.showSavedToast("✅ Session saved!");
+            }
+        }
+
+        function resumeSavedProjectIfAny() {
+            if (typeof window.consumeResumeProject !== "function") return;
+            const saved = window.consumeResumeProject();
+            if (!saved) return;
+            if (saved.page && saved.page !== "innovator.html") return;
+
+            if (Array.isArray(saved.steps) && saved.steps.length) {
+                chatHistory = [];
+                document.getElementById("chatMessages").innerHTML = "";
+                saved.steps.forEach((line) => {
+                    if (typeof line !== "string") return;
+                    if (line.startsWith("USER: ")) {
+                        const text = line.slice(6);
+                        chatHistory.push({ role: "user", content: text });
+                        appendChatMessage("user", text);
+                    } else if (line.startsWith("ASSISTANT: ")) {
+                        const text = line.slice(11);
+                        chatHistory.push({ role: "assistant", content: text });
+                        appendChatMessage("assistant", text);
+                    }
+                });
+            }
         }
 
         function updateDifficulty() {
@@ -302,16 +437,16 @@
             let ageValue = "";
 
             if (education === "middle") {
-                options = ["Easy (5–10 min)", "Medium (15–30 min)", "Hard (30–45 min)"];
+                options = ["Easy: 20–35 min", "Medium: 35–70 min", "Hard: 70–120 min"];
                 ageValue = "10-14";
             } else if (education === "high") {
-                options = ["Easy (10–30 min)", "Medium (45–60 min)", "Hard (60–90 min)"];
+                options = ["Easy: 30–60 min", "Medium: 60–120 min", "Hard: 2–4 hours"];
                 ageValue = "15-18";
             } else if (education === "student") {
-                options = ["Easy (30–60 min)", "Medium (60–120 min)", "Hard (2 days–1 week)"];
+                options = ["Easy: 60–120 min", "Medium: 2–5 hours", "Hard: 1–5 days"];
                 ageValue = "18-25";
             } else {
-                options = ["Easy (30–60 min)", "Medium (60–180 min)", "Hard (5 days–2 weeks)"];
+                options = ["Easy: 2–4 hours", "Medium: 4–8 hours", "Hard: 1–2 weeks"];
                 ageValue = "25+";
             }
 
@@ -333,6 +468,17 @@
             sendBtn.disabled = true;
             sendBtn.textContent = "Sending...";
             chatThinking.style.display = "block";
+            const thinkingSteps = [
+                "SparkAI is thinking...",
+                "Reviewing your project context...",
+                "Composing response..."
+            ];
+            let thinkingIdx = 0;
+            chatThinking.textContent = thinkingSteps[thinkingIdx];
+            const thinkingTimer = setInterval(() => {
+                thinkingIdx = (thinkingIdx + 1) % thinkingSteps.length;
+                chatThinking.textContent = thinkingSteps[thinkingIdx];
+            }, 900);
 
             // Add context into the message (backend does not have a separate memory field).
             const context = buildChatContext();
@@ -364,14 +510,17 @@
             } catch (e) {
                 appendChatMessage("assistant", `Request failed: ${e && e.message ? e.message : String(e)}`);
             } finally {
+                clearInterval(thinkingTimer);
                 sendBtn.disabled = false;
                 sendBtn.textContent = "Send";
                 chatThinking.style.display = "none";
+                chatThinking.textContent = "SparkAI is thinking...";
             }
         }
 
         // Wire up chat events.
         document.getElementById("sendBtn").addEventListener("click", sendMessage);
+        document.getElementById("saveSessionBtn").addEventListener("click", saveSession);
         document.getElementById("chatInput").addEventListener("keydown", (e) => {
             // Enter to send, Shift+Enter to add newline.
             if (e.key === "Enter" && !e.shiftKey) {
@@ -387,7 +536,9 @@
             "assistant",
             "Hi! I'm SparkAI in Innovator mode. You lead the build—tell me your next decision (materials, design, steps) and I'll help you refine it."
         );
+        resumeSavedProjectIfAny();
     </script>
+    <script src="../js/saved-projects.js" defer></script>
     <script src="../js/enginuity-loading%20screen.js" defer></script>
 </body>
 </html>

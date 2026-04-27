@@ -31,6 +31,96 @@
     };
   }
 
+  function buildResumeKey(email) {
+    return "enginuity_resume_project::" + email;
+  }
+
+  function showSavedToast(message) {
+    var msg = document.createElement("div");
+    msg.innerText = message || "✅ Project saved!";
+
+    msg.style.position = "fixed";
+    msg.style.bottom = "20px";
+    msg.style.right = "20px";
+    msg.style.background = "#111";
+    msg.style.color = "#fff";
+    msg.style.padding = "10px 14px";
+    msg.style.borderRadius = "10px";
+    msg.style.fontWeight = "600";
+
+    document.body.appendChild(msg);
+    setTimeout(function () { msg.remove(); }, 2000);
+  }
+
+  function startSavedProject(savedIndex) {
+    var list = Array.isArray(window.savedProjects) ? window.savedProjects : [];
+    var proj = list[savedIndex];
+    if (!proj || !proj.page) return;
+
+    var email = getEmail();
+    if (!email) return;
+
+    localStorage.setItem(buildResumeKey(email), JSON.stringify({
+      savedIndex: savedIndex,
+      project: proj
+    }));
+
+    window.location.href = proj.page;
+  }
+
+  function consumeResumeProject() {
+    var email = getEmail();
+    if (!email) return null;
+    var key = buildResumeKey(email);
+
+    try {
+      var raw = localStorage.getItem(key);
+      if (!raw) return null;
+      localStorage.removeItem(key);
+      var parsed = JSON.parse(raw);
+      return parsed && parsed.project ? parsed.project : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveProjectWithMeta(project, meta) {
+    var email = getEmail();
+    if (!email) {
+      alert("Please sign in first.");
+      return false;
+    }
+
+    var normalized = normalizeProjectForSave(project);
+    if (!normalized) {
+      alert("No project found to save.");
+      return false;
+    }
+
+    var mode = (meta && meta.mode) || "";
+    var page = (meta && meta.page) || "";
+    normalized.mode = mode;
+    normalized.page = page;
+    normalized.savedAt = new Date().toISOString();
+
+    var allSaved = readAllSaved();
+    if (!Array.isArray(allSaved[email])) allSaved[email] = [];
+
+    var alreadyExists = allSaved[email].some(function (p) {
+      return p.title === normalized.title && p.mode === normalized.mode;
+    });
+
+    if (!alreadyExists) {
+      allSaved[email].push(normalized);
+      writeAllSaved(allSaved);
+    }
+
+    if (typeof window.loadSavedProjects === "function") {
+      window.loadSavedProjects();
+    }
+    return true;
+  }
+
   // Save by index into window.allProjects (used by mode pages)
   function saveProject(index) {
     var email = getEmail();
@@ -46,23 +136,18 @@
       return;
     }
 
-    var allSaved = readAllSaved();
-    if (!Array.isArray(allSaved[email])) allSaved[email] = [];
+    var mode = (window.MODE || "").trim();
+    var page = window.location.pathname.split("/").pop() || "";
+    saveProjectWithMeta(proj, { mode: mode, page: page });
 
-    allSaved[email].push(proj);
-    writeAllSaved(allSaved);
-
-    alert("Project saved!");
+    showSavedToast("✅ Project saved!");
     if (typeof window.loadSavedProjects === "function") {
       window.loadSavedProjects();
     }
   }
 
   function viewSavedProject(index) {
-    var list = Array.isArray(window.savedProjects) ? window.savedProjects : [];
-    var proj = list[index];
-    if (!proj) return;
-    alert(proj.description || "No description available");
+    startSavedProject(index);
   }
 
   function loadSavedProjects() {
@@ -95,7 +180,7 @@
         "</strong>" +
         '<button type="button" onclick="viewSavedProject(' +
         index +
-        ')">View</button>';
+        ')">Resume</button>';
       container.appendChild(row);
     });
 
@@ -103,7 +188,11 @@
   }
 
   window.saveProject = saveProject;
+  window.saveProjectWithMeta = saveProjectWithMeta;
   window.loadSavedProjects = loadSavedProjects;
   window.viewSavedProject = viewSavedProject;
+  window.consumeResumeProject = consumeResumeProject;
+  window.startSavedProject = startSavedProject;
+  window.showSavedToast = showSavedToast;
 })();
 

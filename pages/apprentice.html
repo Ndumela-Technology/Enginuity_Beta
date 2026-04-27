@@ -140,6 +140,24 @@
             border-radius: 12px;
             margin-bottom: 16px;
         }
+
+        .thinking-box {
+            border: 1px solid #d7d7d7;
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+        }
+
+        .thinking-title {
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .thinking-step {
+            color: #555;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body class="enginuity-paper">
@@ -191,208 +209,448 @@
     </div>
 
     <script>
-        const MODE = "Apprentice";
-        localStorage.setItem("enginuity_mode", MODE);
+    const MODE = "Apprentice";
+    localStorage.setItem("forge_mode", MODE);
 
-        function escapeHtml(str) {
-            return String(str)
-                .replaceAll("&", "&amp;")
-                .replaceAll("<", "&lt;")
-                .replaceAll(">", "&gt;")
-                .replaceAll("\"", "&quot;")
-                .replaceAll("'", "&#39;");
-        }
+    function escapeHtml(str) {
+        return String(str)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll("\"", "&quot;")
+            .replaceAll("'", "&#39;");
+    }
 
-        function nlToBr(escaped) {
-            return escaped.replace(/\n/g, "<br>");
-        }
+    function nlToBr(escaped) {
+        return escaped.replace(/\n/g, "<br>");
+    }
 
-        function updateDifficulty() {
-            const education = document.getElementById("education").value;
-            const difficulty = document.getElementById("difficulty");
-            const ageHidden = document.getElementById("age");
+    function explanationToText(value) {
+        if (value == null || value === "") return "Not provided.";
 
-            let options = [];
-            let ageValue = "";
+        if (typeof value === "string") {
+            const trimmed = value.trim();
+            const withoutFence = trimmed
+                .replace(/^```(?:json)?\s*/i, "")
+                .replace(/```$/i, "")
+                .trim();
+            const jsonLike = ((withoutFence.startsWith("{") && withoutFence.endsWith("}")) || (withoutFence.startsWith("[") && withoutFence.endsWith("]")))
+                ? withoutFence
+                : (() => {
+                    const match = withoutFence.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+                    return match ? match[1] : null;
+                })();
 
-            if (education === "middle") {
-                options = ["Easy (5–10 min)", "Medium (15–30 min)", "Hard (30–45 min)"];
-                ageValue = "10-14";
-            } else if (education === "high") {
-                options = ["Easy (10–30 min)", "Medium (45–60 min)", "Hard (60–90 min)"];
-                ageValue = "15-18";
-            } else if (education === "student") {
-                options = ["Easy (30–60 min)", "Medium (60–120 min)", "Hard (2 days–1 week)"];
-                ageValue = "18-25";
-            } else {
-                options = ["Easy (30–60 min)", "Medium (60–180 min)", "Hard (5 days–2 weeks)"];
-                ageValue = "25+";
+            if (jsonLike) {
+                try {
+                    return explanationToText(JSON.parse(jsonLike));
+                } catch (_) {
+                    return withoutFence || value;
+                }
             }
-
-            ageHidden.value = ageValue;
-            difficulty.innerHTML = options.map(o => `<option>${o}</option>`).join("");
+            return withoutFence || value;
         }
 
-        async function generateProject() {
-            const output = document.getElementById("output");
-            output.innerHTML = "";
+        if (Array.isArray(value)) {
+            return value.map((item) => explanationToText(item)).join("\n");
+        }
 
-            const engineeringField = document.getElementById("engineeringField").value;
-            const difficulty = document.getElementById("difficulty").value;
-            const age = document.getElementById("age").value;
-            const materials = document.getElementById("materials").value;
-
+        if (typeof value === "object") {
+            const preferredKeys = ["explanation", "physics_explanation", "physicsExplanation", "engineering_explanation", "engineeringExplanation", "text", "summary"];
+            for (const key of preferredKeys) {
+                if (Object.prototype.hasOwnProperty.call(value, key) && value[key]) {
+                    return explanationToText(value[key]);
+                }
+            }
+            const lines = [];
+            Object.entries(value).forEach(([key, val]) => {
+                if (val == null || val === "") return;
+                const label = key
+                    .replace(/_/g, " ")
+                    .replace(/([a-z])([A-Z])/g, "$1 $2")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                    .replace(/^./, (c) => c.toUpperCase());
+                const text = explanationToText(val).trim();
+                lines.push(`${label}: ${text}`);
+            });
+            if (lines.length) return lines.join("\n\n");
             try {
-                output.innerHTML = "SparkAI is thinking...";
-                const descriptionWithField = [
-                    "Generate 3 beginner-friendly hands-on engineering project options.",
-                    engineeringField ? `Engineering focus field: ${engineeringField}.` : null,
-                    "The user is in Apprentice mode and needs full guidance."
-                ].filter(Boolean).join("\n");
-
-                const response = await fetch("http://127.0.0.1:8000/generate-project", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        description: descriptionWithField,
-                        difficulty: difficulty,
-                        age: age,
-                        materials: materials
-                    })
-                });
-
-                const data = await response.json();
-                console.log(data);
-                const rawOutput = document.getElementById("rawOutput");
-                rawOutput.style.display = "none";
-                rawOutput.textContent = "";
-                window.lastProjectData = data;
-                displayProjects(data);
-            } catch (e) {
-                output.innerHTML = `<div class="error">Request failed: ${escapeHtml(e && e.message ? e.message : String(e))}</div>`;
+                return JSON.stringify(value, null, 2);
+            } catch (_) {
+                return String(value);
             }
         }
 
-        function displayProjects(data) {
-            const output = document.getElementById("output");
-            output.innerHTML = "";
+        return String(value);
+    }
 
-            const payload = data && data.projects ? data.projects : null;
+    function formatStepHtml(stepValue) {
+        const escaped = escapeHtml(stepValue == null ? "" : String(stepValue));
+        const boldPrefix = escaped.replace(
+            /^(\s*Step\s*\d+\s*[:.)-]?)/i,
+            "<strong>$1</strong>"
+        );
+        return `<div>${nlToBr(boldPrefix)}</div>`;
+    }
 
-            if (payload && payload.error) {
-                output.innerHTML = `<div class="error">${escapeHtml(payload.error)}</div>`;
-                return;
-            }
+    function formatExplanationHtml(value) {
+        const text = explanationToText(value);
+        const escaped = escapeHtml(text);
+        const withBold = escaped.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        return nlToBr(withBold);
+    }
 
-            const normalized = normalizeProjects(data);
-            const projects = normalized.projects;
-            const safetyWarnings = normalized.safetyWarnings;
+    function updateDifficulty() {
+        const education = document.getElementById("education").value;
+        const difficulty = document.getElementById("difficulty");
+        const ageHidden = document.getElementById("age");
 
-            if (!projects.length) {
-                output.innerHTML = `<div class="error">No projects returned.</div>`;
-                return;
-            }
+        let options = [];
+        let ageValue = "";
 
-            window.allProjects = projects;
+        if (education === "middle") {
+            options = ["Easy: 5–10 min", "Medium: 15–30 min", "Hard: 30–45 min"];
+            ageValue = "10-14";
+        } else if (education === "high") {
+            options = ["Easy: 8–20 min", "Medium: 30–50 min", "Hard: 50–75 min"];
+            ageValue = "15-18";
+        } else if (education === "student") {
+            options = ["Easy: 20–45 min", "Medium: 45–90 min", "Hard: 90–150 min"];
+            ageValue = "18-25";
+        } else {
+            options = ["Easy: 25–50 min", "Medium: 50–120 min", "Hard: 2–4 days"];
+            ageValue = "25+";
+        }
 
-            if (safetyWarnings.length) {
-                const safetyDiv = document.createElement("div");
-                safetyDiv.className = "safety";
-                safetyDiv.innerHTML = `<strong>⚠️ Safety:</strong><div>${safetyWarnings.map(w => escapeHtml(w)).join("<br>")}</div>`;
-                output.appendChild(safetyDiv);
-            }
+        ageHidden.value = ageValue;
+        difficulty.innerHTML = options.map(o => `<option>${o}</option>`).join("");
+    }
 
-            projects.forEach((proj, index) => {
-                const card = document.createElement("div");
-                card.style.marginBottom = "10px";
-                card.innerHTML = `
-                    <button onclick="showProject(${index})">
-                        ${escapeHtml(proj.title || "Project " + (index + 1))}
-                    </button>
-                `;
-                output.appendChild(card);
+    function renderThinkingState(stepText) {
+        const output = document.getElementById("output");
+        output.innerHTML = `
+            <div class="thinking-box">
+                <div class="thinking-title">SparkAI is thinking...</div>
+                <div class="thinking-step">${stepText}</div>
+            </div>
+        `;
+    }
+
+    // -----------------------------
+    // Generate Project
+    // -----------------------------
+    async function generateProject() {
+        const output = document.getElementById("output");
+        const rawOutput = document.getElementById("rawOutput");
+        output.innerHTML = "";
+        rawOutput.style.display = "block";
+        rawOutput.textContent = "Processing JSON response...";
+
+        const engineeringField = document.getElementById("engineeringField").value;
+        const difficulty = document.getElementById("difficulty").value;
+        const age = document.getElementById("age").value;
+        const materials = document.getElementById("materials").value;
+
+        const descriptionWithField = [
+            "Generate 3 beginner-friendly hands-on engineering project options.",
+            engineeringField ? `Engineering focus field: ${engineeringField}.` : null,
+            "The user is in Apprentice mode and needs full guidance."
+        ].filter(Boolean).join("\n");
+
+        const thinkingSteps = [
+            "Reading your preferences...",
+            "Designing 3 project options...",
+            "Processing JSON output..."
+        ];
+        let thinkingIdx = 0;
+        renderThinkingState(thinkingSteps[thinkingIdx]);
+        const thinkingTimer = setInterval(() => {
+            thinkingIdx = (thinkingIdx + 1) % thinkingSteps.length;
+            renderThinkingState(thinkingSteps[thinkingIdx]);
+        }, 900);
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/generate-project", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    description: descriptionWithField,
+                    difficulty: difficulty,
+                    age: age,
+                    materials: materials
+                })
             });
 
-            const helper = document.createElement("div");
-            helper.style.marginTop = "8px";
-            helper.textContent = "Pick one project to view full instructions.";
-            output.appendChild(helper);
+            const data = await response.json();
+            clearInterval(thinkingTimer);
+            window.lastProjectData = data;
+            rawOutput.style.display = "none";
+            rawOutput.textContent = "";
+
+            displayProjects(data);
+
+        } catch (err) {
+            clearInterval(thinkingTimer);
+            rawOutput.style.display = "none";
+            output.innerHTML = `<div class="error">Error: ${err.message}</div>`;
+        }
+    }
+
+    // -----------------------------
+    // Display Project Choices
+    // -----------------------------
+    function displayProjects(data) {
+        const output = document.getElementById("output");
+        output.innerHTML = "";
+
+        const normalized = normalizeProjects(data);
+        const projects = normalized.projects;
+        const safetyWarnings = normalized.safetyWarnings;
+
+        if (!projects.length) {
+            output.innerHTML = `<div class="error">No projects returned.</div>`;
+            return;
         }
 
-        function showProject(index) {
-            const proj = (window.allProjects || [])[index];
-            if (!proj) return;
+        window.allProjects = projects;
 
-            const output = document.getElementById("output");
-            const materials = Array.isArray(proj.materials) ? proj.materials : [];
-            const steps = Array.isArray(proj.steps) ? proj.steps : [];
-            const materialsSuggested = Array.isArray(proj.materialsSuggested) ? proj.materialsSuggested : [];
+        if (safetyWarnings.length) {
+            const safetyDiv = document.createElement("div");
+            safetyDiv.className = "safety";
+            safetyDiv.innerHTML = `<strong>⚠️ Safety:</strong><div>${safetyWarnings.map(w => escapeHtml(w)).join("<br>")}</div>`;
+            output.appendChild(safetyDiv);
+        }
 
-            const stepsHtml = steps.map(s => `<div>${nlToBr(escapeHtml(s))}</div>`).join("<br>");
-            const materialsHtml = materials.length
-                ? `<ul>${materials.map(m => `<li>${escapeHtml(m)}</li>`).join("")}</ul>`
-                : "<p>Not provided.</p>";
-            const suggestedHtml = materialsSuggested.length
-                ? `<div class="section"><strong>Materials Suggested:</strong><ul>${materialsSuggested.map(m => `<li>${escapeHtml(m)}</li>`).join("")}</ul></div>`
-                : "";
-
-            output.innerHTML = `
-                <div class="project">
-                    <div class="title">${escapeHtml(proj.title || "Untitled Project")}</div>
-                    <div class="section"><strong>Description:</strong><pre class="pre">${escapeHtml(proj.description || "Not provided.")}</pre></div>
-                    <div class="section"><strong>Materials Needed:</strong>${materialsHtml}</div>
-                    ${suggestedHtml}
-                    <div class="section"><strong>Steps:</strong><div>${stepsHtml || "Not provided."}</div></div>
-                    <div class="section"><strong>Engineering Explanation:</strong><pre class="pre">${escapeHtml(proj.engineeringExplanation || "Not provided.")}</pre></div>
-                    <div class="section"><strong>Physics Explanation:</strong><pre class="pre">${escapeHtml(proj.physicsExplanation || "Not provided.")}</pre></div>
-                    <button onclick="saveProject(${index})">💾 Save Project</button>
-                </div>
-                <button onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>
+        projects.forEach((proj, index) => {
+            const card = document.createElement("div");
+            card.style.marginBottom = "10px";
+            card.innerHTML = `
+                <button onclick="showProject(${index})">
+                    ${escapeHtml(proj.title || "Project " + (index + 1))}
+                </button>
             `;
+            output.appendChild(card);
+        });
+
+        const helper = document.createElement("div");
+        helper.style.marginTop = "8px";
+        helper.textContent = "Pick one project to view full instructions.";
+        output.appendChild(helper);
+    }
+
+    // -----------------------------
+    // Show Full Project
+    // -----------------------------
+    function showProject(index) {
+        const proj = (window.allProjects || [])[index];
+        if (!proj) return;
+        const output = document.getElementById("output");
+        const materials = Array.isArray(proj.materials) ? proj.materials : [];
+        const steps = Array.isArray(proj.steps) ? proj.steps : [];
+        const materialsSuggested = Array.isArray(proj.materialsSuggested) ? proj.materialsSuggested : [];
+
+        const stepsHtml = steps.map((s) => formatStepHtml(s)).join("<br>");
+        const materialsHtml = materials.length
+            ? `<ul>${materials.map(m => `<li>${escapeHtml(m)}</li>`).join("")}</ul>`
+            : "<p>Not provided.</p>";
+        const suggestedHtml = materialsSuggested.length
+            ? `<div class="section"><strong>Materials Suggested:</strong><ul>${materialsSuggested.map(m => `<li>${escapeHtml(m)}</li>`).join("")}</ul></div>`
+            : "";
+
+        output.innerHTML = `
+            <div class="project">
+                <div class="title">${escapeHtml(proj.title || "Untitled Project")}</div>
+                <div class="section"><strong>Description:</strong><pre class="pre">${escapeHtml(proj.description || "Not provided.")}</pre></div>
+                <div class="section"><strong>Materials Needed:</strong>${materialsHtml}</div>
+                ${suggestedHtml}
+                <div class="section"><strong>Steps:</strong><div>${stepsHtml || "Not provided."}</div></div>
+                <div class="section"><strong>Engineering Explanation:</strong><div class="pre">${formatExplanationHtml(proj.engineeringExplanation)}</div></div>
+                <div class="section"><strong>Physics Explanation:</strong><div class="pre">${formatExplanationHtml(proj.physicsExplanation)}</div></div>
+                <button onclick="saveProject(${index})">💾 Save Project</button>
+            </div>
+            <button onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>
+        `;
+    }
+
+    // -----------------------------
+    // Normalize AI Response
+    // -----------------------------
+    function normalizeProjects(data) {
+        const source = data || {};
+        const directPayload = source.projects || {};
+        const safetyWarnings = Array.isArray(directPayload.safety_warnings) ? directPayload.safety_warnings : [];
+
+        if (directPayload && Array.isArray(directPayload.projects)) {
+            return {
+                projects: directPayload.projects.map((p) => ({
+                    title: p.project_name || p.title || "Untitled",
+                    description: p.description || "",
+                    materials: p.materials_needed || p.materials || [],
+                    materialsSuggested: p.materials_suggested || [],
+                    steps: p.steps || [],
+                    engineeringExplanation: p.engineering_explanation || p.engineeringExplanation || "",
+                    physicsExplanation: p.physics_explanation || p.physicsExplanation || ""
+                })),
+                safetyWarnings
+            };
         }
 
-        function normalizeProjects(data) {
-            const source = data || {};
-            const directPayload = source.projects || {};
-            const safetyWarnings = Array.isArray(directPayload.safety_warnings) ? directPayload.safety_warnings : [];
+        if (source.suggestion && typeof source.suggestion === "object" && !Array.isArray(source.suggestion)) {
+            const projects = Object.entries(source.suggestion).map(([name, p]) => ({
+                title: name,
+                description: p && p.description ? p.description : "",
+                materials: p && Array.isArray(p.materials_needed) ? p.materials_needed : [],
+                materialsSuggested: p && Array.isArray(p.materials_suggested) ? p.materials_suggested : [],
+                steps: p && Array.isArray(p.steps) ? p.steps : [],
+                engineeringExplanation: p ? (p.engineering_explanation || p.engineeringExplanation || "") : "",
+                physicsExplanation: p ? (p.physics_explanation || p.physicsExplanation || "") : ""
+            }));
 
-            // Shape A: backend-style payload => { projects: { projects: [...] } }
-            if (directPayload && Array.isArray(directPayload.projects)) {
-                return {
-                    projects: directPayload.projects.map((proj) => ({
-                        title: proj.project_name || proj.title || "Untitled",
-                        description: proj.description || "",
-                        materials: proj.materials_needed || proj.materials || [],
-                        materialsSuggested: proj.materials_suggested || [],
-                        steps: proj.steps || [],
-                        engineeringExplanation: proj.engineering_explanation || "",
-                        physicsExplanation: proj.physics_explanation || ""
-                    })),
-                    safetyWarnings
-                };
-            }
-
-            // Shape B: suggestion object => { suggestion: { "Name": { ... } } }
-            if (source.suggestion && typeof source.suggestion === "object" && !Array.isArray(source.suggestion)) {
-                const projects = Object.entries(source.suggestion).map(([name, proj]) => ({
-                    title: name,
-                    description: proj && proj.description ? proj.description : "",
-                    materials: proj && Array.isArray(proj.materials_needed) ? proj.materials_needed : [],
-                    materialsSuggested: proj && Array.isArray(proj.materials_suggested) ? proj.materials_suggested : [],
-                    steps: proj && Array.isArray(proj.steps) ? proj.steps : [],
-                    engineeringExplanation: proj && proj.engineering_explanation ? proj.engineering_explanation : "",
-                    physicsExplanation: proj && proj.physics_explanation ? proj.physics_explanation : ""
-                }));
-
-                return { projects, safetyWarnings: [] };
-            }
-
-            return { projects: [], safetyWarnings };
+            return { projects, safetyWarnings: [] };
         }
 
-        // initialize once page loads
+        return { projects: [], safetyWarnings };
+    }
+
+    // -----------------------------
+    // Save Project
+    // -----------------------------
+    function saveProject(index) {
+        const project = (window.allProjects || [])[index];
+        if (!project) return;
+        if (typeof window.saveProjectWithMeta !== "function") {
+            alert("Save service is unavailable.");
+            return;
+        }
+
+        const saved = window.saveProjectWithMeta(project, {
+            mode: MODE,
+            page: "apprentice.html"
+        });
+
+        if (saved && typeof window.showSavedToast === "function") {
+            window.showSavedToast("✅ Project saved!");
+        }
+    }
+
+    // -----------------------------
+    // Load Saved Projects (Home)
+    // -----------------------------
+    function loadSavedProjects() {
+        const container = document.getElementById("savedProjects");
+        if (!container) return;
+
+        const email = localStorage.getItem("user_email");
+
+        if (!email) {
+            container.innerHTML = "";
+            return;
+        }
+
+        let allSaved = JSON.parse(localStorage.getItem("saved_projects")) || {};
+        let projects = allSaved[email] || [];
+
+        if (projects.length === 0) {
+            container.innerHTML = "<p>No saved projects yet.</p>";
+            return;
+        }
+
+        container.innerHTML = "";
+
+        projects.forEach((proj, index) => {
+            const div = document.createElement("div");
+
+            div.innerHTML = `
+                <strong>${proj.title}</strong>
+                <button onclick="viewSavedProject(${index})">View</button>
+            `;
+
+            container.appendChild(div);
+        });
+
+        window.savedProjects = projects;
+    }
+
+    // -----------------------------
+    // View Saved Project
+    // -----------------------------
+    function viewSavedProject(index) {
+        const proj = window.savedProjects[index];
+
+        const output = document.getElementById("output");
+
+        output.innerHTML = `
+            <div class="project">
+                <div class="title">${proj.title}</div>
+
+                <div class="section">
+                    <strong>Description:</strong>
+                    <pre>${proj.description}</pre>
+                </div>
+
+                <div class="section">
+                    <strong>Steps:</strong>
+                    <ol>${(proj.steps || []).map(s => `<li>${s}</li>`).join("")}</ol>
+                </div>
+            </div>
+        `;
+    }
+
+    // -----------------------------
+    // Login Handling
+    // -----------------------------
+    function handleCredentialResponse(response) {
+        const data = parseJwt(response.credential);
+
+        localStorage.setItem("user_email", data.email);
+        localStorage.setItem("user_name", data.name);
+
+        document.getElementById("welcome").innerText = `Welcome, ${data.name}`;
+
+        const btn = document.querySelector(".g_id_signin");
+        if (btn) btn.style.display = "none";
+    }
+
+    // decode JWT
+    function parseJwt(token) {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
+            '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join(''));
+
+        return JSON.parse(jsonPayload);
+    }
+
+    // -----------------------------
+    // On Load
+    // -----------------------------
+    function resumeSavedProjectIfAny() {
+        if (typeof window.consumeResumeProject !== "function") return;
+        const saved = window.consumeResumeProject();
+        if (!saved) return;
+        if (saved.page && saved.page !== "apprentice.html") return;
+        window.allProjects = [saved];
+        window.lastProjectData = { projects: { projects: [saved] } };
+        showProject(0);
+    }
+
+    window.onload = function () {
         updateDifficulty();
-    </script>
+        loadSavedProjects();
+
+        const name = localStorage.getItem("user_name");
+        if (name) {
+            document.getElementById("welcome").innerText = `Welcome, ${name}`;
+
+            const btn = document.querySelector(".g_id_signin");
+            if (btn) btn.style.display = "none";
+        }
+
+        resumeSavedProjectIfAny();
+    };
+</script>
     <script src="../js/saved-projects.js" defer></script>
     <script src="../js/enginuity-loading%20screen.js" defer></script>
 </body>

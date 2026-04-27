@@ -140,6 +140,43 @@
             border-radius: 12px;
             margin-bottom: 16px;
         }
+
+        .thinking-box {
+            border: 1px solid #d7d7d7;
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+        }
+
+        .thinking-title {
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .thinking-step {
+            color: #555;
+            font-size: 13px;
+        }
+
+        .contribution-box {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px dashed #ddd;
+        }
+
+        .contribution-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .muted {
+            color: #555;
+            font-size: 13px;
+            margin-top: 6px;
+        }
     </style>
 </head>
 <body class="enginuity-paper">
@@ -153,9 +190,6 @@
 
         <div class="generator">
             <h2>Spark Associate</h2>
-
-            <label for="customization">Customization (what should SparkAI change/focus on?)</label>
-            <textarea id="customization" placeholder="Example: keep it low-cost, add more electronics, make it outdoor-safe, or avoid soldering."></textarea>
 
             <label for="engineeringField">Field of engineering you are most interested in</label>
             <select id="engineeringField">
@@ -196,6 +230,7 @@
     <script>
         const MODE = "Associate";
         localStorage.setItem("enginuity_mode", MODE);
+        let selectedProjectIndex = null;
 
         function escapeHtml(str) {
             return String(str)
@@ -210,6 +245,96 @@
             return escaped.replace(/\n/g, "<br>");
         }
 
+        function explanationToText(value) {
+            if (value == null || value === "") return "Not provided.";
+
+            if (typeof value === "string") {
+                const trimmed = value.trim();
+                const withoutFence = trimmed
+                    .replace(/^```(?:json)?\s*/i, "")
+                    .replace(/```$/i, "")
+                    .trim();
+                const jsonLike = ((withoutFence.startsWith("{") && withoutFence.endsWith("}")) || (withoutFence.startsWith("[") && withoutFence.endsWith("]")))
+                    ? withoutFence
+                    : (() => {
+                        const match = withoutFence.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+                        return match ? match[1] : null;
+                    })();
+
+                if (jsonLike) {
+                    try {
+                        return explanationToText(JSON.parse(jsonLike));
+                    } catch (_) {
+                        return withoutFence || value;
+                    }
+                }
+                return withoutFence || value;
+            }
+
+            if (Array.isArray(value)) {
+                return value.map((item) => explanationToText(item)).join("\n");
+            }
+
+            if (typeof value === "object") {
+                const preferredKeys = ["explanation", "physics_explanation", "physicsExplanation", "engineering_explanation", "engineeringExplanation", "text", "summary"];
+                for (const key of preferredKeys) {
+                    if (Object.prototype.hasOwnProperty.call(value, key) && value[key]) {
+                        return explanationToText(value[key]);
+                    }
+                }
+                const lines = [];
+                Object.entries(value).forEach(([key, val]) => {
+                    if (val == null || val === "") return;
+                    const label = key
+                        .replace(/_/g, " ")
+                        .replace(/([a-z])([A-Z])/g, "$1 $2")
+                        .replace(/\s+/g, " ")
+                        .trim()
+                        .replace(/^./, (c) => c.toUpperCase());
+                    const text = explanationToText(val).trim();
+                    lines.push(`${label}: ${text}`);
+                });
+                if (lines.length) return lines.join("\n\n");
+                try {
+                    return JSON.stringify(value, null, 2);
+                } catch (_) {
+                    return String(value);
+                }
+            }
+
+            return String(value);
+        }
+
+        function formatStepHtml(stepValue) {
+            const escaped = escapeHtml(stepValue == null ? "" : String(stepValue));
+            const boldPrefix = escaped.replace(
+                /^(\s*Step\s*\d+\s*[:.)-]?)/i,
+                "<strong>$1</strong>"
+            );
+            return `<div>${nlToBr(boldPrefix)}</div>`;
+        }
+
+        function formatExplanationHtml(value) {
+            const text = explanationToText(value);
+            const escaped = escapeHtml(text);
+            const withBold = escaped.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+            const normalizedMarkdown = withBold
+                .replace(/^#{1,6}\s*(.+)$/gm, "<strong>$1</strong>")
+                .replace(/^\s*[-*]\s+/gm, "• ")
+                .replace(/^\s*>\s?/gm, "");
+            return nlToBr(normalizedMarkdown);
+        }
+
+        function renderThinkingState(stepText) {
+            const output = document.getElementById("output");
+            output.innerHTML = `
+                <div class="thinking-box">
+                    <div class="thinking-title">SparkAI is thinking...</div>
+                    <div class="thinking-step">${escapeHtml(stepText)}</div>
+                </div>
+            `;
+        }
+
         function updateDifficulty() {
             const education = document.getElementById("education").value;
             const difficulty = document.getElementById("difficulty");
@@ -219,16 +344,16 @@
             let ageValue = "";
 
             if (education === "middle") {
-                options = ["Easy (5–10 min)", "Medium (15–30 min)", "Hard (30–45 min)"];
+                options = ["Easy: 10–20 min", "Medium: 25–45 min", "Hard: 45–70 min"];
                 ageValue = "10-14";
             } else if (education === "high") {
-                options = ["Easy (10–30 min)", "Medium (45–60 min)", "Hard (60–90 min)"];
+                options = ["Easy: 20–40 min", "Medium: 40–75 min", "Hard: 75–120 min"];
                 ageValue = "15-18";
             } else if (education === "student") {
-                options = ["Easy (30–60 min)", "Medium (60–120 min)", "Hard (2 days–1 week)"];
+                options = ["Easy: 45–90 min", "Medium: 90–180 min", "Hard: 1–3 days"];
                 ageValue = "18-25";
             } else {
-                options = ["Easy (30–60 min)", "Medium (60–180 min)", "Hard (5 days–2 weeks)"];
+                options = ["Easy: 60–120 min", "Medium: 2–4 hours", "Hard: 3–7 days"];
                 ageValue = "25+";
             }
 
@@ -238,20 +363,34 @@
 
         async function generateProject() {
             const output = document.getElementById("output");
+            const rawOutput = document.getElementById("rawOutput");
             output.innerHTML = "";
+            rawOutput.style.display = "block";
+            rawOutput.textContent = "Processing JSON response...";
 
-            const customization = document.getElementById("customization").value.trim();
             const engineeringField = document.getElementById("engineeringField").value;
             const difficulty = document.getElementById("difficulty").value;
             const age = document.getElementById("age").value;
             const materials = document.getElementById("materials").value;
+            let thinkingTimer = null;
 
             try {
-                output.innerHTML = "SparkAI is thinking...";
+                const thinkingSteps = [
+                    "Reading your preferences...",
+                    "Designing project options...",
+                    "Processing JSON output..."
+                ];
+                let thinkingIdx = 0;
+                renderThinkingState(thinkingSteps[thinkingIdx]);
+                thinkingTimer = setInterval(() => {
+                    thinkingIdx = (thinkingIdx + 1) % thinkingSteps.length;
+                    renderThinkingState(thinkingSteps[thinkingIdx]);
+                }, 900);
+
                 const descriptionWithField = [
                     "Generate 3 engineering project options for Associate mode.",
                     engineeringField ? `Engineering focus field: ${engineeringField}.` : null,
-                    customization ? `User customization request: ${customization}` : "User customization request: Keep projects practical and easy to personalize."
+                    "User customization request: Keep projects practical and easy to personalize."
                 ].filter(Boolean).join("\n");
 
                 const response = await fetch("http://127.0.0.1:8000/generate-project", {
@@ -266,13 +405,15 @@
                 });
 
                 const data = await response.json();
+                clearInterval(thinkingTimer);
                 console.log(data);
-                const rawOutput = document.getElementById("rawOutput");
                 rawOutput.style.display = "none";
                 rawOutput.textContent = "";
                 window.lastProjectData = data;
                 displayProjects(data);
             } catch (e) {
+                if (thinkingTimer) clearInterval(thinkingTimer);
+                rawOutput.style.display = "none";
                 output.innerHTML = `<div class="error">Request failed: ${escapeHtml(e && e.message ? e.message : String(e))}</div>`;
             }
         }
@@ -326,13 +467,14 @@
         function showProject(index) {
             const proj = (window.allProjects || [])[index];
             if (!proj) return;
+            selectedProjectIndex = index;
 
             const output = document.getElementById("output");
             const materials = Array.isArray(proj.materials) ? proj.materials : [];
             const steps = Array.isArray(proj.steps) ? proj.steps : [];
             const materialsSuggested = Array.isArray(proj.materialsSuggested) ? proj.materialsSuggested : [];
 
-            const stepsHtml = steps.map(s => `<div>${nlToBr(escapeHtml(s))}</div>`).join("<br>");
+            const stepsHtml = steps.map((s) => formatStepHtml(s)).join("<br>");
             const materialsHtml = materials.length
                 ? `<ul>${materials.map(m => `<li>${escapeHtml(m)}</li>`).join("")}</ul>`
                 : "<p>Not provided.</p>";
@@ -347,11 +489,123 @@
                     <div class="section"><strong>Materials Needed:</strong>${materialsHtml}</div>
                     ${suggestedHtml}
                     <div class="section"><strong>Steps:</strong><div>${stepsHtml || "Not provided."}</div></div>
-                    <div class="section"><strong>Engineering Explanation:</strong><pre class="pre">${escapeHtml(proj.engineeringExplanation || "Not provided.")}</pre></div>
-                    <div class="section"><strong>Physics Explanation:</strong><pre class="pre">${escapeHtml(proj.physicsExplanation || "Not provided.")}</pre></div>
+                    <div class="section"><strong>Engineering Explanation:</strong><div class="pre">${formatExplanationHtml(proj.engineeringExplanation)}</div></div>
+                    <div class="section"><strong>Physics Explanation:</strong><div class="pre">${formatExplanationHtml(proj.physicsExplanation)}</div></div>
+                    <div class="contribution-box">
+                        <label for="contributionInput"><strong>What additions do you want to contribute?</strong></label>
+                        <textarea id="contributionInput" placeholder="Example: make it waterproof, add a Bluetooth sensor, reduce cost, or include a testing checklist."></textarea>
+                        <div class="contribution-actions">
+                            <button id="contributionRefreshBtn" onclick="refreshSelectedProject()">Refresh Project</button>
+                            <button onclick="saveProject(${index})">💾 Save Project</button>
+                        </div>
+                        <div class="muted" id="contributionStatus"></div>
+                    </div>
                 </div>
                 <button onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>
             `;
+        }
+
+        async function refreshSelectedProject() {
+            const output = document.getElementById("output");
+            if (selectedProjectIndex == null) return;
+            const proj = (window.allProjects || [])[selectedProjectIndex];
+            if (!proj) return;
+
+            const contributionInput = document.getElementById("contributionInput");
+            const contribution = contributionInput ? contributionInput.value.trim() : "";
+            const statusEl = document.getElementById("contributionStatus");
+            const btn = document.getElementById("contributionRefreshBtn");
+
+            if (!contribution) {
+                if (statusEl) statusEl.textContent = "Please add a contribution request first.";
+                return;
+            }
+
+            const engineeringField = document.getElementById("engineeringField").value;
+            const difficulty = document.getElementById("difficulty").value;
+            const age = document.getElementById("age").value;
+            const materials = document.getElementById("materials").value;
+
+            try {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = "Refreshing...";
+                }
+                if (statusEl) statusEl.textContent = "Updating your selected project with your additions...";
+
+                const baseMaterials = Array.isArray(proj.materials) ? proj.materials.join(", ") : "";
+                const baseSteps = Array.isArray(proj.steps) ? proj.steps.join(" | ") : "";
+
+                const updateDescription = [
+                    "Generate exactly 1 updated engineering project for Associate mode.",
+                    "Keep the same core concept, but apply the user's requested additions.",
+                    engineeringField ? `Engineering focus field: ${engineeringField}.` : null,
+                    `Current project title: ${proj.title || "Untitled"}`,
+                    `Current description: ${proj.description || ""}`,
+                    baseMaterials ? `Current materials: ${baseMaterials}` : null,
+                    baseSteps ? `Current steps: ${baseSteps}` : null,
+                    `User requested additions: ${contribution}`
+                ].filter(Boolean).join("\n");
+
+                const response = await fetch("http://127.0.0.1:8000/generate-project", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        description: updateDescription,
+                        difficulty: difficulty,
+                        age: age,
+                        materials: materials
+                    })
+                });
+
+                const data = await response.json();
+                const normalized = normalizeProjects(data);
+                if (!normalized.projects.length) {
+                    if (statusEl) statusEl.textContent = "Could not generate an updated project. Try a more specific addition.";
+                    return;
+                }
+
+                const updated = normalized.projects[0];
+                window.allProjects[selectedProjectIndex] = updated;
+                if (statusEl) statusEl.textContent = "Updated! Showing your refreshed project.";
+                showProject(selectedProjectIndex);
+            } catch (e) {
+                if (statusEl) statusEl.textContent = `Update failed: ${escapeHtml(e && e.message ? e.message : String(e))}`;
+                output.scrollIntoView({ behavior: "smooth", block: "start" });
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = "Refresh Project";
+                }
+            }
+        }
+
+        function saveProject(index) {
+            const project = (window.allProjects || [])[index];
+            if (!project) return;
+            if (typeof window.saveProjectWithMeta !== "function") {
+                alert("Save service is unavailable.");
+                return;
+            }
+
+            const saved = window.saveProjectWithMeta(project, {
+                mode: MODE,
+                page: "associate.html"
+            });
+
+            if (saved && typeof window.showSavedToast === "function") {
+                window.showSavedToast("✅ Project saved!");
+            }
+        }
+
+        function resumeSavedProjectIfAny() {
+            if (typeof window.consumeResumeProject !== "function") return;
+            const saved = window.consumeResumeProject();
+            if (!saved) return;
+            if (saved.page && saved.page !== "associate.html") return;
+            window.allProjects = [saved];
+            window.lastProjectData = { projects: { projects: [saved] } };
+            showProject(0);
         }
 
         function normalizeProjects(data) {
@@ -368,8 +622,8 @@
                         materials: proj.materials_needed || proj.materials || [],
                         materialsSuggested: proj.materials_suggested || [],
                         steps: proj.steps || [],
-                        engineeringExplanation: proj.engineering_explanation || "",
-                        physicsExplanation: proj.physics_explanation || ""
+                        engineeringExplanation: proj.engineering_explanation || proj.engineeringExplanation || "",
+                        physicsExplanation: proj.physics_explanation || proj.physicsExplanation || ""
                     })),
                     safetyWarnings
                 };
@@ -383,8 +637,8 @@
                     materials: proj && Array.isArray(proj.materials_needed) ? proj.materials_needed : [],
                     materialsSuggested: proj && Array.isArray(proj.materials_suggested) ? proj.materials_suggested : [],
                     steps: proj && Array.isArray(proj.steps) ? proj.steps : [],
-                    engineeringExplanation: proj && proj.engineering_explanation ? proj.engineering_explanation : "",
-                    physicsExplanation: proj && proj.physics_explanation ? proj.physics_explanation : ""
+                    engineeringExplanation: proj ? (proj.engineering_explanation || proj.engineeringExplanation || "") : "",
+                    physicsExplanation: proj ? (proj.physics_explanation || proj.physicsExplanation || "") : ""
                 }));
 
                 return { projects, safetyWarnings: [] };
@@ -393,7 +647,10 @@
             return { projects: [], safetyWarnings };
         }
 
-        updateDifficulty();
+        window.onload = function () {
+            updateDifficulty();
+            resumeSavedProjectIfAny();
+        };
     </script>
     <script src="../js/saved-projects.js" defer></script>
     <script src="../js/enginuity-loading%20screen.js" defer></script>

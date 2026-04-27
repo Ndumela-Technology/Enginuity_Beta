@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   version="1.1"
+   id="svg1"
+   width="1948.837"
+   height="1130.4374"
+   viewBox="0 0 1948.837 1130.4374"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1">
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path8" />
+    </marker>
+  </defs>
+  <g
+     id="g1"
+     transform="translate(-285.93609,-27.055727)">
+    <path
+       style="opacity:1;fill:none;fill-opacity:0.6;fill-rule:nonzero;stroke:#ff0000;stroke-width:5;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker-end:url(#RoundedArrow)"
+       d="m 391.84189,29.555675 c 0,0 240.48122,1.553875 534.38338,4.629901 C 1458.0098,39.751316 2209.0634,89.624229 2231.8633,379.23026 2264.5975,795.02266 350.83127,257.9415 290.12151,642.41191 223.97486,1061.3138 2100.8164,525.78155 2117.887,899.37668 c 4.3237,94.62569 -108.3841,151.92442 -302.263,154.21862 -187.3773,2.2173 -285.9164,-11.9041 -435.2288,-10.6083 -181.1388,1.5719 -181.0482,49.7881 -179.6076,90.8446"
+       id="path1" />
+  </g>
+</svg>

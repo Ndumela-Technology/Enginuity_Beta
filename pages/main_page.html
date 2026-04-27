@@ -12,7 +12,7 @@
     <style>
         .site-header {
             position: relative;
-            z-index: 2;
+            z-index: 5;
             display: grid;
             /* Keep title centered even if right-side content changes width */
             grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -27,12 +27,13 @@
             display: flex;
             align-items: center;
             text-decoration: none;
-            transform: rotate(-1.2deg);
+            /* Move only the logo so the fixed arrow tip meets its edge */
+            transform: translate(8px, 12px) rotate(-1.2deg);
         }
 
         .brand-mark img {
-            /* +~15% for visibility */
-            width: clamp(76px, 16vw, 110px);
+            /* +20% size boost while keeping responsive behavior */
+            width: clamp(91px, 19.2vw, 132px);
             height: auto;
             display: block;
             filter:
@@ -44,7 +45,7 @@
             margin: 0;
             text-align: center;
             font-family: "Special Elite", "Courier New", Courier, monospace;
-            font-size: clamp(1.85rem, 5vw, 2.75rem);
+            font-size: clamp(2.22rem, 6vw, 3.3rem);
             color: var(--ink);
             letter-spacing: 0.06em;
             text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.6);
@@ -136,6 +137,7 @@
         }
 
         .home-wrap {
+            position: relative;
             max-width: 1100px;
             margin: 0 auto;
             padding: 0 1rem 2.5rem;
@@ -153,12 +155,17 @@
         .home-path {
             position: relative;
             min-height: clamp(520px, 78vh, 720px);
-            margin-top: 0.5rem;
+            margin-top: -20px;
+            overflow: visible;
         }
 
         .path-layer {
             position: absolute;
-            inset: 0;
+            top: -30%;
+            right: 0;
+            left: 0;
+            bottom: 0;
+            height: 130%;
             z-index: 0;
             pointer-events: none;
             overflow: visible;
@@ -168,6 +175,19 @@
             width: 100%;
             height: 100%;
             display: block;
+            transform: translate(3%, 5%);
+        }
+
+        #path1 {
+            stroke-dasharray: 1;
+            stroke-dashoffset: 1;
+            animation: path-draw-in 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @keyframes path-draw-in {
+            to {
+                stroke-dashoffset: 0;
+            }
         }
 
         .path-main {
@@ -219,8 +239,8 @@
         }
 
         .mode-node--apprentice {
-            top: 4%;
-            right: 2%;
+            top: 6%;
+            right: -6%;
             transform: rotate(-0.8deg);
         }
 
@@ -231,8 +251,8 @@
         }
 
         .mode-node--innovator {
-            bottom: 6%;
-            right: 3%;
+            bottom: 25%;
+            right: -5%;
             transform: rotate(-1.1deg);
         }
 
@@ -341,7 +361,7 @@
             }
 
             .mode-node--innovator {
-                bottom: 4%;
+                bottom: 10%;
                 right: auto;
                 left: 50%;
                 transform: translateX(-50%) rotate(-0.6deg);
@@ -356,6 +376,13 @@
 
             body.is-guest .guest-cta {
                 display: inline-block;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #path1 {
+                animation: none;
+                stroke-dashoffset: 0;
             }
         }
     </style>
@@ -389,22 +416,46 @@
 
         <main class="home-path" aria-label="Choose your learning path">
             <div class="path-layer" aria-hidden="true">
-                <svg viewBox="0 0 400 620" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+                <svg
+                    version="1.1"
+                    id="svg1"
+                    viewBox="0 0 1948.837 1130.4374"
+                    preserveAspectRatio="xMidYMid meet"
+                    xmlns="http://www.w3.org/2000/svg"
+                    xmlns:svg="http://www.w3.org/2000/svg"
+                >
                     <defs>
                         <filter id="path-pencil" x="-6%" y="-6%" width="112%" height="112%">
                             <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="1" seed="3" result="t" />
                             <feDisplacementMap in="SourceGraphic" in2="t" scale="0.75" xChannelSelector="R" yChannelSelector="G" />
                         </filter>
+                        <marker
+                            style="overflow:visible"
+                            id="RoundedArrow"
+                            refX="0"
+                            refY="0"
+                            orient="auto-start-reverse"
+                            markerWidth="1"
+                            markerHeight="1"
+                            viewBox="0 0 1 1"
+                            preserveAspectRatio="xMidYMid"
+                        >
+                            <path
+                                transform="scale(0.7)"
+                                d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+                                fill="context-stroke"
+                            />
+                        </marker>
                     </defs>
-                    <path
-                        class="path-shadow"
-                        d="M 330 135 L 90 135 L 90 325 L 330 325 L 330 515"
-                    />
-                    <path
-                        class="path-main"
-                        d="M 330 135 L 90 135 L 90 325 L 330 325 L 330 515"
-                    />
-                    <polygon class="path-head" points="330,515 316,500 344,500" />
+                    <g id="g1" transform="translate(-285.93609,-27.055727)">
+                        <path
+                            id="path1"
+                            class="path-main"
+                            d="m 391.84189,29.555675 c 0,0 240.48122,1.553875 534.38338,4.629901 C 1458.0098,39.751316 2209.0634,89.624229 2231.8633,379.23026 2264.5975,795.02266 350.83127,257.9415 290.12151,642.41191 223.97486,1061.3138 2100.8164,525.78155 2117.887,899.37668 c 4.3237,94.62569 -108.3841,151.92442 -302.263,154.21862 -187.3773,2.2173 -285.9164,-11.9041 -435.2288,-10.6083 -181.1388,1.5719 -181.0482,49.7881 -179.6076,90.8446"
+                            marker-end="url(#RoundedArrow)"
+                            filter="url(#path-pencil)"
+                        />
+                    </g>
                 </svg>
             </div>
 
