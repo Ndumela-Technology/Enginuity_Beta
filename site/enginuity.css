@@ -136,7 +136,7 @@ body.enginuity-paper {
 
 #savedProjects .saved-project-card {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   align-items: center;
   gap: 0.6rem;
   margin-bottom: 0.55rem;
