@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from typing import List, Optional
 from core.ai_engine import generate_projects, generate_chat_reply, run_safety_check
@@ -170,7 +170,7 @@ class ProjectRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
-    mode: str
+    context: str = ""
     history: List[dict] = []
     education: Optional[str] = None
 
@@ -184,7 +184,7 @@ def root():
     return {"status": "Enginuity API — SparkAI ready"}
 
 
-@app.post("/chat")
+@app.post("/chat-innovator")
 def chat(request: ChatRequest):
 
     messages = []
@@ -253,3 +253,68 @@ def generate_project(request: ProjectRequest):
     safe_projects = run_safety_check(projects)
 
     return {"projects": safe_projects}
+
+
+@app.post("/chat-helper")
+def spark_helper(data: ChatRequest):
+    message = data.message
+    context = data.context
+
+    prompt = f"""
+    You are SparkHelper, an assistant inside an educational engineering app.
+
+    Your job:
+    - Explain steps
+    - Answer questions about the project
+    - Teach clearly
+
+    RULES:
+    - Do NOT generate new project ideas
+    - Stay within the context
+
+    Context:
+    {context}
+
+    Question:
+    {message}
+    """
+
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {"role": "system", "content": prompt}
+        ]
+    )
+
+    reply = response.choices[0].message.content
+
+    return {"reply": reply}
+
+@app.post("/generate-diagram")
+def generate_diagram(data: dict):
+    step = data["step"]
+
+    prompt = f"""
+    A clean, simple educational diagram of this step:
+
+    {step}
+
+    Style:
+    - white background
+    - minimal design
+    - labeled parts
+    - instructional like a LEGO manual
+    """
+
+    result = client.images.generate(
+        model="gpt-image-1",
+        prompt=prompt,
+        size="1024x1024"
+    )
+
+    image_base64 = result.data[0].b64_json
+
+    # Convert to usable format for frontend
+    image_url = f"data:image/png;base64,{image_base64}"
+
+    return {"image_url": image_url}
