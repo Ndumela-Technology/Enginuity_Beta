@@ -30,6 +30,13 @@ Each project must contain:
 - "engineering_explanation": deeper explanation of what is happening scientifically
 - "physics_explanation": formatted physics explanation adapted to education level
 
+---------------------------------
+PROJECT QUALITY:
+---------------------------------
+- Project 1: Most feasible, safest, and easiest to complete successfully.
+- Project 2: Moderately challenging but still realistic.
+- Project 3: More creative or experimental, but still possible (may be less reliable).
+
 --------------------------------
 AGE ADAPTATION RULES
 --------------------------------
@@ -54,6 +61,7 @@ STEP FORMAT RULES (IMPORTANT)
 --------------------------------
 Steps should be easy to read.
 Steps should be longer and more descriptive in case of complicated steps
+Prioritize practicality over creativity if there is a conflict.
 
 For advanced users:
 - Use subsection titles inside steps
@@ -69,6 +77,7 @@ MATERIAL RULES
 - Suggest affordable household alternatives when needed.
 - For Students and Adults, suggest cheap purchasable upgrades.
 - Projects must be safe and realistic.
+- Projects MUST be feasible with the given materials.
 
 --------------------------------
 UNIT SYSTEM (VERY IMPORTANT)
@@ -110,7 +119,9 @@ JSON FORMAT
     },
     {},
     {}
-  ]
+  ],
+  "safety_warnings": []
+}
 }
 
 --------------------------------
