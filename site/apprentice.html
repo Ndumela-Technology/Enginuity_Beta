@@ -428,6 +428,14 @@
     // Generate Project
     // -----------------------------
     async function generateProject() {
+        if (typeof window.canUseApprenticeGeneration === "function") {
+            const genCheck = window.canUseApprenticeGeneration();
+            if (!genCheck.allowed) {
+                alert(genCheck.message || "Generation limit reached.");
+                return;
+            }
+        }
+
         const output = document.getElementById("output");
         output.innerHTML = "";
 
@@ -468,6 +476,9 @@
 
             const data = await response.json();
             clearInterval(thinkingTimer);
+            if (typeof window.recordApprenticeGeneration === "function") {
+                window.recordApprenticeGeneration();
+            }
             window.lastProjectData = data;
 
             displayProjects(data);
@@ -711,6 +722,7 @@
         resumeSavedProjectIfAny();
     };
 </script>
+    <script src="user-plan.js"></script>
     <script src="saved-projects.js" defer></script>
     <script src="enginuity-loading-screen.js" defer></script>
 </body>

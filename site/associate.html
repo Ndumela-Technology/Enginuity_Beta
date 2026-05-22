@@ -445,6 +445,14 @@
         }
 
         async function generateProject() {
+            if (typeof window.canUseAssociate === "function") {
+                const associateCheck = window.canUseAssociate();
+                if (!associateCheck.allowed) {
+                    alert(associateCheck.message || "Associate limit reached.");
+                    return;
+                }
+            }
+
             const output = document.getElementById("output");
             output.innerHTML = "";
 
@@ -486,6 +494,9 @@
 
                 const data = await response.json();
                 clearInterval(thinkingTimer);
+                if (typeof window.recordAssociateUse === "function") {
+                    window.recordAssociateUse();
+                }
                 window.lastProjectData = data;
                 displayProjects(data);
             } catch (e) {
@@ -565,6 +576,14 @@
         }
 
         async function refreshSelectedProject() {
+            if (typeof window.canUseAssociate === "function") {
+                const associateCheck = window.canUseAssociate();
+                if (!associateCheck.allowed) {
+                    alert(associateCheck.message || "Associate limit reached.");
+                    return;
+                }
+            }
+
             const output = document.getElementById("output");
             if (selectedProjectIndex == null) return;
             const proj = (window.allProjects || [])[selectedProjectIndex];
@@ -630,6 +649,9 @@
 
                 const updated = normalized.projects[0];
                 window.allProjects[selectedProjectIndex] = updated;
+                if (typeof window.recordAssociateUse === "function") {
+                    window.recordAssociateUse();
+                }
                 if (statusEl) statusEl.textContent = "Updated! Showing your refreshed project.";
                 showProject(selectedProjectIndex);
             } catch (e) {
@@ -724,6 +746,7 @@
             resumeSavedProjectIfAny();
         };
     </script>
+    <script src="user-plan.js"></script>
     <script src="saved-projects.js" defer></script>
     <script src="enginuity-loading-screen.js" defer></script>
 </body>

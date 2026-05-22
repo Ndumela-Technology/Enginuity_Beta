@@ -140,6 +140,13 @@
     });
 
     if (!alreadyExists) {
+      if (typeof window.canSaveProject === "function") {
+        var limitBeforePush = window.canSaveProject(email);
+        if (!limitBeforePush.allowed) {
+          alert(limitBeforePush.message || "Save limit reached.");
+          return false;
+        }
+      }
       allSaved[email].push(normalized);
       writeAllSaved(allSaved);
     }
