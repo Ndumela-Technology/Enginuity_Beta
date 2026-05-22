@@ -173,6 +173,7 @@ class ChatRequest(BaseModel):
     context: str = ""
     history: List[dict] = []
     education: Optional[str] = None
+    mode: str = "Innovator"
 
 
 # ------------------------
@@ -193,6 +194,8 @@ def chat(request: ChatRequest):
     # 1. System Prompt (mode-based)
     # -------------------------------
     system_prompt = personality_layer(request.mode, request.education)
+    if request.context and request.context.strip():
+        system_prompt = f"{system_prompt}\n\nUser context:\n{request.context.strip()}"
     messages.append({"role": "system", "content": system_prompt})
 
     # -------------------------------

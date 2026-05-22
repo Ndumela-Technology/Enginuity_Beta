@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="enginuity.css" />
+    <link rel="stylesheet" href="project-output.css" />
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="alternate icon" href="assets/logo.svg">
@@ -226,9 +227,9 @@
 
         <hr />
         <div id="output"></div>
-        <pre id="rawOutput" class="pre" style="margin-top:12px; display:none;"></pre>
     </div>
 
+    <script src="project-output.js"></script>
     <script>
     const MODE = "Apprentice";
     localStorage.setItem("forge_mode", MODE);
@@ -428,10 +429,7 @@
     // -----------------------------
     async function generateProject() {
         const output = document.getElementById("output");
-        const rawOutput = document.getElementById("rawOutput");
         output.innerHTML = "";
-        rawOutput.style.display = "block";
-        rawOutput.textContent = "Processing JSON response...";
 
         const engineeringField = document.getElementById("engineeringField").value;
         const difficulty = document.getElementById("difficulty").value;
@@ -447,7 +445,7 @@
         const thinkingSteps = [
             "Reading your preferences...",
             "Designing 3 project options...",
-            "Processing JSON output..."
+            "Formatting your projects..."
         ];
         let thinkingIdx = 0;
         renderThinkingState(thinkingSteps[thinkingIdx]);
@@ -471,14 +469,11 @@
             const data = await response.json();
             clearInterval(thinkingTimer);
             window.lastProjectData = data;
-            rawOutput.style.display = "none";
-            rawOutput.textContent = "";
 
             displayProjects(data);
 
         } catch (err) {
             clearInterval(thinkingTimer);
-            rawOutput.style.display = "none";
             output.innerHTML = `<div class="error">Error: ${err.message}</div>`;
         }
     }
@@ -508,21 +503,11 @@
             output.appendChild(safetyDiv);
         }
 
-        projects.forEach((proj, index) => {
-            const card = document.createElement("div");
-            card.style.marginBottom = "10px";
-            card.innerHTML = `
-                <button onclick="showProject(${index})">
-                    ${escapeHtml(proj.title || "Project " + (index + 1))}
-                </button>
-            `;
-            output.appendChild(card);
+        const choices = document.createElement("div");
+        choices.innerHTML = window.ProjectOutput.renderProjectChoices(projects, {
+            escapeHtml: escapeHtml
         });
-
-        const helper = document.createElement("div");
-        helper.style.marginTop = "8px";
-        helper.textContent = "Pick one project to view full instructions.";
-        output.appendChild(helper);
+        output.appendChild(choices);
     }
 
     // -----------------------------
@@ -532,31 +517,23 @@
         const proj = (window.allProjects || [])[index];
         if (!proj) return;
         const output = document.getElementById("output");
-        const materials = Array.isArray(proj.materials) ? proj.materials : [];
-        const steps = Array.isArray(proj.steps) ? proj.steps : [];
-        const materialsSuggested = Array.isArray(proj.materialsSuggested) ? proj.materialsSuggested : [];
 
-        const stepsHtml = steps.map((s) => formatStepHtml(s)).join("<br>");
-        const materialsHtml = materials.length
-            ? `<ul>${materials.map(m => `<li>${escapeHtml(m)}</li>`).join("")}</ul>`
-            : "<p>Not provided.</p>";
-        const suggestedHtml = materialsSuggested.length
-            ? `<div class="section"><strong>Materials Suggested:</strong><ul>${materialsSuggested.map(m => `<li>${escapeHtml(m)}</li>`).join("")}</ul></div>`
-            : "";
+        const extraSections = [
+            proj.engineeringExplanation
+                ? `<section class="project-output__section"><h3 class="project-output__label">Engineering</h3><div class="project-output__prose">${formatExplanationHtml(proj.engineeringExplanation)}</div></section>`
+                : "",
+            proj.physicsExplanation
+                ? `<section class="project-output__section"><h3 class="project-output__label">Physics</h3><div class="project-output__prose">${formatExplanationHtml(proj.physicsExplanation)}</div></section>`
+                : ""
+        ].join("");
 
-        output.innerHTML = `
-            <div class="project">
-                <div class="title">${escapeHtml(proj.title || "Untitled Project")}</div>
-                <div class="section"><strong>Description:</strong><pre class="pre">${escapeHtml(proj.description || "Not provided.")}</pre></div>
-                <div class="section"><strong>Materials Needed:</strong>${materialsHtml}</div>
-                ${suggestedHtml}
-                <div class="section"><strong>Steps:</strong><div>${stepsHtml || "Not provided."}</div></div>
-                <div class="section"><strong>Engineering Explanation:</strong><div class="pre">${formatExplanationHtml(proj.engineeringExplanation)}</div></div>
-                <div class="section"><strong>Physics Explanation:</strong><div class="pre">${formatExplanationHtml(proj.physicsExplanation)}</div></div>
-                <button onclick="saveProject(${index})">💾 Save Project</button>
-            </div>
-            <button onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>
-        `;
+        output.innerHTML =
+            window.ProjectOutput.renderStructuredProject(proj, {
+                escapeHtml: escapeHtml,
+                extraSectionsHtml: extraSections,
+                actionsHtml: `<button type="button" onclick="saveProject(${index})">💾 Save Project</button>`
+            }) +
+            `<button type="button" onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>`;
     }
 
     // -----------------------------
@@ -572,9 +549,9 @@
                 projects: directPayload.projects.map((p) => ({
                     title: p.project_name || p.title || "Untitled",
                     description: p.description || "",
-                    materials: p.materials_needed || p.materials || [],
-                    materialsSuggested: p.materials_suggested || [],
-                    steps: p.steps || [],
+                    materials: window.ProjectOutput.toStringList(p.materials_needed || p.materials),
+                    materialsSuggested: window.ProjectOutput.toStringList(p.materials_suggested),
+                    steps: window.ProjectOutput.toStringList(p.steps),
                     engineeringExplanation: p.engineering_explanation || p.engineeringExplanation || p.engineering || "",
                     physicsExplanation: p.physics_explanation || p.physicsExplanation || p.physics || ""
                 })),
@@ -663,24 +640,9 @@
     // -----------------------------
     function viewSavedProject(index) {
         const proj = window.savedProjects[index];
-
-        const output = document.getElementById("output");
-
-        output.innerHTML = `
-            <div class="project">
-                <div class="title">${proj.title}</div>
-
-                <div class="section">
-                    <strong>Description:</strong>
-                    <pre>${proj.description}</pre>
-                </div>
-
-                <div class="section">
-                    <strong>Steps:</strong>
-                    <ol>${(proj.steps || []).map(s => `<li>${s}</li>`).join("")}</ol>
-                </div>
-            </div>
-        `;
+        if (!proj) return;
+        window.allProjects = [proj.fullProject || proj];
+        showProject(0);
     }
 
     // -----------------------------

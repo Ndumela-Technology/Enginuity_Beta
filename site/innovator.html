@@ -125,8 +125,12 @@
             border-radius: 12px;
             height: 320px;
             overflow: auto;
+            overflow-x: hidden;
             padding: 12px;
             margin-bottom: 12px;
+            max-width: 100%;
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
         }
 
         .chat-row {
@@ -178,21 +182,26 @@
         }
 
         @media (max-width: 768px) {
-    body {
-        padding: 12px;
-    }
+            body {
+                padding: 12px;
+            }
 
-    h1 {
-        font-size: 24px;
-    }
+            h1 {
+                font-size: 24px;
+            }
 
-    .mode-grid {
-        grid-template-columns: 1fr;
-    }
-    button {
-        width: 100%;
-    }
-}
+            .chat-compose {
+                flex-direction: column;
+            }
+
+            .chat-compose button {
+                width: 100%;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body class="enginuity-paper">
@@ -219,16 +228,13 @@
             </select>
 
             <label for="education">Education / age</label>
-            <select id="education" onchange="updateDifficulty()">
+            <select id="education" onchange="updateAgeFromEducation()">
                 <option value="middle">Middle-Schooler (10–14)</option>
                 <option value="high">High-Schooler (15–18)</option>
                 <option value="student">Student (18–25)</option>
                 <option value="adult">Adult (25+)</option>
             </select>
             <input type="hidden" id="age" value="" />
-
-            <label for="difficulty">Difficulty (estimated time)</label>
-            <select id="difficulty"></select>
         </div>
 
         <div class="chat" id="chatPanel">
@@ -249,6 +255,7 @@
 
     <script>
         const MODE = "Innovator";
+        const API_BASE = "https://enginuity-cpl1.onrender.com";
         localStorage.setItem("enginuity_mode", MODE);
 
         // -------------------------
@@ -422,22 +429,29 @@
             return labels[education] || null;
         }
 
-        function buildChatContext() {
-            const materialsEl = document.getElementById("materials");
-            const materials = materialsEl ? materialsEl.value.trim() : "";
-            const difficulty = document.getElementById("difficulty").value;
+        function buildInnovatorContext() {
             const age = document.getElementById("age").value;
             const engineeringField = document.getElementById("engineeringField").value;
             const parts = [
                 `Mode: ${MODE}`,
                 lastSelectedProjectName ? `Selected project: ${lastSelectedProjectName}` : null,
-                materials ? `Materials: ${materials}` : null,
-                difficulty ? `Difficulty: ${difficulty}` : null,
-                age ? `Age: ${age}` : null,
+                age ? `Age group: ${age}` : null,
                 engineeringField ? `Engineering field focus: ${engineeringField}` : null
             ].filter(Boolean);
 
             return parts.join("\n");
+        }
+
+        function parseChatResponse(data) {
+            if (!data || typeof data !== "object") return { reply: "", error: "Invalid response from server." };
+            if (data.error) {
+                return {
+                    reply: "",
+                    error: typeof data.error === "string" ? data.error : "Something went wrong."
+                };
+            }
+            const reply = typeof data.reply === "string" ? data.reply.trim() : "";
+            return { reply, error: reply ? "" : "Empty reply from server." };
         }
 
         function appendChatMessage(role, text) {
@@ -467,7 +481,6 @@
             }
 
             const engineeringField = document.getElementById("engineeringField").value;
-            const difficulty = document.getElementById("difficulty").value;
             const age = document.getElementById("age").value;
             const summary = chatHistory.length
                 ? "Saved Innovator session with your chat history."
@@ -479,7 +492,7 @@
                 materials: [],
                 steps: chatHistory.map((entry) => `${entry.role.toUpperCase()}: ${entry.content}`),
                 engineeringExplanation: `Field: ${engineeringField || "Not set"}`,
-                physicsExplanation: `Difficulty: ${difficulty || "Not set"} | Age: ${age || "Not set"}`
+                physicsExplanation: `Age: ${age || "Not set"}`
             };
 
             const saved = window.saveProjectWithMeta(project, {
@@ -526,30 +539,16 @@
 
         window.renderSavedProject = renderSavedProject;
 
-        function updateDifficulty() {
+        function updateAgeFromEducation() {
             const education = document.getElementById("education").value;
-            const difficulty = document.getElementById("difficulty");
             const ageHidden = document.getElementById("age");
-
-            let options = [];
-            let ageValue = "";
-
-            if (education === "middle") {
-                options = ["Easy: 5–10 min", "Medium: 15–30 min", "Hard: 30–45 min"];
-                ageValue = "10-14";
-            } else if (education === "high") {
-                options = ["Easy: 8–20 min", "Medium: 30–50 min", "Hard: 50–75 min"];
-                ageValue = "15-18";
-            } else if (education === "student") {
-                options = ["Easy: 20–45 min", "Medium: 45–90 min", "Hard: 90–150 min"];
-                ageValue = "18-25";
-            } else {
-                options = ["Easy: 25–50 min", "Medium: 50–120 min", "Hard: 2–4 days"];
-                ageValue = "25+";
-            }
-
-            ageHidden.value = ageValue;
-            difficulty.innerHTML = options.map(o => `<option>${o}</option>`).join("");
+            const ageByEducation = {
+                middle: "10-14",
+                high: "15-18",
+                student: "18-25",
+                adult: "25+"
+            };
+            ageHidden.value = ageByEducation[education] || "";
         }
 
         async function sendMessage() {
@@ -557,9 +556,9 @@
             const userText = inputEl.value.trim();
             if (!userText) return;
 
-            // Optimistically render user message.
             appendChatMessage("user", userText);
             chatHistory.push({ role: "user", content: userText });
+            const historyForApi = chatHistory.slice(0, -1);
             inputEl.value = "";
 
             const sendBtn = document.getElementById("sendBtn");
@@ -579,19 +578,16 @@
                 chatThinking.textContent = thinkingSteps[thinkingIdx];
             }, 900);
 
-            // Add context into the message (backend does not have a separate memory field).
-            const context = buildChatContext();
-            const messageToSend = context ? `${context}\n\n${userText}` : userText;
-
             try {
-                const response = await fetch("https://enginuity-cpl1.onrender.com/chat", {
+                const response = await fetch(`${API_BASE}/chat-innovator`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        message: messageToSend,
-                        mode: MODE,
-                        history: chatHistory,
-                        education: getEducationLabel()
+                        message: userText,
+                        context: buildInnovatorContext(),
+                        history: historyForApi,
+                        education: getEducationLabel(),
+                        mode: MODE
                     })
                 });
 
@@ -600,39 +596,20 @@
                 }
 
                 const data = await response.json();
-                function pickChatReply(d) {
-                    if (!d || typeof d !== "object") return "";
-                    const keys = ["reply", "message", "response", "answer", "text", "content"];
-                    for (const k of keys) {
-                        if (!Object.prototype.hasOwnProperty.call(d, k)) continue;
-                        const v = d[k];
-                        if (v == null || v === "") continue;
-                        if (typeof v === "string" && !v.trim()) continue;
-                        return v;
-                    }
-                    return "";
-                }
-                let replyPayload = pickChatReply(data);
-                if (!replyPayload && data && data.error) {
-                    replyPayload = typeof data.error === "string" ? data.error : JSON.stringify(data.error);
-                }
-                let replyText =
-                    typeof replyPayload === "object"
-                        ? explanationToText(replyPayload)
-                        : typeof replyPayload === "string"
-                          ? explanationToText(replyPayload)
-                          : replyPayload != null
-                            ? String(replyPayload)
-                            : "";
-                replyText = String(replyText || "").trim();
+                const parsed = parseChatResponse(data);
 
+                if (parsed.error) {
+                    appendChatMessage("assistant", parsed.error);
+                    return;
+                }
+
+                const replyText = explanationToText(parsed.reply).trim();
                 if (!replyText) {
                     appendChatMessage("assistant", "Sorry, I couldn't generate a reply. Please try again.");
                     return;
                 }
 
                 appendChatMessage("assistant", replyText);
-
                 chatHistory.push({ role: "assistant", content: replyText });
             } catch (e) {
                 appendChatMessage("assistant", `Request failed: ${e && e.message ? e.message : String(e)}`);
@@ -656,7 +633,7 @@
             }
         });
 
-        updateDifficulty();
+        updateAgeFromEducation();
 
         // Initial assistant nudge (no backend call).
         appendChatMessage(

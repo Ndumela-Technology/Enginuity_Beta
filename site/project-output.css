@@ -1,0 +1,156 @@
+/* Structured project output — shared across mode pages */
+#output,
+.project-output,
+.project-output-choices {
+    max-width: 100%;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+
+.project-output {
+    border: 1px solid #e6e6e6;
+    padding: 1rem 1.1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    border-radius: 12px;
+    background: #fff;
+    line-height: 1.5;
+}
+
+.project-output__title {
+    margin: 0 0 0.35rem;
+    font-size: 1.35rem;
+    font-weight: 900;
+    line-height: 1.25;
+}
+
+.project-output__section {
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid #eee;
+}
+
+.project-output__section:first-of-type {
+    margin-top: 0.75rem;
+    padding-top: 0;
+    border-top: none;
+}
+
+.project-output__label {
+    margin: 0 0 0.45rem;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #444;
+}
+
+.project-output__text {
+    margin: 0;
+    color: #222;
+    line-height: 1.55;
+}
+
+.project-output__list,
+.project-output__steps {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.project-output__list li,
+.project-output__steps li {
+    margin: 0.35rem 0;
+}
+
+.project-output__steps li {
+    padding-left: 0.15rem;
+}
+
+.project-output__muted {
+    margin: 0;
+    color: #666;
+    font-style: italic;
+}
+
+.project-output__prose {
+    margin: 0;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    background: #fcfcfc;
+    line-height: 1.45;
+}
+
+.project-output__actions {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    align-items: center;
+}
+
+.project-output-choices__title {
+    margin: 0 0 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.project-output-choices__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.project-choice-card {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.85rem 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.project-choice-card:hover {
+    border-color: #bbb;
+    background: #fafafa;
+}
+
+.project-choice-card__name {
+    display: block;
+    font-weight: 800;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.project-choice-card__desc {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: #555;
+    line-height: 1.4;
+}
+
+.project-output-choices__hint {
+    margin-top: 0.65rem;
+    font-size: 0.875rem;
+    color: #555;
+}
+
+@media (max-width: 768px) {
+    .project-output__actions,
+    .contribution-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .project-output__actions button,
+    .contribution-actions button,
+    .project-choice-card,
+    #output > button {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}

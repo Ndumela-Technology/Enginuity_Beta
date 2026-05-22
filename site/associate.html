@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="enginuity.css" />
+    <link rel="stylesheet" href="project-output.css" />
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="alternate icon" href="assets/logo.svg">
@@ -245,9 +246,9 @@
 
         <hr />
         <div id="output"></div>
-        <pre id="rawOutput" class="pre" style="margin-top:12px; display:none;"></pre>
     </div>
 
+    <script src="project-output.js"></script>
     <script>
         const MODE = "Associate";
         localStorage.setItem("enginuity_mode", MODE);
@@ -445,10 +446,7 @@
 
         async function generateProject() {
             const output = document.getElementById("output");
-            const rawOutput = document.getElementById("rawOutput");
             output.innerHTML = "";
-            rawOutput.style.display = "block";
-            rawOutput.textContent = "Processing JSON response...";
 
             const engineeringField = document.getElementById("engineeringField").value;
             const difficulty = document.getElementById("difficulty").value;
@@ -460,7 +458,7 @@
                 const thinkingSteps = [
                     "Reading your preferences...",
                     "Designing project options...",
-                    "Processing JSON output..."
+                    "Formatting your projects..."
                 ];
                 let thinkingIdx = 0;
                 renderThinkingState(thinkingSteps[thinkingIdx]);
@@ -488,14 +486,10 @@
 
                 const data = await response.json();
                 clearInterval(thinkingTimer);
-                console.log(data);
-                rawOutput.style.display = "none";
-                rawOutput.textContent = "";
                 window.lastProjectData = data;
                 displayProjects(data);
             } catch (e) {
                 if (thinkingTimer) clearInterval(thinkingTimer);
-                rawOutput.style.display = "none";
                 output.innerHTML = `<div class="error">Request failed: ${escapeHtml(e && e.message ? e.message : String(e))}</div>`;
             }
         }
@@ -529,21 +523,11 @@
                 output.appendChild(safetyDiv);
             }
 
-            projects.forEach((proj, index) => {
-                const card = document.createElement("div");
-                card.style.marginBottom = "10px";
-                card.innerHTML = `
-                    <button onclick="showProject(${index})">
-                        ${escapeHtml(proj.title || "Project " + (index + 1))}
-                    </button>
-                `;
-                output.appendChild(card);
+            const choices = document.createElement("div");
+            choices.innerHTML = window.ProjectOutput.renderProjectChoices(projects, {
+                escapeHtml: escapeHtml
             });
-
-            const helper = document.createElement("div");
-            helper.style.marginTop = "8px";
-            helper.textContent = "Pick one project to view full instructions.";
-            output.appendChild(helper);
+            output.appendChild(choices);
         }
 
         function showProject(index) {
@@ -552,39 +536,32 @@
             selectedProjectIndex = index;
 
             const output = document.getElementById("output");
-            const materials = Array.isArray(proj.materials) ? proj.materials : [];
-            const steps = Array.isArray(proj.steps) ? proj.steps : [];
-            const materialsSuggested = Array.isArray(proj.materialsSuggested) ? proj.materialsSuggested : [];
 
-            const stepsHtml = steps.map((s) => formatStepHtml(s)).join("<br>");
-            const materialsHtml = materials.length
-                ? `<ul>${materials.map(m => `<li>${escapeHtml(m)}</li>`).join("")}</ul>`
-                : "<p>Not provided.</p>";
-            const suggestedHtml = materialsSuggested.length
-                ? `<div class="section"><strong>Materials Suggested:</strong><ul>${materialsSuggested.map(m => `<li>${escapeHtml(m)}</li>`).join("")}</ul></div>`
-                : "";
-
-            output.innerHTML = `
-                <div class="project">
-                    <div class="title">${escapeHtml(proj.title || "Untitled Project")}</div>
-                    <div class="section"><strong>Description:</strong><pre class="pre">${escapeHtml(proj.description || "Not provided.")}</pre></div>
-                    <div class="section"><strong>Materials Needed:</strong>${materialsHtml}</div>
-                    ${suggestedHtml}
-                    <div class="section"><strong>Steps:</strong><div>${stepsHtml || "Not provided."}</div></div>
-                    <div class="section"><strong>Engineering Explanation:</strong><div class="pre">${formatExplanationHtml(proj.engineeringExplanation)}</div></div>
-                    <div class="section"><strong>Physics Explanation:</strong><div class="pre">${formatExplanationHtml(proj.physicsExplanation)}</div></div>
-                    <div class="contribution-box">
-                        <label for="contributionInput"><strong>What additions do you want to contribute?</strong></label>
-                        <textarea id="contributionInput" placeholder="Example: make it waterproof, add a Bluetooth sensor, reduce cost, or include a testing checklist."></textarea>
-                        <div class="contribution-actions">
-                            <button id="contributionRefreshBtn" onclick="refreshSelectedProject()">Refresh Project</button>
-                            <button onclick="saveProject(${index})">💾 Save Project</button>
-                        </div>
-                        <div class="muted" id="contributionStatus"></div>
+            const extraSections = [
+                proj.engineeringExplanation
+                    ? `<section class="project-output__section"><h3 class="project-output__label">Engineering</h3><div class="project-output__prose">${formatExplanationHtml(proj.engineeringExplanation)}</div></section>`
+                    : "",
+                proj.physicsExplanation
+                    ? `<section class="project-output__section"><h3 class="project-output__label">Physics</h3><div class="project-output__prose">${formatExplanationHtml(proj.physicsExplanation)}</div></section>`
+                    : "",
+                `<section class="project-output__section contribution-box">
+                    <h3 class="project-output__label">Your contribution</h3>
+                    <label for="contributionInput">What additions do you want to contribute?</label>
+                    <textarea id="contributionInput" placeholder="Example: make it waterproof, add a Bluetooth sensor, reduce cost, or include a testing checklist."></textarea>
+                    <div class="contribution-actions project-output__actions">
+                        <button type="button" id="contributionRefreshBtn" onclick="refreshSelectedProject()">Refresh Project</button>
+                        <button type="button" onclick="saveProject(${index})">💾 Save Project</button>
                     </div>
-                </div>
-                <button onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>
-            `;
+                    <div class="muted" id="contributionStatus"></div>
+                </section>`
+            ].join("");
+
+            output.innerHTML =
+                window.ProjectOutput.renderStructuredProject(proj, {
+                    escapeHtml: escapeHtml,
+                    extraSectionsHtml: extraSections
+                }) +
+                `<button type="button" onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>`;
         }
 
         async function refreshSelectedProject() {
@@ -714,9 +691,9 @@
                     projects: directPayload.projects.map((proj) => ({
                         title: proj.project_name || proj.title || "Untitled",
                         description: proj.description || "",
-                        materials: proj.materials_needed || proj.materials || [],
-                        materialsSuggested: proj.materials_suggested || [],
-                        steps: proj.steps || [],
+                        materials: window.ProjectOutput.toStringList(proj.materials_needed || proj.materials),
+                        materialsSuggested: window.ProjectOutput.toStringList(proj.materials_suggested),
+                        steps: window.ProjectOutput.toStringList(proj.steps),
                         engineeringExplanation: proj.engineering_explanation || proj.engineeringExplanation || proj.engineering || "",
                         physicsExplanation: proj.physics_explanation || proj.physicsExplanation || proj.physics || ""
                     })),
