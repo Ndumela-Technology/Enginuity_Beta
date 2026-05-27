@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enginuity · Innovator Lite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="enginuity.css" />
+  <link rel="stylesheet" href="project-output.css" />
+  <link rel="stylesheet" href="spark-helper.css" />
+  <link rel="stylesheet" href="contact.css" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="alternate icon" href="assets/logo.svg" />
+  <style>
+    .lite-wrap { max-width: 980px; margin: 0 auto; }
+    .lite-panel {
+      border: 1px solid #e7e7e7;
+      border-radius: 14px;
+      background: #fff;
+      padding: 1rem 1.1rem;
+      margin-bottom: 1rem;
+    }
+    .lite-title { margin: 0 0 0.4rem; font-size: 2rem; }
+    .lite-sub { margin: 0; color: #333; line-height: 1.45; }
+    .lite-materials { min-height: 88px; width: 100%; box-sizing: border-box; }
+    .lite-actions { margin-top: 0.75rem; display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .lite-status { margin-top: 0.6rem; color: #555; font-size: 0.9rem; }
+    .lite-error {
+      border: 1px solid #ffb7b7;
+      background: #fff3f3;
+      color: #8a0000;
+      border-radius: 10px;
+      padding: 0.65rem 0.8rem;
+      margin-top: 0.7rem;
+    }
+    .lite-progress {
+      margin: 0.8rem 0;
+      border: 1px solid #e6e6e6;
+      background: #fafafa;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .lite-progress__bar {
+      height: 12px;
+      width: 0%;
+      background: linear-gradient(90deg, #d81f26, #ff7c31);
+      transition: width 200ms ease;
+    }
+    .lite-progress__label { margin: 0.4rem 0 0; font-size: 0.85rem; color: #555; }
+    .lite-step-check { margin-right: 0.5rem; transform: translateY(1px); }
+    .lite-complete {
+      margin-top: 0.8rem;
+      border: 1px solid #c7f1cf;
+      background: #edfdf1;
+      color: #155724;
+      border-radius: 10px;
+      padding: 0.65rem 0.8rem;
+      display: none;
+    }
+  </style>
+</head>
+<body class="enginuity-paper">
+  <div class="lite-wrap">
+    <a class="back" href="index.html">← Back</a>
+    <section class="lite-panel">
+      <h1 class="lite-title">Innovator Lite</h1>
+      <p class="lite-sub">
+        Your first Enginuity build. Quick, fun, and visual. Share the materials you already have and SparkAI will craft a 15-20 minute project.
+      </p>
+      <label for="liteMaterials"><strong>Available materials (comma or new line)</strong></label>
+      <textarea id="liteMaterials" class="lite-materials" placeholder="Example: paper cups, tape, string, coins"></textarea>
+      <div class="lite-actions">
+        <button type="button" id="liteGenerateBtn">Generate Innovator Lite Project</button>
+      </div>
+      <div id="liteStatus" class="lite-status"></div>
+      <div id="liteError" class="lite-error" hidden></div>
+    </section>
+
+    <div id="liteOutput"></div>
+    <div id="liteComplete" class="lite-complete">
+      Nice work — you completed your Innovator Lite project.
+    </div>
+  </div>
+
+  <script src="user-plan.js"></script>
+  <script src="project-output.js"></script>
+  <script src="saved-projects.js"></script>
+  <script src="diagram-generator.js"></script>
+  <script src="spark-helper.js"></script>
+  <script>
+    (function () {
+      var API_BASE = "https://enginuity-cpl1.onrender.com";
+      var COMPLETED_KEY = "innovator_lite_completed";
+      var PROGRESS_KEY = "innovator_lite_progress";
+      var MODE = "Innovator Lite";
+      var currentProject = null;
+
+      window.MODE = MODE;
+      localStorage.setItem("enginuity_mode", MODE);
+
+      // Temporary onboarding access without plan restrictions.
+      window.canUseDiagram = function () { return { allowed: true }; };
+      window.recordDiagramUse = function () {};
+      window.canUseSparkHelper = function () { return { allowed: true }; };
+      window.recordSparkHelperUse = function () {};
+
+      function escapeHtml(str) {
+        return String(str)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll("\"", "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function getMaterialsList() {
+        var raw = document.getElementById("liteMaterials").value || "";
+        return raw
+          .split(/\n|,/)
+          .map(function (m) { return m.trim(); })
+          .filter(Boolean);
+      }
+
+      function readProgressMap() {
+        try {
+          return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || {};
+        } catch (_) {
+          return {};
+        }
+      }
+
+      function writeProgressMap(map) {
+        localStorage.setItem(PROGRESS_KEY, JSON.stringify(map || {}));
+      }
+
+      function progressKeyFor(project) {
+        return String(project && project.id ? project.id : "default");
+      }
+
+      function getStepChecks(project, len) {
+        var map = readProgressMap();
+        var arr = map[progressKeyFor(project)];
+        if (!Array.isArray(arr)) return new Array(len).fill(false);
+        var checks = arr.slice(0, len);
+        while (checks.length < len) checks.push(false);
+        return checks;
+      }
+
+      function setStepChecks(project, checks) {
+        var map = readProgressMap();
+        map[progressKeyFor(project)] = checks;
+        writeProgressMap(map);
+      }
+
+      function updateProgressUi() {
+        var bar = document.getElementById("liteProgressBar");
+        var label = document.getElementById("liteProgressLabel");
+        var complete = document.getElementById("liteComplete");
+        if (!currentProject || !bar || !label) return;
+
+        var steps = Array.isArray(currentProject.steps) ? currentProject.steps : [];
+        var checks = getStepChecks(currentProject, steps.length);
+        var done = checks.filter(Boolean).length;
+        var pct = steps.length ? Math.round((done / steps.length) * 100) : 0;
+        bar.style.width = pct + "%";
+        label.textContent = done + " / " + steps.length + " steps complete";
+
+        if (steps.length && done === steps.length) {
+          localStorage.setItem(COMPLETED_KEY, "true");
+          complete.style.display = "block";
+        } else {
+          complete.style.display = "none";
+        }
+      }
+
+      function hydrateChecklist() {
+        if (!currentProject) return;
+        var steps = Array.isArray(currentProject.steps) ? currentProject.steps : [];
+        var checks = getStepChecks(currentProject, steps.length);
+        var nodes = document.querySelectorAll("#liteOutput .project-output__step");
+        nodes.forEach(function (li, idx) {
+          var textDiv = li.querySelector(".project-output__step-text");
+          if (!textDiv) return;
+          if (textDiv.querySelector(".lite-step-check")) return;
+
+          var box = document.createElement("input");
+          box.type = "checkbox";
+          box.className = "lite-step-check";
+          box.checked = !!checks[idx];
+          box.addEventListener("change", function () {
+            var current = getStepChecks(currentProject, steps.length);
+            current[idx] = box.checked;
+            setStepChecks(currentProject, current);
+            updateProgressUi();
+          });
+          textDiv.prepend(box);
+        });
+      }
+
+      function saveLiteProject() {
+        if (!currentProject || typeof window.saveProjectWithMeta !== "function") return;
+        var saved = window.saveProjectWithMeta(currentProject, {
+          mode: MODE,
+          page: "innovator-lite.html"
+        });
+        if (saved && typeof window.showSavedToast === "function") {
+          window.showSavedToast("✅ Project saved!");
+        }
+      }
+
+      function renderProject(project) {
+        currentProject = project;
+        if (typeof window.setCurrentProject === "function") {
+          window.setCurrentProject(project);
+        }
+        if (typeof window.syncSparkHelperContext === "function") {
+          window.syncSparkHelperContext();
+        }
+
+        var output = document.getElementById("liteOutput");
+        var extra =
+          '<section class="project-output__section"><h3 class="project-output__label">Estimated time</h3><p class="project-output__text">' + escapeHtml(project.estimatedTime || "15-20 minutes") + "</p></section>" +
+          '<section class="project-output__section"><h3 class="project-output__label">Difficulty</h3><p class="project-output__text">' + escapeHtml(project.difficulty || "Beginner") + "</p></section>" +
+          '<section class="project-output__section"><h3 class="project-output__label">Science behind it</h3><div class="project-output__prose">' + escapeHtml(project.scienceExplanation || "Explore why each step works as you build.") + "</div></section>" +
+          '<section class="project-output__section"><h3 class="project-output__label">Progress</h3><div class="lite-progress"><div id="liteProgressBar" class="lite-progress__bar"></div></div><p id="liteProgressLabel" class="lite-progress__label">0 / 0 steps complete</p></section>';
+
+        output.innerHTML = window.ProjectOutput.renderStructuredProject(project, {
+          escapeHtml: escapeHtml,
+          extraSectionsHtml: extra,
+          actionsHtml: '<button type="button" id="liteSaveBtn">💾 Save Project</button>'
+        });
+
+        var saveBtn = document.getElementById("liteSaveBtn");
+        if (saveBtn) saveBtn.addEventListener("click", saveLiteProject);
+
+        hydrateChecklist();
+        updateProgressUi();
+      }
+
+      function normalizeLiteProject(data, materials) {
+        return {
+          id: "innovator-lite-" + Date.now(),
+          title: data.title || "Innovator Lite Project",
+          description: data.description || "",
+          estimatedTime: data.estimated_time || "15-20 minutes",
+          difficulty: data.difficulty || "Beginner",
+          materials: Array.isArray(data.materials) && data.materials.length ? data.materials : materials,
+          steps: Array.isArray(data.steps) ? data.steps.map(String).filter(Boolean).slice(0, 7) : [],
+          scienceExplanation: data.science_explanation || "",
+          mode: MODE,
+          page: "innovator-lite.html"
+        };
+      }
+
+      function setError(msg) {
+        var el = document.getElementById("liteError");
+        if (!msg) {
+          el.hidden = true;
+          el.textContent = "";
+          return;
+        }
+        el.hidden = false;
+        el.textContent = msg;
+      }
+
+      async function generateLiteProject() {
+        setError("");
+        var status = document.getElementById("liteStatus");
+        var btn = document.getElementById("liteGenerateBtn");
+        var materials = getMaterialsList();
+        if (!materials.length) {
+          setError("Please add at least one material.");
+          return;
+        }
+
+        status.textContent = "Generating your Innovator Lite experience...";
+        btn.disabled = true;
+        btn.textContent = "Generating...";
+
+        try {
+          var res = await fetch(API_BASE + "/generate-innovator-lite", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ materials: materials })
+          });
+          if (!res.ok) throw new Error("Server returned " + res.status);
+
+          var data = await res.json();
+          if (data && data.error) {
+            setError(data.error);
+            return;
+          }
+
+          var project = normalizeLiteProject(data || {}, materials);
+          if (!project.steps.length) {
+            setError("Could not generate a valid project. Please try again.");
+            return;
+          }
+
+          status.textContent = "Project ready. Build, track progress, and ask SparkHelper anytime.";
+          renderProject(project);
+        } catch (err) {
+          setError("Request failed: " + (err && err.message ? err.message : String(err)));
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Generate Innovator Lite Project";
+        }
+      }
+
+      document.getElementById("liteGenerateBtn").addEventListener("click", generateLiteProject);
+    })();
+  </script>
+  <script src="contact.js"></script>
+  <script src="enginuity-loading-screen.js" defer></script>
+</body>
+</html>

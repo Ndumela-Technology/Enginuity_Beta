@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 from typing import List, Optional
-from core.ai_engine import generate_projects, generate_chat_reply, run_safety_check
+from core.ai_engine import generate_projects, generate_chat_reply, run_safety_check, generate_innovator_lite_project
 from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
+import os
 
 app = FastAPI()
 
@@ -176,6 +177,10 @@ class ChatRequest(BaseModel):
     mode: str = "Innovator"
 
 
+class InnovatorLiteRequest(BaseModel):
+    materials: List[str] = []
+
+
 # ------------------------
 # Routes
 # ------------------------
@@ -183,6 +188,12 @@ class ChatRequest(BaseModel):
 @app.get("/")
 def root():
     return {"status": "Enginuity API — SparkAI ready"}
+
+
+@app.get("/public-config/contact")
+def public_contact_config():
+    email = (os.getenv("CONTACT_EMAIL", "") or "").strip()
+    return {"email": email}
 
 
 @app.post("/chat-innovator")
@@ -258,35 +269,102 @@ def generate_project(request: ProjectRequest):
     return {"projects": safe_projects}
 
 
+@app.post("/generate-innovator-lite")
+def generate_innovator_lite(request: InnovatorLiteRequest):
+    materials = request.materials or []
+    if not isinstance(materials, list):
+        return {"error": "Materials must be a list of strings."}
+
+    normalized_materials = [str(m).strip() for m in materials if str(m).strip()]
+    if not normalized_materials:
+        return {"error": "Please provide at least one material."}
+
+    generated = generate_innovator_lite_project(normalized_materials)
+    if generated.get("error"):
+        return generated
+
+    def cleaned_text(value, default=""):
+        if value is None:
+            return default
+        text = str(value).strip()
+        return text if text else default
+
+    result = {
+        "title": cleaned_text(generated.get("title", ""), ""),
+        "description": cleaned_text(generated.get("description", ""), ""),
+        "estimated_time": cleaned_text(generated.get("estimated_time"), "15-20 minutes"),
+        "difficulty": cleaned_text(generated.get("difficulty"), "Beginner"),
+        "materials": [str(m).strip() for m in generated.get("materials", []) if str(m).strip()],
+        "steps": [str(s).strip() for s in generated.get("steps", []) if str(s).strip()],
+        "science_explanation": cleaned_text(generated.get("science_explanation", ""), ""),
+    }
+
+    if not result["materials"]:
+        result["materials"] = normalized_materials
+
+    if not result["steps"]:
+        return {"error": "Could not generate onboarding steps. Please try again."}
+
+    if len(result["steps"]) > 7:
+        result["steps"] = result["steps"][:7]
+
+    return result
+
+
 @app.post("/chat-helper")
 def spark_helper(data: ChatRequest):
-    message = data.message
-    context = data.context
+    context = (data.context or "").strip()
+    message = (data.message or "").strip()
+    mode = (data.mode or "Apprentice").strip()
 
-    prompt = f"""
-    You are SparkHelper, an assistant inside an educational engineering app.
+    mode_guidance = {
+        "Apprentice": "Use simple, step-by-step language. Do not assume prior knowledge.",
+        "Associate": "Collaborate: suggest options and trade-offs; support the user's choices.",
+        "Innovator": "Be concise; the user leads. Answer directly without over-explaining.",
+        "Innovator Lite": "Keep it welcoming, simple, and motivating for a first-time builder.",
+    }.get(mode, "Explain clearly for a learning builder.")
 
-    Your job:
-    - Explain steps
-    - Answer questions about the project
-    - Teach clearly
+    system_prompt = f"""You are SparkHelper, an engineering mentor and educational assistant inside Enginuity.
 
-    RULES:
-    - Do NOT generate new project ideas
-    - Stay within the context
+The user is in {mode} mode. {mode_guidance}
 
-    Context:
-    {context}
+You help the user with their CURRENT project only (provided below).
 
-    Question:
-    {message}
-    """
+You should:
+- Explain concepts clearly
+- Help improve existing builds
+- Discuss related engineering ideas in context
+- Compare designs and principles
+- Encourage experimentation and learning
+
+You should NOT:
+- Generate entirely new standalone projects
+- Replace SparkAI's project generator
+- Create unrelated build plans
+
+If the user asks for a completely new project or an unrelated build:
+- Redirect them naturally to use SparkAI's project generator on their mode page
+- Offer to help explore or improve ideas within their current project instead
+
+Reply in clear plain language. Avoid markdown headings (#). Use short paragraphs or simple bullet lists when helpful.
+
+Current project context:
+{context if context else "(No project context provided.)"}
+"""
+
+    messages = [{"role": "system", "content": system_prompt}]
+
+    for msg in data.history or []:
+        role = msg.get("role")
+        content = msg.get("content")
+        if role in ("user", "assistant") and content:
+            messages.append({"role": role, "content": content})
+
+    messages.append({"role": "user", "content": message})
 
     response = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {"role": "system", "content": prompt}
-        ]
+        model="gpt-4o-mini",
+        messages=messages,
     )
 
     reply = response.choices[0].message.content

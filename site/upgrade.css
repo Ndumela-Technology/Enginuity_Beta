@@ -1,0 +1,191 @@
+.eng-upgrade-mount {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.65rem;
+}
+
+.site-header .eng-upgrade-mount {
+  margin: 0;
+  align-items: center;
+}
+
+.eng-upgrade-btn {
+  border: 2px solid var(--eng-red, #d81f26);
+  border-radius: 999px;
+  padding: 0.42rem 0.85rem;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--eng-red-deep, #8a0000);
+  font-family: "Special Elite", "Courier New", Courier, monospace;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.eng-upgrade-btn:hover {
+  background: rgba(216, 31, 38, 0.08);
+}
+
+.eng-upgrade-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(16, 10, 10, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.eng-upgrade-modal.is-open {
+  display: flex;
+}
+
+.eng-upgrade-modal__card {
+  width: min(920px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(216, 31, 38, 0.28);
+  background: #fff;
+  padding: 1rem;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.2);
+}
+
+.eng-upgrade-modal__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.eng-upgrade-modal__head h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  color: var(--eng-red-deep, #8a0000);
+}
+
+.eng-upgrade-modal__sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: rgba(30, 30, 30, 0.65);
+}
+
+.eng-upgrade-modal__close {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #444;
+}
+
+.eng-upgrade-billing-toggle {
+  display: inline-flex;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 0.85rem;
+  background: #f4f4f4;
+}
+
+.eng-upgrade-billing-toggle button {
+  border: none;
+  background: transparent;
+  color: #333;
+  padding: 0.42rem 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.eng-upgrade-billing-toggle button.is-active {
+  background: #111;
+  color: #fff;
+}
+
+.eng-upgrade-plans {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.eng-upgrade-plan {
+  position: relative;
+  border: 1px solid #e4e4e4;
+  border-radius: 12px;
+  padding: 0.8rem;
+  background: #fafafa;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.eng-upgrade-plan.is-current {
+  border-color: rgba(216, 31, 38, 0.55);
+  box-shadow: 0 0 0 2px rgba(216, 31, 38, 0.12);
+}
+
+.eng-upgrade-plan.is-recommended {
+  border-color: rgba(216, 31, 38, 0.75);
+}
+
+.eng-upgrade-plan__badge {
+  position: absolute;
+  top: -0.45rem;
+  right: 0.55rem;
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: #111;
+  color: #fff;
+}
+
+.eng-upgrade-plan__badge--current {
+  background: var(--eng-red, #d81f26);
+}
+
+.eng-upgrade-plan h3 {
+  margin: 0 0 0.2rem;
+  font-size: 1.05rem;
+  color: var(--eng-red-deep, #8a0000);
+}
+
+.eng-upgrade-plan__price {
+  margin: 0 0 0.45rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.eng-upgrade-plan ul {
+  margin: 0 0 0.65rem;
+  padding-left: 1rem;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.eng-upgrade-plan__select {
+  width: 100%;
+  border: 2px solid var(--eng-red, #d81f26);
+  border-radius: 8px;
+  padding: 0.45rem 0.55rem;
+  background: #fff;
+  color: var(--eng-red-deep, #8a0000);
+  font-family: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.eng-upgrade-plan__select:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+@media (max-width: 860px) {
+  .eng-upgrade-plans {
+    grid-template-columns: 1fr;
+  }
+}

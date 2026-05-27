@@ -8,6 +8,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="enginuity.css" />
     <link rel="stylesheet" href="project-output.css" />
+    <link rel="stylesheet" href="spark-helper.css" />
+    <link rel="stylesheet" href="upgrade.css" />
+    <link rel="stylesheet" href="contact.css" />
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="alternate icon" href="assets/logo.svg">
@@ -249,8 +252,11 @@
     </div>
 
     <script src="project-output.js"></script>
+    <script src="user-plan.js"></script>
+    <script src="diagram-generator.js"></script>
     <script>
         const MODE = "Associate";
+        window.MODE = MODE;
         localStorage.setItem("enginuity_mode", MODE);
         let selectedProjectIndex = null;
 
@@ -261,6 +267,15 @@
                 .replaceAll(">", "&gt;")
                 .replaceAll("\"", "&quot;")
                 .replaceAll("'", "&#39;");
+        }
+
+        function toStringList(value) {
+            if (window.ProjectOutput && typeof window.ProjectOutput.toStringList === "function") {
+                return window.ProjectOutput.toStringList(value);
+            }
+            if (!value) return [];
+            if (Array.isArray(value)) return value.map(String).filter(Boolean);
+            return [String(value)];
         }
 
         function nlToBr(escaped) {
@@ -448,7 +463,7 @@
             if (typeof window.canUseAssociate === "function") {
                 const associateCheck = window.canUseAssociate();
                 if (!associateCheck.allowed) {
-                    alert(associateCheck.message || "Associate limit reached.");
+                    alert(associateCheck.message || "You've used your free builds. Upgrade to continue.");
                     return;
                 }
             }
@@ -492,10 +507,18 @@
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error("Server returned " + response.status);
+                }
+
                 const data = await response.json();
                 clearInterval(thinkingTimer);
-                if (typeof window.recordAssociateUse === "function") {
-                    window.recordAssociateUse();
+
+                const normalized = normalizeProjects(data);
+                if (normalized.projects.length) {
+                    if (typeof window.recordAssociateUse === "function") {
+                        window.recordAssociateUse();
+                    }
                 }
                 window.lastProjectData = data;
                 displayProjects(data);
@@ -508,6 +531,11 @@
         function displayProjects(data) {
             const output = document.getElementById("output");
             output.innerHTML = "";
+
+            if (data && data.error) {
+                output.innerHTML = `<div class="error">${escapeHtml(data.error)}</div>`;
+                return;
+            }
 
             const payload = data && data.projects ? data.projects : null;
 
@@ -534,17 +562,35 @@
                 output.appendChild(safetyDiv);
             }
 
-            const choices = document.createElement("div");
-            choices.innerHTML = window.ProjectOutput.renderProjectChoices(projects, {
-                escapeHtml: escapeHtml
-            });
-            output.appendChild(choices);
+            if (!window.ProjectOutput) {
+                projects.forEach((proj, i) => {
+                    const btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.textContent = escapeHtml(proj.title || "Project " + (i + 1));
+                    btn.onclick = function () { showProject(i); };
+                    btn.style.display = "block";
+                    btn.style.marginBottom = "8px";
+                    output.appendChild(btn);
+                });
+            } else {
+                const choices = document.createElement("div");
+                choices.innerHTML = window.ProjectOutput.renderProjectChoices(projects, {
+                    escapeHtml: escapeHtml
+                });
+                output.appendChild(choices);
+            }
         }
 
         function showProject(index) {
             const proj = (window.allProjects || [])[index];
             if (!proj) return;
             selectedProjectIndex = index;
+            if (typeof window.setCurrentProject === "function") {
+                window.setCurrentProject(proj);
+            }
+            if (typeof window.syncSparkHelperContext === "function") {
+                window.syncSparkHelperContext();
+            }
 
             const output = document.getElementById("output");
 
@@ -567,19 +613,27 @@
                 </section>`
             ].join("");
 
-            output.innerHTML =
-                window.ProjectOutput.renderStructuredProject(proj, {
-                    escapeHtml: escapeHtml,
-                    extraSectionsHtml: extraSections
-                }) +
-                `<button type="button" onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>`;
+            if (!window.ProjectOutput) {
+                output.innerHTML =
+                    `<div><strong>${escapeHtml(proj.title || "Untitled")}</strong></div>` +
+                    `<p>${escapeHtml(proj.description || "")}</p>` +
+                    extraSections +
+                    `<button type="button" onclick="displayProjects(window.lastProjectData)">← Back</button>`;
+            } else {
+                output.innerHTML =
+                    window.ProjectOutput.renderStructuredProject(proj, {
+                        escapeHtml: escapeHtml,
+                        extraSectionsHtml: extraSections
+                    }) +
+                    `<button type="button" onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>`;
+            }
         }
 
         async function refreshSelectedProject() {
             if (typeof window.canUseAssociate === "function") {
                 const associateCheck = window.canUseAssociate();
                 if (!associateCheck.allowed) {
-                    alert(associateCheck.message || "Associate limit reached.");
+                    alert(associateCheck.message || "You've used your free builds. Upgrade to continue.");
                     return;
                 }
             }
@@ -713,9 +767,9 @@
                     projects: directPayload.projects.map((proj) => ({
                         title: proj.project_name || proj.title || "Untitled",
                         description: proj.description || "",
-                        materials: window.ProjectOutput.toStringList(proj.materials_needed || proj.materials),
-                        materialsSuggested: window.ProjectOutput.toStringList(proj.materials_suggested),
-                        steps: window.ProjectOutput.toStringList(proj.steps),
+                        materials: toStringList(proj.materials_needed || proj.materials),
+                        materialsSuggested: toStringList(proj.materials_suggested),
+                        steps: toStringList(proj.steps),
                         engineeringExplanation: proj.engineering_explanation || proj.engineeringExplanation || proj.engineering || "",
                         physicsExplanation: proj.physics_explanation || proj.physicsExplanation || proj.physics || ""
                     })),
@@ -728,9 +782,9 @@
                 const projects = Object.entries(source.suggestion).map(([name, proj]) => ({
                     title: name,
                     description: proj && proj.description ? proj.description : "",
-                    materials: proj && Array.isArray(proj.materials_needed) ? proj.materials_needed : [],
-                    materialsSuggested: proj && Array.isArray(proj.materials_suggested) ? proj.materials_suggested : [],
-                    steps: proj && Array.isArray(proj.steps) ? proj.steps : [],
+                    materials: toStringList(proj && (proj.materials_needed || proj.materials)),
+                    materialsSuggested: toStringList(proj && (proj.materials_suggested || proj.materialsSuggested)),
+                    steps: toStringList(proj && proj.steps),
                     engineeringExplanation: proj ? (proj.engineering_explanation || proj.engineeringExplanation || proj.engineering || "") : "",
                     physicsExplanation: proj ? (proj.physics_explanation || proj.physicsExplanation || proj.physics || "") : ""
                 }));
@@ -746,8 +800,10 @@
             resumeSavedProjectIfAny();
         };
     </script>
-    <script src="user-plan.js"></script>
+    <script src="upgrade.js"></script>
+    <script src="contact.js"></script>
     <script src="saved-projects.js" defer></script>
+    <script src="spark-helper.js" defer></script>
     <script src="enginuity-loading-screen.js" defer></script>
 </body>
 </html>

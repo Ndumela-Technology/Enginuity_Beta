@@ -8,6 +8,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="enginuity.css" />
     <link rel="stylesheet" href="project-output.css" />
+    <link rel="stylesheet" href="spark-helper.css" />
+    <link rel="stylesheet" href="upgrade.css" />
+    <link rel="stylesheet" href="contact.css" />
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="alternate icon" href="assets/logo.svg">
@@ -226,12 +229,21 @@
         </div>
 
         <hr />
+        <section class="saved-section" aria-label="Saved projects">
+            <h2>📁 Saved Projects</h2>
+            <div id="savedProjects"></div>
+        </section>
+        <hr />
         <div id="output"></div>
     </div>
 
     <script src="project-output.js"></script>
+    <script src="user-plan.js"></script>
+    <script src="diagram-generator.js"></script>
+    <script src="saved-projects.js"></script>
     <script>
     const MODE = "Apprentice";
+    window.MODE = MODE;
     localStorage.setItem("forge_mode", MODE);
 
     function escapeHtml(str) {
@@ -241,6 +253,15 @@
             .replaceAll(">", "&gt;")
             .replaceAll("\"", "&quot;")
             .replaceAll("'", "&#39;");
+    }
+
+    function toStringList(value) {
+        if (window.ProjectOutput && typeof window.ProjectOutput.toStringList === "function") {
+            return window.ProjectOutput.toStringList(value);
+        }
+        if (!value) return [];
+        if (Array.isArray(value)) return value.map(String).filter(Boolean);
+        return [String(value)];
     }
 
     function nlToBr(escaped) {
@@ -474,10 +495,18 @@
                 })
             });
 
+            if (!response.ok) {
+                throw new Error("Server returned " + response.status);
+            }
+
             const data = await response.json();
             clearInterval(thinkingTimer);
-            if (typeof window.recordApprenticeGeneration === "function") {
-                window.recordApprenticeGeneration();
+
+            const normalized = normalizeProjects(data);
+            if (normalized.projects.length) {
+                if (typeof window.recordApprenticeGeneration === "function") {
+                    window.recordApprenticeGeneration();
+                }
             }
             window.lastProjectData = data;
 
@@ -485,7 +514,7 @@
 
         } catch (err) {
             clearInterval(thinkingTimer);
-            output.innerHTML = `<div class="error">Error: ${err.message}</div>`;
+            output.innerHTML = `<div class="error">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</div>`;
         }
     }
 
@@ -495,6 +524,18 @@
     function displayProjects(data) {
         const output = document.getElementById("output");
         output.innerHTML = "";
+
+        if (data && data.error) {
+            output.innerHTML = `<div class="error">${escapeHtml(data.error)}</div>`;
+            return;
+        }
+
+        const payload = data && data.projects ? data.projects : null;
+
+        if (payload && payload.error) {
+            output.innerHTML = `<div class="error">${escapeHtml(payload.error)}</div>`;
+            return;
+        }
 
         const normalized = normalizeProjects(data);
         const projects = normalized.projects;
@@ -514,11 +555,23 @@
             output.appendChild(safetyDiv);
         }
 
-        const choices = document.createElement("div");
-        choices.innerHTML = window.ProjectOutput.renderProjectChoices(projects, {
-            escapeHtml: escapeHtml
-        });
-        output.appendChild(choices);
+        if (!window.ProjectOutput) {
+            projects.forEach((proj, i) => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.textContent = escapeHtml(proj.title || "Project " + (i + 1));
+                btn.onclick = function () { showProject(i); };
+                btn.style.display = "block";
+                btn.style.marginBottom = "8px";
+                output.appendChild(btn);
+            });
+        } else {
+            const choices = document.createElement("div");
+            choices.innerHTML = window.ProjectOutput.renderProjectChoices(projects, {
+                escapeHtml: escapeHtml
+            });
+            output.appendChild(choices);
+        }
     }
 
     // -----------------------------
@@ -527,6 +580,12 @@
     function showProject(index) {
         const proj = (window.allProjects || [])[index];
         if (!proj) return;
+        if (typeof window.setCurrentProject === "function") {
+            window.setCurrentProject(proj);
+        }
+        if (typeof window.syncSparkHelperContext === "function") {
+            window.syncSparkHelperContext();
+        }
         const output = document.getElementById("output");
 
         const extraSections = [
@@ -538,13 +597,21 @@
                 : ""
         ].join("");
 
-        output.innerHTML =
-            window.ProjectOutput.renderStructuredProject(proj, {
-                escapeHtml: escapeHtml,
-                extraSectionsHtml: extraSections,
-                actionsHtml: `<button type="button" onclick="saveProject(${index})">💾 Save Project</button>`
-            }) +
-            `<button type="button" onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>`;
+        if (!window.ProjectOutput) {
+            output.innerHTML =
+                `<div><strong>${escapeHtml(proj.title || "Untitled")}</strong></div>` +
+                `<p>${escapeHtml(proj.description || "")}</p>` +
+                `<button type="button" onclick="saveProject(${index})">💾 Save Project</button>` +
+                `<button type="button" onclick="displayProjects(window.lastProjectData)">← Back</button>`;
+        } else {
+            output.innerHTML =
+                window.ProjectOutput.renderStructuredProject(proj, {
+                    escapeHtml: escapeHtml,
+                    extraSectionsHtml: extraSections,
+                    actionsHtml: `<button type="button" onclick="saveProject(${index})">💾 Save Project</button>`
+                }) +
+                `<button type="button" onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>`;
+        }
     }
 
     // -----------------------------
@@ -560,9 +627,9 @@
                 projects: directPayload.projects.map((p) => ({
                     title: p.project_name || p.title || "Untitled",
                     description: p.description || "",
-                    materials: window.ProjectOutput.toStringList(p.materials_needed || p.materials),
-                    materialsSuggested: window.ProjectOutput.toStringList(p.materials_suggested),
-                    steps: window.ProjectOutput.toStringList(p.steps),
+                    materials: toStringList(p.materials_needed || p.materials),
+                    materialsSuggested: toStringList(p.materials_suggested),
+                    steps: toStringList(p.steps),
                     engineeringExplanation: p.engineering_explanation || p.engineeringExplanation || p.engineering || "",
                     physicsExplanation: p.physics_explanation || p.physicsExplanation || p.physics || ""
                 })),
@@ -574,9 +641,9 @@
             const projects = Object.entries(source.suggestion).map(([name, p]) => ({
                 title: name,
                 description: p && p.description ? p.description : "",
-                materials: p && Array.isArray(p.materials_needed) ? p.materials_needed : [],
-                materialsSuggested: p && Array.isArray(p.materials_suggested) ? p.materials_suggested : [],
-                steps: p && Array.isArray(p.steps) ? p.steps : [],
+                materials: toStringList(p && (p.materials_needed || p.materials)),
+                materialsSuggested: toStringList(p && (p.materials_suggested || p.materialsSuggested)),
+                steps: toStringList(p && p.steps),
                 engineeringExplanation: p ? (p.engineering_explanation || p.engineeringExplanation || p.engineering || "") : "",
                 physicsExplanation: p ? (p.physics_explanation || p.physicsExplanation || p.physics || "") : ""
             }));
@@ -606,54 +673,6 @@
         if (saved && typeof window.showSavedToast === "function") {
             window.showSavedToast("✅ Project saved!");
         }
-    }
-
-    // -----------------------------
-    // Load Saved Projects (Home)
-    // -----------------------------
-    function loadSavedProjects() {
-        const container = document.getElementById("savedProjects");
-        if (!container) return;
-
-        const email = localStorage.getItem("user_email");
-
-        if (!email) {
-            container.innerHTML = "";
-            return;
-        }
-
-        let allSaved = JSON.parse(localStorage.getItem("saved_projects")) || {};
-        let projects = allSaved[email] || [];
-
-        if (projects.length === 0) {
-            container.innerHTML = "<p>No saved projects yet.</p>";
-            return;
-        }
-
-        container.innerHTML = "";
-
-        projects.forEach((proj, index) => {
-            const div = document.createElement("div");
-
-            div.innerHTML = `
-                <strong>${proj.title}</strong>
-                <button onclick="viewSavedProject(${index})">View</button>
-            `;
-
-            container.appendChild(div);
-        });
-
-        window.savedProjects = projects;
-    }
-
-    // -----------------------------
-    // View Saved Project
-    // -----------------------------
-    function viewSavedProject(index) {
-        const proj = window.savedProjects[index];
-        if (!proj) return;
-        window.allProjects = [proj.fullProject || proj];
-        showProject(0);
     }
 
     // -----------------------------
@@ -706,14 +725,16 @@
 
     window.onload = function () {
         updateDifficulty();
-        loadSavedProjects();
+        if (typeof window.loadSavedProjects === "function") {
+            window.loadSavedProjects();
+        }
 
         const name = localStorage.getItem("user_name");
         if (name) {
             var welcomeEl = document.getElementById("welcome");
             if (welcomeEl) {
                 welcomeEl.innerText = `Welcome, ${name}`;
-}
+            }
 
             const btn = document.querySelector(".g_id_signin");
             if (btn) btn.style.display = "none";
@@ -722,8 +743,9 @@
         resumeSavedProjectIfAny();
     };
 </script>
-    <script src="user-plan.js"></script>
-    <script src="saved-projects.js" defer></script>
+    <script src="upgrade.js"></script>
+    <script src="contact.js"></script>
+    <script src="spark-helper.js" defer></script>
     <script src="enginuity-loading-screen.js" defer></script>
 </body>
 </html>

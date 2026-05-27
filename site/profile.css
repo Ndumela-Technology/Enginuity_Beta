@@ -1,0 +1,115 @@
+.profile-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1rem 1rem 2.5rem;
+}
+
+.profile-page__back {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  font-family: "Special Elite", "Courier New", Courier, monospace;
+  font-weight: 800;
+  color: var(--eng-red-deep, #8a0000);
+  text-decoration: none;
+}
+
+.profile-page__title {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.4rem, 4vw, 1.9rem);
+  color: var(--eng-red-deep, #8a0000);
+}
+
+.profile-card {
+  border: 1px solid rgba(216, 31, 38, 0.25);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 0.9rem;
+  margin-bottom: 0.85rem;
+}
+
+.profile-card__label {
+  margin: 0 0 0.2rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(30, 30, 30, 0.65);
+}
+
+.profile-card__value {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--eng-red-deep, #8a0000);
+}
+
+.profile-saved__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.profile-saved__head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--eng-red-deep, #8a0000);
+}
+
+.profile-saved__link {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--eng-red-deep, #8a0000);
+  text-decoration: none;
+}
+
+.profile-saved__link:hover {
+  text-decoration: underline;
+}
+
+.profile-saved-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.profile-saved-item {
+  border: 1px solid rgba(216, 31, 38, 0.2);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.profile-saved-item__title {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.profile-saved-item__desc {
+  margin: 0.2rem 0 0.45rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: rgba(30, 30, 30, 0.75);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.profile-saved-item button {
+  border: 2px solid var(--eng-red, #d81f26);
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
+  background: #fff;
+  color: var(--eng-red-deep, #8a0000);
+  font-family: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.profile-page__hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(30, 30, 30, 0.8);
+}

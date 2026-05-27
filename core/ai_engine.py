@@ -74,6 +74,60 @@ def generate_chat_reply(messages):
     except Exception as e:
         return f"Error: {str(e)}"
 
+
+def generate_innovator_lite_project(materials):
+    """
+    Generates a single first-time onboarding project (Innovator Lite).
+    """
+    materials_list = [str(m).strip() for m in (materials or []) if str(m).strip()]
+    materials_text = ", ".join(materials_list) if materials_list else "paper, tape, and a cup"
+
+    system_prompt = (
+        "You are SparkAI creating a first-impression onboarding build for Enginuity.\n"
+        "Return ONLY valid JSON with exactly these keys:\n"
+        "{\n"
+        '  "title": "",\n'
+        '  "description": "",\n'
+        '  "estimated_time": "",\n'
+        '  "difficulty": "",\n'
+        '  "materials": [],\n'
+        '  "steps": [],\n'
+        '  "science_explanation": ""\n'
+        "}\n\n"
+        "Rules:\n"
+        "- Beginner-friendly only\n"
+        "- Use only provided materials\n"
+        "- Build time must be 15-20 minutes max\n"
+        "- Safe, realistic, visually interesting, satisfying to complete\n"
+        "- 4 to 7 concise numbered steps\n"
+        "- Fun immediately, wow factor, no dangerous actions\n"
+        "- No external purchases\n"
+        "- Avoid technical jargon\n"
+    )
+
+    user_prompt = (
+        "Create one Innovator Lite project.\n"
+        f"Available materials: {materials_text}\n"
+        "Reminder: return JSON only."
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.6,
+            response_format={"type": "json_object"},
+        )
+        content = (response.choices[0].message.content or "").strip()
+        return _extract_first_json_object(content)
+    except json.JSONDecodeError:
+        return {"error": "AI response was not valid JSON. Try again."}
+    except Exception as e:
+        return {"error": str(e)}
+
 def run_safety_check(project_data):
     """
     Checks projects for safety and injects warnings if needed.

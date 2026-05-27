@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enginuity · Project</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="enginuity.css" />
+  <link rel="stylesheet" href="project-output.css" />
+  <link rel="stylesheet" href="saved-pages.css" />
+  <link rel="stylesheet" href="spark-helper.css" />
+  <link rel="stylesheet" href="contact.css" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="alternate icon" href="assets/logo.svg" />
+  <style>
+    .project-view__actions {
+      margin-top: 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+    }
+
+    .project-view__actions a,
+    .project-view__actions button {
+      display: inline-block;
+      box-sizing: border-box;
+      border: 2px solid var(--eng-red, #d81f26);
+      border-radius: 10px;
+      padding: 0.6rem 1rem;
+      background: rgba(255, 255, 255, 0.94);
+      color: var(--eng-red-deep, #8a0000);
+      font-family: "Special Elite", "Courier New", Courier, monospace;
+      font-weight: 800;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .project-view__actions a,
+      .project-view__actions button {
+        width: 100%;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body class="enginuity-paper">
+  <div class="saved-page">
+    <a class="saved-page__back" href="saved.html">← Back to Saved Projects</a>
+    <div id="projectViewRoot"></div>
+    <div class="project-view__actions" id="projectViewActions" hidden>
+      <a href="saved.html">All Saved Projects</a>
+      <a href="index.html">Home</a>
+    </div>
+  </div>
+
+  <script src="user-plan.js"></script>
+  <script src="project-output.js"></script>
+  <script src="saved-projects.js"></script>
+  <script src="diagram-generator.js"></script>
+  <script src="spark-helper.js"></script>
+  <script src="contact.js"></script>
+  <script>
+    (function () {
+      function escapeHtml(str) {
+        return String(str)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll("\"", "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function formatExplanationHtml(value) {
+        if (!window.ProjectOutput || typeof window.ProjectOutput.formatExplanationHtml !== "function") {
+          return "";
+        }
+        return window.ProjectOutput.formatExplanationHtml(value, { escapeHtml: escapeHtml });
+      }
+
+      function renderEmpty(message) {
+        var root = document.getElementById("projectViewRoot");
+        var actions = document.getElementById("projectViewActions");
+        if (!root) return;
+        root.innerHTML =
+          '<p class="saved-page__hint saved-page__error">' + escapeHtml(message) + "</p>";
+        if (actions) actions.hidden = false;
+      }
+
+      function renderProject(project) {
+        var root = document.getElementById("projectViewRoot");
+        var actions = document.getElementById("projectViewActions");
+        if (!root || !window.ProjectOutput) {
+          renderEmpty("Unable to load project viewer.");
+          return;
+        }
+
+        var extraSections = [
+          project.engineeringExplanation
+            ? '<section class="project-output__section"><h3 class="project-output__label">Engineering</h3><div class="project-output__prose">' +
+              formatExplanationHtml(project.engineeringExplanation) +
+              "</div></section>"
+            : "",
+          project.physicsExplanation
+            ? '<section class="project-output__section"><h3 class="project-output__label">Physics</h3><div class="project-output__prose">' +
+              formatExplanationHtml(project.physicsExplanation) +
+              "</div></section>"
+            : ""
+        ].join("");
+
+        root.innerHTML = window.ProjectOutput.renderStructuredProject(project, {
+          escapeHtml: escapeHtml,
+          extraSectionsHtml: extraSections
+        });
+        if (actions) actions.hidden = false;
+        document.title = "Enginuity · " + (project.title || "Project");
+      }
+
+      var project =
+        typeof window.getCurrentProject === "function"
+          ? window.getCurrentProject()
+          : null;
+
+      if (!project || !project.title) {
+        renderEmpty("No project selected. Open a project from your saved list.");
+        return;
+      }
+
+      var mode = (project.mode || "").trim();
+      if (!mode) {
+        mode =
+          localStorage.getItem("enginuity_mode") ||
+          localStorage.getItem("forge_mode") ||
+          "Apprentice";
+      }
+      window.MODE = mode;
+
+      if (typeof window.setCurrentProject === "function") {
+        window.setCurrentProject(project);
+      }
+
+      renderProject(project);
+
+      if (typeof window.syncSparkHelperContext === "function") {
+        window.syncSparkHelperContext();
+      }
+    })();
+  </script>
+  <script src="enginuity-loading-screen.js" defer></script>
+</body>
+</html>

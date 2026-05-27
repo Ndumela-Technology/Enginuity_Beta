@@ -2,47 +2,149 @@
 (function () {
   "use strict";
 
+  var STORAGE_KEY = "saved_projects";
+  var CURRENT_PROJECT_KEY = "current_project";
+
   function getEmail() {
     return localStorage.getItem("user_email") || "";
   }
 
+  function createProjectId() {
+    return Date.now().toString();
+  }
+
+  function toStringList(value) {
+    if (window.ProjectOutput && typeof window.ProjectOutput.toStringList === "function") {
+      return window.ProjectOutput.toStringList(value);
+    }
+    if (!value) return [];
+    if (Array.isArray(value)) return value.map(String).filter(Boolean);
+    return [String(value)];
+  }
+
   function readAllSaved() {
     try {
-      return JSON.parse(localStorage.getItem("saved_projects")) || {};
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
     } catch {
       return {};
     }
   }
 
   function writeAllSaved(obj) {
-    localStorage.setItem("saved_projects", JSON.stringify(obj || {}));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(obj || {}));
   }
 
-  function normalizeProjectForSave(project) {
+  function isValidTimestamp(value) {
+    return typeof value === "number" && !isNaN(value) && isFinite(value);
+  }
+
+  function resolveProjectTimestamp(project, source) {
+    if (isValidTimestamp(project.timestamp)) return project.timestamp;
+    if (isValidTimestamp(source.timestamp)) return source.timestamp;
+    if (project.savedAt) {
+      var fromProjectSavedAt = Date.parse(project.savedAt);
+      if (isValidTimestamp(fromProjectSavedAt)) return fromProjectSavedAt;
+    }
+    if (source.savedAt) {
+      var fromSourceSavedAt = Date.parse(source.savedAt);
+      if (isValidTimestamp(fromSourceSavedAt)) return fromSourceSavedAt;
+    }
+    return Date.now();
+  }
+
+  function normalizeLegacyProject(project) {
     if (!project || typeof project !== "object") return null;
-    var normalizedMaterials = Array.isArray(project.materials || project.materials_needed)
-      ? (project.materials || project.materials_needed)
-      : [];
-    var normalizedSteps = Array.isArray(project.steps) ? project.steps : [];
+    var source = project.fullProject || project;
     return {
-      title: project.title || project.project_name || "Project",
-      description: project.description || "",
-      materials: normalizedMaterials,
-      materialsSuggested: project.materialsSuggested || project.materials_suggested || [],
-      steps: normalizedSteps,
-      engineeringExplanation: project.engineeringExplanation || project.engineering_explanation || "",
-      physicsExplanation: project.physicsExplanation || project.physics_explanation || "",
-      // Keep the full normalized project shape for exact replay in UI.
-      fullProject: {
-        title: project.title || project.project_name || "Project",
-        description: project.description || "",
-        materials: normalizedMaterials,
-        materialsSuggested: project.materialsSuggested || project.materials_suggested || [],
-        steps: normalizedSteps,
-        engineeringExplanation: project.engineeringExplanation || project.engineering_explanation || "",
-        physicsExplanation: project.physicsExplanation || project.physics_explanation || ""
-      }
+      id: project.id || source.id || createProjectId(),
+      title: project.title || source.title || source.project_name || "Project",
+      description: project.description || source.description || "",
+      materials: toStringList(project.materials || source.materials || source.materials_needed),
+      materialsSuggested: toStringList(
+        project.materialsSuggested || source.materialsSuggested || source.materials_suggested
+      ),
+      steps: toStringList(project.steps || source.steps),
+      engineeringExplanation:
+        project.engineeringExplanation ||
+        source.engineeringExplanation ||
+        source.engineering_explanation ||
+        source.engineering ||
+        "",
+      physicsExplanation:
+        project.physicsExplanation ||
+        source.physics_explanation ||
+        source.physicsExplanation ||
+        source.physics ||
+        "",
+      scienceExplanation:
+        project.scienceExplanation ||
+        source.scienceExplanation ||
+        source.science_explanation ||
+        "",
+      timestamp: resolveProjectTimestamp(project, source),
+      mode: project.mode || source.mode || "",
+      page: project.page || source.page || ""
     };
+  }
+
+  function buildSavedProjectObject(project, meta) {
+    if (!project || typeof project !== "object") return null;
+    var base = normalizeLegacyProject(project);
+    if (!base) return null;
+    if (meta) {
+      if (meta.mode) base.mode = meta.mode;
+      if (meta.page) base.page = meta.page;
+    }
+    if (!base.id) base.id = createProjectId();
+    if (!isValidTimestamp(base.timestamp)) base.timestamp = Date.now();
+    return base;
+  }
+
+  function getSavedProjectsForUser(email) {
+    var resolved = email || getEmail();
+    if (!resolved) return [];
+    var allSaved = readAllSaved();
+    var list = Array.isArray(allSaved[resolved]) ? allSaved[resolved] : [];
+    return list.map(normalizeLegacyProject).filter(Boolean);
+  }
+
+  function setCurrentProject(project) {
+    var normalized = normalizeLegacyProject(project);
+    if (!normalized) return false;
+    localStorage.setItem(CURRENT_PROJECT_KEY, JSON.stringify(normalized));
+    return true;
+  }
+
+  function getCurrentProject() {
+    try {
+      var raw = localStorage.getItem(CURRENT_PROJECT_KEY);
+      if (!raw) return null;
+      return normalizeLegacyProject(JSON.parse(raw));
+    } catch {
+      return null;
+    }
+  }
+
+  function openSavedProject(project) {
+    var normalized = normalizeLegacyProject(project);
+    if (!normalized) return false;
+
+    if (typeof window.renderSavedProject === "function") {
+      setCurrentProject(normalized);
+      window.renderSavedProject(normalized);
+      return true;
+    }
+
+    if (!setCurrentProject(normalized)) return false;
+    window.location.href = "project.html";
+    return true;
+  }
+
+  function openSavedProjectByIndex(index) {
+    var list = getSavedProjectsForUser();
+    var proj = list[index];
+    if (!proj) return false;
+    return openSavedProject(proj);
   }
 
   function buildResumeKey(email) {
@@ -61,40 +163,14 @@
     msg.style.padding = "10px 14px";
     msg.style.borderRadius = "10px";
     msg.style.fontWeight = "600";
+    msg.style.zIndex = "9999";
 
     document.body.appendChild(msg);
     setTimeout(function () { msg.remove(); }, 2000);
   }
 
   function startSavedProject(savedIndex) {
-    var list = Array.isArray(window.savedProjects) ? window.savedProjects : [];
-    var proj = list[savedIndex];
-    if (!proj) return;
-
-    if (typeof window.renderSavedProject === "function") {
-      window.renderSavedProject(proj.fullProject || proj);
-      return;
-    }
-
-    // Fallback renderer for pages without a custom project renderer.
-    var container = document.getElementById("savedProjects");
-    if (!container) return;
-    var safeTitle = String(proj.title || "Project").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    var safeDescription = String(proj.description || "Not provided.")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-    var steps = Array.isArray(proj.steps) ? proj.steps : [];
-    var materials = Array.isArray(proj.materials) ? proj.materials : [];
-
-    container.innerHTML =
-      '<div class="saved-project-preview">' +
-      "<h3>" + safeTitle + "</h3>" +
-      "<p><strong>Description:</strong> " + safeDescription + "</p>" +
-      "<p><strong>Materials:</strong> " + (materials.length ? materials.map(function (m) { return String(m).replace(/</g, "&lt;").replace(/>/g, "&gt;"); }).join(", ") : "Not provided.") + "</p>" +
-      "<p><strong>Steps:</strong></p>" +
-      "<ol>" + steps.map(function (s) { return "<li>" + String(s).replace(/</g, "&lt;").replace(/>/g, "&gt;") + "</li>"; }).join("") + "</ol>" +
-      '<button type="button" onclick="loadSavedProjects()">Back to saved projects</button>' +
-      "</div>";
+    openSavedProjectByIndex(savedIndex);
   }
 
   function consumeResumeProject() {
@@ -107,7 +183,9 @@
       if (!raw) return null;
       localStorage.removeItem(key);
       var parsed = JSON.parse(raw);
-      return parsed && parsed.project ? parsed.project : null;
+      var project = parsed && parsed.project ? parsed.project : null;
+      if (project) setCurrentProject(project);
+      return normalizeLegacyProject(project);
     } catch {
       return null;
     }
@@ -120,26 +198,30 @@
       return false;
     }
 
-    var normalized = normalizeProjectForSave(project);
+    var normalized = buildSavedProjectObject(project, meta);
     if (!normalized) {
       alert("No project found to save.");
       return false;
     }
 
-    var mode = (meta && meta.mode) || "";
-    var page = (meta && meta.page) || "";
-    normalized.mode = mode;
-    normalized.page = page;
-    normalized.savedAt = new Date().toISOString();
-
     var allSaved = readAllSaved();
     if (!Array.isArray(allSaved[email])) allSaved[email] = [];
 
-    var alreadyExists = allSaved[email].some(function (p) {
-      return p.title === normalized.title && p.mode === normalized.mode;
+    var existingIndex = allSaved[email].findIndex(function (p) {
+      return p && normalized.id && p.id === normalized.id;
     });
 
-    if (!alreadyExists) {
+    if (existingIndex === -1) {
+      existingIndex = allSaved[email].findIndex(function (p) {
+        if (!p) return false;
+        return (
+          p.title === normalized.title &&
+          (p.mode || "") === (normalized.mode || "")
+        );
+      });
+    }
+
+    if (existingIndex === -1) {
       if (typeof window.canSaveProject === "function") {
         var limitBeforePush = window.canSaveProject(email);
         if (!limitBeforePush.allowed) {
@@ -149,6 +231,14 @@
       }
       allSaved[email].push(normalized);
       writeAllSaved(allSaved);
+    } else {
+      var existing = allSaved[email][existingIndex];
+      if (existing && existing.id) {
+        normalized.id = existing.id;
+      }
+      normalized.timestamp = Date.now();
+      allSaved[email][existingIndex] = normalized;
+      writeAllSaved(allSaved);
     }
 
     if (typeof window.loadSavedProjects === "function") {
@@ -157,7 +247,6 @@
     return true;
   }
 
-  // Save by index into window.allProjects (used by mode pages)
   function saveProject(index) {
     var email = getEmail();
     if (!email) {
@@ -166,24 +255,38 @@
     }
 
     var list = Array.isArray(window.allProjects) ? window.allProjects : [];
-    var proj = normalizeProjectForSave(list[index]);
-    if (!proj) {
+    var raw = list[index];
+    if (!raw) {
       alert("No project found to save.");
       return;
     }
 
+    var toSave = buildSavedProjectObject(raw, null);
+    if (toSave && !toSave.id) toSave.id = createProjectId();
+
     var mode = (window.MODE || "").trim();
     var page = window.location.pathname.split("/").pop() || "";
-    saveProjectWithMeta(proj, { mode: mode, page: page });
+    var saved = saveProjectWithMeta(toSave || raw, { mode: mode, page: page });
 
-    showSavedToast("✅ Project saved!");
-    if (typeof window.loadSavedProjects === "function") {
-      window.loadSavedProjects();
+    if (saved) {
+      showSavedToast("✅ Project saved!");
+      if (typeof window.loadSavedProjects === "function") {
+        window.loadSavedProjects();
+      }
     }
   }
 
   function viewSavedProject(index) {
-    startSavedProject(index);
+    openSavedProjectByIndex(index);
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll("\"", "&quot;")
+      .replaceAll("'", "&#39;");
   }
 
   function loadSavedProjects() {
@@ -192,37 +295,51 @@
 
     var email = getEmail();
     if (!email) {
-      container.innerHTML = '<p class="saved-projects__hint">Please sign in to see your projects.</p>';
+      container.innerHTML =
+        '<p class="saved-projects__hint">Please sign in to see your projects.</p>';
       return;
     }
 
-    var allSaved = readAllSaved();
-    var projects = Array.isArray(allSaved[email]) ? allSaved[email] : [];
+    var projects = getSavedProjectsForUser(email);
 
     if (projects.length === 0) {
-      container.innerHTML = '<p class="saved-projects__hint">No saved projects yet.</p>';
+      container.innerHTML =
+        '<p class="saved-projects__hint">No saved projects yet.</p>' +
+        '<a class="saved-projects__link" href="saved.html">Go to Saved Projects →</a>';
       return;
     }
 
-    container.innerHTML = "";
+    container.innerHTML =
+      '<a class="saved-projects__link saved-projects__link--top" href="saved.html">View all saved projects →</a>';
 
-    projects.forEach(function (proj, index) {
+    projects.slice(-3).reverse().forEach(function (proj) {
       var row = document.createElement("div");
       row.className = "saved-project-card";
-      var safeTitle = String(proj.title || "Project").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      var safeTitle = escapeHtml(proj.title || "Project");
+      var safeDesc = escapeHtml(proj.description || "");
       row.innerHTML =
-        '<div class="saved-project-card__title">' +
-        safeTitle +
+        '<div class="saved-project-card__body">' +
+        '<div class="saved-project-card__title">' + safeTitle + "</div>" +
+        (safeDesc
+          ? '<p class="saved-project-card__desc">' + safeDesc + "</p>"
+          : "") +
         "</div>" +
-        '<button type="button" onclick="viewSavedProject(' +
-        index +
-        ')">Open Project</button>';
+        '<button type="button" class="saved-project-card__btn">Open Project</button>';
+      row.querySelector("button").addEventListener("click", function () {
+        openSavedProject(proj);
+      });
       container.appendChild(row);
     });
 
     window.savedProjects = projects;
   }
 
+  window.createProjectId = createProjectId;
+  window.getSavedProjectsForUser = getSavedProjectsForUser;
+  window.setCurrentProject = setCurrentProject;
+  window.getCurrentProject = getCurrentProject;
+  window.openSavedProject = openSavedProject;
+  window.openSavedProjectByIndex = openSavedProjectByIndex;
   window.saveProject = saveProject;
   window.saveProjectWithMeta = saveProjectWithMeta;
   window.loadSavedProjects = loadSavedProjects;
@@ -230,5 +347,16 @@
   window.consumeResumeProject = consumeResumeProject;
   window.startSavedProject = startSavedProject;
   window.showSavedToast = showSavedToast;
-})();
+  window.buildSavedProjectObject = buildSavedProjectObject;
 
+  function initSavedProjectsPreview() {
+    if (!document.getElementById("savedProjects")) return;
+    loadSavedProjects();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initSavedProjectsPreview);
+  } else {
+    initSavedProjectsPreview();
+  }
+})();

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enginuity · Account</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="enginuity.css" />
+  <link rel="stylesheet" href="profile.css" />
+  <link rel="stylesheet" href="upgrade.css" />
+  <link rel="stylesheet" href="contact.css" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="alternate icon" href="assets/logo.svg" />
+</head>
+<body class="enginuity-paper">
+  <div class="profile-page">
+    <a class="profile-page__back" href="index.html">← Back to Home</a>
+    <h1 class="profile-page__title">Account</h1>
+
+    <section class="profile-card" aria-labelledby="profileNameLabel">
+      <p class="profile-card__label" id="profileNameLabel">Name</p>
+      <p class="profile-card__value" id="profileUserName">Guest</p>
+    </section>
+
+    <section class="profile-card" aria-labelledby="profilePlanLabel">
+      <p class="profile-card__label" id="profilePlanLabel">Current plan</p>
+      <p class="profile-card__value" id="profilePlanName">Free</p>
+    </section>
+
+    <section class="profile-card">
+      <div class="profile-saved__head">
+        <h2>Recent saved projects</h2>
+        <a class="profile-saved__link" href="saved.html">View all →</a>
+      </div>
+      <div id="profileSavedPreview" class="profile-saved-list" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <script src="user-plan.js"></script>
+  <script src="saved-projects.js"></script>
+  <script src="upgrade.js"></script>
+  <script src="contact.js"></script>
+  <script>
+    (function () {
+      function escapeHtml(str) {
+        return String(str)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll("\"", "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function updatePlanLabel() {
+        var el = document.getElementById("profilePlanName");
+        if (!el) return;
+        el.textContent =
+          typeof window.getPlanTierDisplayName === "function"
+            ? window.getPlanTierDisplayName()
+            : "Free";
+      }
+
+      function renderSavedPreview() {
+        var root = document.getElementById("profileSavedPreview");
+        if (!root) return;
+
+        var email = localStorage.getItem("user_email");
+        if (!email) {
+          root.innerHTML =
+            '<p class="profile-page__hint">Sign in from the home page to see saved projects.</p>';
+          return;
+        }
+
+        var projects =
+          typeof window.getSavedProjectsForUser === "function"
+            ? window.getSavedProjectsForUser(email)
+            : [];
+
+        if (!projects.length) {
+          root.innerHTML =
+            '<p class="profile-page__hint">No saved projects yet.</p>';
+          return;
+        }
+
+        var recent = projects.slice(-3).reverse();
+        root.innerHTML = recent
+          .map(function (proj) {
+            return (
+              '<article class="profile-saved-item">' +
+              '<h3 class="profile-saved-item__title">' +
+              escapeHtml(proj.title || "Untitled Project") +
+              "</h3>" +
+              '<p class="profile-saved-item__desc">' +
+              escapeHtml(proj.description || "No description.") +
+              "</p>" +
+              '<button type="button" data-open-saved>Open</button>' +
+              "</article>"
+            );
+          })
+          .join("");
+
+        root.querySelectorAll("[data-open-saved]").forEach(function (btn, index) {
+          btn.addEventListener("click", function () {
+            if (typeof window.openSavedProject === "function") {
+              window.openSavedProject(recent[index]);
+            }
+          });
+        });
+      }
+
+      function renderProfile() {
+        var nameEl = document.getElementById("profileUserName");
+        var name = localStorage.getItem("user_name") || "";
+        if (nameEl) {
+          nameEl.textContent = name || "Guest";
+        }
+        updatePlanLabel();
+        renderSavedPreview();
+      }
+
+      document.addEventListener("enginuity:plan-changed", renderProfile);
+      renderProfile();
+    })();
+  </script>
+  <script src="enginuity-loading-screen.js" defer></script>
+</body>
+</html>

@@ -8,6 +8,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="enginuity.css" />
+    <link rel="stylesheet" href="project-output.css" />
+    <link rel="stylesheet" href="spark-helper.css" />
+    <link rel="stylesheet" href="upgrade.css" />
+    <link rel="stylesheet" href="contact.css" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
@@ -316,8 +320,150 @@
             white-space: nowrap;
         }
 
-        body.is-guest .guest-cta {
+        .onboarding-hero {
+            display: none;
+            position: relative;
+            z-index: 3;
+            max-width: 760px;
+            margin: 1rem auto 1.4rem;
+            text-align: center;
+            border: 2px solid rgba(216, 31, 38, 0.3);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.92);
+            padding: 1.1rem 1rem 1.2rem;
+            box-shadow: 2px 4px 0 rgba(120, 10, 10, 0.1);
+        }
+
+        .onboarding-hero h2 {
+            margin: 0 0 0.45rem;
+            font-size: clamp(1.3rem, 3.6vw, 1.8rem);
+            color: var(--eng-red-deep);
+        }
+
+        .onboarding-hero p {
+            margin: 0 0 0.8rem;
+            color: #2e2e2e;
+            line-height: 1.45;
+        }
+
+        .onboarding-hero__cta {
             display: inline-block;
+        }
+
+        .onboarding-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            display: none;
+            background: rgba(20, 12, 12, 0.8);
+            backdrop-filter: blur(2px);
+            overflow: auto;
+            padding: 1rem;
+        }
+
+        .onboarding-modal.is-open {
+            display: block;
+        }
+
+        .onboarding-modal__card {
+            max-width: 980px;
+            margin: 0 auto;
+            border-radius: 14px;
+            border: 1px solid rgba(216, 31, 38, 0.35);
+            background: #fff;
+            padding: 1rem 1.05rem 1.2rem;
+        }
+
+        .onboarding-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.65rem;
+        }
+
+        .onboarding-grid input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.62rem 0.7rem;
+            border: 1px solid #d8d8d8;
+            border-radius: 10px;
+            font-size: 0.95rem;
+        }
+
+        .onboarding-progress {
+            margin-top: 0.85rem;
+            border: 1px solid #e6e6e6;
+            border-radius: 10px;
+            background: #fafafa;
+            overflow: hidden;
+        }
+
+        .onboarding-progress__bar {
+            height: 12px;
+            width: 0%;
+            background: linear-gradient(90deg, #d81f26, #ff7c31);
+            transition: width 180ms ease;
+        }
+
+        .onboarding-complete {
+            margin-top: 0.9rem;
+            border: 1px solid #d5efe0;
+            border-radius: 12px;
+            background: #f0fbf4;
+            padding: 0.8rem;
+        }
+
+        .plan-toggle {
+            display: inline-flex;
+            border: 1px solid #d8d8d8;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 0.4rem;
+        }
+
+        .plan-toggle button {
+            border: none;
+            background: #fff;
+            color: #222;
+            padding: 0.38rem 0.7rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .plan-toggle button.active {
+            background: #111;
+            color: #fff;
+        }
+
+        .plan-cards {
+            margin-top: 0.65rem;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.65rem;
+        }
+
+        .plan-card {
+            border: 1px solid #e2e2e2;
+            border-radius: 10px;
+            background: #fff;
+            padding: 0.7rem;
+        }
+
+        .plan-card h4 {
+            margin: 0 0 0.25rem;
+            color: var(--eng-red-deep);
+        }
+
+        body.onboarding-pending .guest-cta {
+            display: inline-block;
+        }
+
+        body.onboarding-pending .g_id_signin {
+            display: none !important;
+        }
+
+        body.onboarding-pending .onboarding-hero {
+            display: block;
         }
 
         body.is-guest .saved-section--panel {
@@ -378,8 +524,12 @@
                 margin: 1rem auto 0;
             }
 
-            body.is-guest .guest-cta {
+            body.onboarding-pending .guest-cta {
                 display: inline-block;
+            }
+
+            .plan-cards {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -427,6 +577,7 @@
         <div class="auth-area">
             <div class="g_id_signin"></div>
             <h2 id="welcome"></h2>
+            <a href="profile.html" id="profileLink" class="saved-projects__link" style="display:none;">Account</a>
             <button id="signOutBtn" type="button" class="btn-signout" style="display:none;">Sign out</button>
         </div>
     </div>
@@ -434,6 +585,11 @@
 
     <div class="home-wrap">
         <p class="home-tagline">Turning dreams into a reality.</p>
+        <section class="onboarding-hero" id="onboardingHero" aria-live="polite">
+            <h2>Try Your First Build</h2>
+            <p>Start with Innovator Lite: a premium first build using simple items around you.</p>
+            <a class="guest-cta onboarding-hero__cta" id="heroFirstBuildBtn" href="#">Try Your First Build</a>
+        </section>
 
         <main class="home-path" aria-label="Choose your learning path">
             <div class="path-layer" aria-hidden="true">
@@ -482,6 +638,7 @@
 
             <section class="saved-section saved-section--panel" aria-label="Saved projects">
                 <h2>📁 Your Saved Projects</h2>
+                <p class="saved-section__sub"><a class="saved-projects__link" href="saved.html">View all →</a></p>
                 <div id="savedProjects"></div>
             </section>
 
@@ -503,7 +660,7 @@
                 <span class="mode-node__cta">Start →</span>
             </a>
 
-            <a class="guest-cta" id="guestTryFirstProject" href="tutorial.html">Try First Project →</a>
+            <a class="guest-cta" id="guestTryFirstProject" href="innovator-lite.html">Try First Project →</a>
         </main>
 
         <p class="footer-note">
@@ -511,8 +668,47 @@
         </p>
     </div>
 
-    <script src="enginuity-loading-screen.js" defer></script>
+    <div class="onboarding-modal" id="innovatorLiteModal" aria-hidden="true">
+        <div class="onboarding-modal__card">
+            <a class="back" href="#" id="liteCloseBtn">← Close</a>
+            <h2 style="margin:0 0 0.45rem;">Build Something Incredible Using Items Around You</h2>
+            <p style="margin:0 0 0.65rem; line-height:1.45;">
+                Find ANY 3 simple items in your house. SparkAI will instantly turn them into a real engineering project you can build in around 15 minutes.
+            </p>
+            <p style="margin:0 0 0.7rem; color:#444;">
+                You’ll also experience: AI visual diagrams, smart engineering guidance, interactive build tracking, and SparkHelper AI assistance.
+            </p>
+            <div class="onboarding-grid">
+                <input id="liteMaterial1" type="text" placeholder="Material 1 (e.g., cardboard)" />
+                <input id="liteMaterial2" type="text" placeholder="Material 2 (e.g., tape)" />
+                <input id="liteMaterial3" type="text" placeholder="Material 3 (e.g., rubber bands)" />
+            </div>
+            <div style="margin-top:0.7rem;">
+                <button type="button" id="liteGenerateBtn">Generate My First Build</button>
+            </div>
+            <p id="liteStatus" style="margin:0.55rem 0 0; color:#555;"></p>
+            <div id="liteError" class="error" style="display:none; margin-top:0.6rem;"></div>
+            <div id="liteOutput" style="margin-top:0.8rem;"></div>
+            <section id="liteCompletion" class="onboarding-complete" style="display:none;">
+                <h3 style="margin:0 0 0.45rem;">You just experienced Enginuity.</h3>
+                <p style="margin:0 0 0.5rem;">
+                    Ready to build bigger, smarter, and more advanced projects?
+                </p>
+                <p style="margin:0 0 0.4rem;">
+                    Unlock: unlimited builds, advanced engineering modes, saved projects, unlimited SparkHelper, visual engineering diagrams.
+                </p>
+                <button type="button" id="liteUpgradeBtn" class="eng-upgrade-btn" style="margin-top:0.5rem;">Choose your plan</button>
+            </section>
+        </div>
+    </div>
+
     <script src="user-plan.js"></script>
+    <script src="upgrade.js"></script>
+    <script src="contact.js"></script>
+    <script src="enginuity-loading-screen.js" defer></script>
+    <script src="project-output.js"></script>
+    <script src="diagram-generator.js"></script>
+    <script src="spark-helper.js" defer></script>
     <script src="saved-projects.js" defer></script>
 <script>
 /* --------------------------
@@ -540,6 +736,9 @@ function handleCredentialResponse(response) {
     const signOutBtn = document.getElementById("signOutBtn");
     if (signOutBtn) signOutBtn.style.display = "inline-block";
 
+    const profileLink = document.getElementById("profileLink");
+    if (profileLink) profileLink.style.display = "inline-block";
+
     // Load saved projects after login
     if (typeof loadSavedProjects === "function") loadSavedProjects();
 
@@ -560,6 +759,271 @@ function parseJwt(token) {
 
 // Saved projects helpers are now in ../js/saved-projects.js
 
+
+/* --------------------------
+   ONBOARDING (first visit)
+-------------------------- */
+
+var HAS_STARTED_KEY = "has_started";
+var LITE_COMPLETED_KEY = "innovator_lite_completed";
+var LITE_PROGRESS_KEY = "innovator_lite_progress";
+var liteProject = null;
+
+function hasUserStarted() {
+    return localStorage.getItem(HAS_STARTED_KEY) === "true";
+}
+
+function startFirstProject() {
+    openInnovatorLiteModal();
+}
+
+function openInnovatorLiteModal() {
+    const modal = document.getElementById("innovatorLiteModal");
+    if (!modal) return;
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    window.MODE = "Innovator Lite";
+    // Temporary onboarding access without plan gates.
+    window.canUseSparkHelper = function () { return { allowed: true }; };
+    window.recordSparkHelperUse = function () {};
+    window.canUseDiagram = function () { return { allowed: true }; };
+    window.recordDiagramUse = function () {};
+    if (typeof window.syncSparkHelperContext === "function") {
+        window.syncSparkHelperContext();
+    }
+}
+
+function closeInnovatorLiteModal() {
+    const modal = document.getElementById("innovatorLiteModal");
+    if (!modal) return;
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#39;");
+}
+
+function liteProgressId(project) {
+    return String(project && project.id ? project.id : "default");
+}
+
+function readLiteProgress() {
+    try {
+        return JSON.parse(localStorage.getItem(LITE_PROGRESS_KEY)) || {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function writeLiteProgress(progress) {
+    localStorage.setItem(LITE_PROGRESS_KEY, JSON.stringify(progress || {}));
+}
+
+function getLiteChecks(project, stepCount) {
+    const progress = readLiteProgress();
+    const key = liteProgressId(project);
+    const existing = Array.isArray(progress[key]) ? progress[key] : [];
+    const checks = existing.slice(0, stepCount);
+    while (checks.length < stepCount) checks.push(false);
+    return checks;
+}
+
+function setLiteChecks(project, checks) {
+    const progress = readLiteProgress();
+    progress[liteProgressId(project)] = checks;
+    writeLiteProgress(progress);
+}
+
+function updateLiteProgressUi() {
+    const bar = document.getElementById("liteProgressBar");
+    const label = document.getElementById("liteProgressLabel");
+    const completion = document.getElementById("liteCompletion");
+    if (!bar || !label || !liteProject) return;
+
+    const steps = Array.isArray(liteProject.steps) ? liteProject.steps : [];
+    const checks = getLiteChecks(liteProject, steps.length);
+    const done = checks.filter(Boolean).length;
+    const pct = steps.length ? Math.round((done / steps.length) * 100) : 0;
+    bar.style.width = pct + "%";
+    label.textContent = done + " / " + steps.length + " steps complete";
+
+    if (steps.length && done === steps.length) {
+        localStorage.setItem(LITE_COMPLETED_KEY, "true");
+        localStorage.setItem(HAS_STARTED_KEY, "true");
+        if (completion) completion.style.display = "block";
+        updateAuthUi();
+    } else if (completion) {
+        completion.style.display = "none";
+    }
+}
+
+function hydrateLiteChecklist() {
+    if (!liteProject) return;
+    const steps = Array.isArray(liteProject.steps) ? liteProject.steps : [];
+    const checks = getLiteChecks(liteProject, steps.length);
+    document.querySelectorAll("#liteOutput .project-output__step").forEach(function (li, index) {
+        const textNode = li.querySelector(".project-output__step-text");
+        if (!textNode || textNode.querySelector(".lite-step-check")) return;
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.className = "lite-step-check";
+        box.checked = !!checks[index];
+        box.addEventListener("change", function () {
+            const current = getLiteChecks(liteProject, steps.length);
+            current[index] = box.checked;
+            setLiteChecks(liteProject, current);
+            updateLiteProgressUi();
+        });
+        textNode.prepend(box);
+    });
+}
+
+function setLiteError(message) {
+    const errorEl = document.getElementById("liteError");
+    if (!errorEl) return;
+    if (!message) {
+        errorEl.style.display = "none";
+        errorEl.textContent = "";
+        return;
+    }
+    errorEl.style.display = "block";
+    errorEl.textContent = message;
+}
+
+function normalizeLiteProject(payload, materials) {
+    return {
+        id: "lite-" + Date.now(),
+        title: payload.title || "Innovator Lite Project",
+        description: payload.description || "",
+        estimatedTime: payload.estimated_time || "15-20 minutes",
+        difficulty: payload.difficulty || "Beginner",
+        materials: Array.isArray(payload.materials) && payload.materials.length ? payload.materials : materials,
+        steps: Array.isArray(payload.steps) ? payload.steps.map(String).filter(Boolean).slice(0, 7) : [],
+        scienceExplanation: payload.science_explanation || "",
+        mode: "Innovator Lite",
+        page: "index.html"
+    };
+}
+
+function renderLiteProject(project) {
+    liteProject = project;
+    if (typeof window.setCurrentProject === "function") {
+        window.setCurrentProject(project);
+    }
+    if (typeof window.syncSparkHelperContext === "function") {
+        window.syncSparkHelperContext();
+    }
+
+    const output = document.getElementById("liteOutput");
+    if (!output || !window.ProjectOutput) return;
+
+    const extraSections =
+        '<section class="project-output__section"><h3 class="project-output__label">Estimated time</h3><p class="project-output__text">' + escapeHtml(project.estimatedTime || "15-20 minutes") + '</p></section>' +
+        '<section class="project-output__section"><h3 class="project-output__label">Difficulty</h3><p class="project-output__text">' + escapeHtml(project.difficulty || "Beginner") + '</p></section>' +
+        '<section class="project-output__section"><h3 class="project-output__label">Science explanation</h3><div class="project-output__prose">' + escapeHtml(project.scienceExplanation || "") + '</div></section>' +
+        '<section class="project-output__section"><h3 class="project-output__label">Progress tracking</h3><div class="onboarding-progress"><div id="liteProgressBar" class="onboarding-progress__bar"></div></div><p id="liteProgressLabel" class="lite-progress__label">0 / 0 steps complete</p></section>';
+
+    output.innerHTML = window.ProjectOutput.renderStructuredProject(project, {
+        escapeHtml: escapeHtml,
+        extraSectionsHtml: extraSections
+    });
+
+    hydrateLiteChecklist();
+    updateLiteProgressUi();
+}
+
+async function generateFirstBuild() {
+    const mat1 = (document.getElementById("liteMaterial1").value || "").trim();
+    const mat2 = (document.getElementById("liteMaterial2").value || "").trim();
+    const mat3 = (document.getElementById("liteMaterial3").value || "").trim();
+    const materials = [mat1, mat2, mat3].filter(Boolean);
+    if (materials.length < 3) {
+        setLiteError("Please provide 3 materials.");
+        return;
+    }
+
+    const status = document.getElementById("liteStatus");
+    const button = document.getElementById("liteGenerateBtn");
+    setLiteError("");
+    if (button) {
+        button.disabled = true;
+        button.textContent = "Generating...";
+    }
+    if (status) status.textContent = "Generating your first build...";
+
+    try {
+        const response = await fetch("https://enginuity-cpl1.onrender.com/generate-innovator-lite", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ materials: materials })
+        });
+        if (!response.ok) throw new Error("Server returned " + response.status);
+        const data = await response.json();
+        if (data && data.error) {
+            setLiteError(data.error);
+            return;
+        }
+        const project = normalizeLiteProject(data || {}, materials);
+        if (!project.steps.length) {
+            setLiteError("Could not generate a valid project. Please try again.");
+            return;
+        }
+        renderLiteProject(project);
+        if (status) status.textContent = "Project ready. Follow your steps and track your progress.";
+    } catch (err) {
+        setLiteError("Request failed: " + (err && err.message ? err.message : String(err)));
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = "Generate My First Build";
+        }
+    }
+}
+
+function initLiteUpgradeButton() {
+    const btn = document.getElementById("liteUpgradeBtn");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+        if (typeof window.openUpgradeModal === "function") {
+            window.openUpgradeModal();
+        }
+    });
+}
+
+function initOnboarding() {
+    const guestCta = document.getElementById("guestTryFirstProject");
+    const heroBtn = document.getElementById("heroFirstBuildBtn");
+    const closeBtn = document.getElementById("liteCloseBtn");
+    const generateBtn = document.getElementById("liteGenerateBtn");
+
+    function bindStart(button) {
+        if (!button) return;
+        button.addEventListener("click", function (e) {
+            if (hasUserStarted()) return;
+            e.preventDefault();
+            startFirstProject();
+        });
+    }
+
+    bindStart(guestCta);
+    bindStart(heroBtn);
+    if (closeBtn) {
+        closeBtn.addEventListener("click", function (e) {
+            e.preventDefault();
+            closeInnovatorLiteModal();
+        });
+    }
+    if (generateBtn) {
+        generateBtn.addEventListener("click", generateFirstBuild);
+    }
+    initLiteUpgradeButton();
+}
 
 /* --------------------------
    AUTH UI HELPERS
@@ -588,16 +1052,29 @@ function setModeLinksEnabled(enabled) {
 function updateAuthUi() {
     const email = localStorage.getItem("user_email");
     const isGuest = !email;
+    const hasStarted = hasUserStarted();
+    const isFirstVisitOnboarding = isGuest && !hasStarted;
+
     document.body.classList.toggle("is-guest", isGuest);
+    document.body.classList.toggle("onboarding-pending", isFirstVisitOnboarding);
 
     // Toggle sign-in / sign-out controls
     const signInBtn = document.querySelector(".g_id_signin");
     const signOutBtn = document.getElementById("signOutBtn");
-    if (signInBtn) signInBtn.style.display = isGuest ? "" : "none";
+    if (signInBtn) {
+        if (isGuest) {
+            signInBtn.style.display = isFirstVisitOnboarding ? "none" : "";
+        } else {
+            signInBtn.style.display = "none";
+        }
+    }
     if (signOutBtn) signOutBtn.style.display = isGuest ? "none" : "inline-block";
 
-    // Toggle mode navigation
-    setModeLinksEnabled(!isGuest);
+    const profileLink = document.getElementById("profileLink");
+    if (profileLink) profileLink.style.display = isGuest ? "none" : "inline-block";
+
+    // Toggle mode navigation (only lock on first-visit onboarding)
+    setModeLinksEnabled(!isFirstVisitOnboarding);
 
     // Signed-in: load saved projects
     if (!isGuest && typeof loadSavedProjects === "function") loadSavedProjects();
@@ -630,6 +1107,8 @@ function signOut() {
 window.onload = function () {
     const signOutBtn = document.getElementById("signOutBtn");
     if (signOutBtn) signOutBtn.addEventListener("click", signOut);
+
+    initOnboarding();
 
     // restore name if already logged in
     const name = localStorage.getItem("user_name");

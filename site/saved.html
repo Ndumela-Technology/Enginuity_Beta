@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enginuity · Saved Projects</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="enginuity.css" />
+  <link rel="stylesheet" href="saved-pages.css" />
+  <link rel="stylesheet" href="upgrade.css" />
+  <link rel="stylesheet" href="contact.css" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="alternate icon" href="assets/logo.svg" />
+</head>
+<body class="enginuity-paper">
+  <div class="saved-page">
+    <a class="saved-page__back" href="index.html">← Back to Home</a>
+    <h1 class="saved-page__title">Saved Projects</h1>
+    <p class="saved-page__lede">Open a project to view full instructions.</p>
+    <div id="savedListRoot" class="saved-list" aria-live="polite"></div>
+  </div>
+
+  <script src="user-plan.js"></script>
+  <script src="upgrade.js"></script>
+  <script src="contact.js"></script>
+  <script src="project-output.js"></script>
+  <script src="saved-projects.js"></script>
+  <script>
+    (function () {
+      function escapeHtml(str) {
+        return String(str)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll("\"", "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function render() {
+        var root = document.getElementById("savedListRoot");
+        if (!root) return;
+
+        var email = localStorage.getItem("user_email");
+        if (!email) {
+          root.innerHTML =
+            '<p class="saved-page__hint">Please sign in from the home page to see your saved projects.</p>' +
+            '<p><a class="saved-page__back" href="index.html">Go to Home →</a></p>';
+          return;
+        }
+
+        var projects =
+          typeof window.getSavedProjectsForUser === "function"
+            ? window.getSavedProjectsForUser(email)
+            : [];
+
+        if (!projects.length) {
+          root.innerHTML =
+            '<p class="saved-page__empty">No saved projects yet. Generate a project in Apprentice or Associate mode, then save it.</p>';
+          return;
+        }
+
+        root.innerHTML = "";
+        projects.forEach(function (proj, index) {
+          var card = document.createElement("article");
+          card.className = "saved-list__card";
+          card.innerHTML =
+            '<h2 class="saved-list__card-title">' +
+            escapeHtml(proj.title || "Untitled Project") +
+            "</h2>" +
+            '<p class="saved-list__card-desc">' +
+            escapeHtml(proj.description || "No description.") +
+            "</p>" +
+            '<button type="button" class="saved-list__open-btn">Open Project</button>';
+
+          card.querySelector("button").addEventListener("click", function () {
+            if (typeof window.openSavedProject === "function") {
+              window.openSavedProject(proj);
+            }
+          });
+
+          root.appendChild(card);
+        });
+      }
+
+      render();
+    })();
+  </script>
+  <script src="enginuity-loading-screen.js" defer></script>
+</body>
+</html>

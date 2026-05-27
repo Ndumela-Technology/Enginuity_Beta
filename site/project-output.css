@@ -11,7 +11,7 @@
 .project-output {
     border: 1px solid #e6e6e6;
     padding: 1rem 1.1rem 1.25rem;
-    margin-bottom: 1.25rem;
+    margin-bottom: 7rem;
     border-radius: 12px;
     background: #fff;
     line-height: 1.5;
@@ -34,6 +34,42 @@
     margin-top: 0.75rem;
     padding-top: 0;
     border-top: none;
+}
+
+.project-output__section--progress {
+    position: fixed;
+    right: 1rem;
+    bottom: 0.9rem;
+    z-index: 80;
+    width: min(360px, calc(100vw - 2rem));
+    margin-top: 0;
+    padding: 0.75rem 0.85rem;
+    border-top: none;
+    border: 1px solid rgba(216, 31, 38, 0.35);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+}
+
+.project-output__progress-text {
+    margin: 0 0 0.4rem;
+    font-size: 0.82rem;
+    color: #333;
+}
+
+.project-output__progress {
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    background: #ececec;
+    overflow: hidden;
+}
+
+.project-output__progress-fill {
+    width: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #d81f26, #f16e64);
+    transition: width 170ms ease;
 }
 
 .project-output__label {
@@ -64,6 +100,83 @@
 
 .project-output__steps li {
     padding-left: 0.15rem;
+}
+
+.project-output__step {
+    list-style: decimal;
+}
+
+.project-output__step-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+}
+
+.project-output__step-check {
+    margin-top: 0.2rem;
+    width: 16px;
+    height: 16px;
+    accent-color: #d81f26;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.project-output__step-text {
+    margin-bottom: 0.4rem;
+}
+
+.project-output__step.is-complete .project-output__step-text {
+    opacity: 0.65;
+    text-decoration: line-through;
+}
+
+.project-output__diagram-btn {
+    display: inline-block;
+    margin: 0.15rem 0 0.35rem;
+    padding: 0.35rem 0.65rem;
+    border: 1px solid rgba(216, 31, 38, 0.45);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--eng-red-deep, #8a0000);
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.project-output__diagram-btn:hover:not(:disabled) {
+    background: rgba(216, 31, 38, 0.08);
+}
+
+.project-output__diagram-btn:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.project-output__diagram-slot {
+    margin: 0.35rem 0 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    background: #fafafa;
+}
+
+.project-output__diagram-slot--loading {
+    color: #555;
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+.project-output__diagram-slot--error {
+    color: #8a0000;
+    font-size: 0.85rem;
+}
+
+.project-output__diagram-img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
 }
 
 .project-output__muted {
@@ -109,6 +222,7 @@
     border: 1px solid #e0e0e0;
     border-radius: 12px;
     background: #fff;
+    color: #222;
     cursor: pointer;
     box-sizing: border-box;
 }
@@ -140,6 +254,14 @@
 }
 
 @media (max-width: 768px) {
+    .project-output__section--progress {
+        left: 0.6rem;
+        right: 0.6rem;
+        width: auto;
+        bottom: 0.6rem;
+        border-radius: 10px;
+    }
+
     .project-output__actions,
     .contribution-actions {
         flex-direction: column;
@@ -149,6 +271,7 @@
     .project-output__actions button,
     .contribution-actions button,
     .project-choice-card,
+    .project-output__diagram-btn,
     #output > button {
         width: 100%;
         box-sizing: border-box;

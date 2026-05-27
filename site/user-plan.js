@@ -1,9 +1,22 @@
-// User plan system (localStorage). Manual test: localStorage.setItem("user_plan", "free"|"builder"|"pro")
+// User plan system (localStorage). Stripe-ready plan IDs.
 (function () {
   "use strict";
 
   var PLAN_KEY = "user_plan";
-  var VALID_PLANS = ["free", "builder", "pro"];
+  var ASSOCIATE_USES_KEY = "associate_uses";
+
+  var VALID_PLAN_IDS = [
+    "free",
+    "builder_monthly",
+    "builder_yearly",
+    "pro_monthly",
+    "pro_yearly"
+  ];
+
+  var LEGACY_PLAN_MAP = {
+    builder: "builder_monthly",
+    pro: "pro_monthly"
+  };
 
   var USAGE_KEYS = {
     associate: "enginuity_usage_associate",
@@ -12,58 +25,98 @@
     sparkHelper: "enginuity_usage_sparkhelper"
   };
 
-  var PLAN_LIMITS = {
+  var TIER_LIMITS = {
     free: {
-      associateUses: 3,
+      associateUses: 5,
       maxSavedProjects: 5,
       maxDiagramUses: 2,
-      sparkHelperUses: 5,
+      sparkHelperUses: 10,
       apprenticeGenerations: 5
     },
     builder: {
       associateUses: null,
-      maxSavedProjects: 15,
+      maxSavedProjects: 5,
       maxDiagramUses: 10,
       sparkHelperUses: null,
       apprenticeGenerations: null
     },
     pro: {
       associateUses: null,
-      maxSavedProjects: null,
+      maxSavedProjects: 15,
       maxDiagramUses: null,
       sparkHelperUses: null,
       apprenticeGenerations: null
     }
   };
 
-  function getUserPlan() {
-    var plan = localStorage.getItem(PLAN_KEY);
-    if (VALID_PLANS.indexOf(plan) === -1) {
-      setUserPlan("free");
+  function normalizePlanId(plan) {
+    var normalized = String(plan || "").toLowerCase().trim();
+    if (LEGACY_PLAN_MAP[normalized]) {
+      normalized = LEGACY_PLAN_MAP[normalized];
+    }
+    if (VALID_PLAN_IDS.indexOf(normalized) === -1) {
       return "free";
     }
-    return plan;
+    return normalized;
+  }
+
+  function getUserPlan() {
+    return normalizePlanId(localStorage.getItem(PLAN_KEY));
   }
 
   function setUserPlan(plan) {
-    var normalized = String(plan || "").toLowerCase();
-    if (VALID_PLANS.indexOf(normalized) === -1) {
-      return false;
-    }
+    var normalized = normalizePlanId(plan);
     localStorage.setItem(PLAN_KEY, normalized);
-    return true;
+    return normalized;
+  }
+
+  function getPlanTier(plan) {
+    var id = normalizePlanId(plan || getUserPlan());
+    if (id === "free") return "free";
+    if (id.indexOf("builder_") === 0) return "builder";
+    if (id.indexOf("pro_") === 0) return "pro";
+    return "free";
+  }
+
+  function isFree() {
+    return getPlanTier() === "free";
+  }
+
+  function isBuilder() {
+    return getPlanTier() === "builder";
+  }
+
+  function isPro() {
+    return getPlanTier() === "pro";
   }
 
   function bypassAllLimits() {
-    return getUserPlan() === "pro";
+    return isPro();
   }
 
-  function getLimitsForPlan(plan) {
-    return PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+  function getPlanTierDisplayName(plan) {
+    var tier = getPlanTier(plan);
+    if (tier === "builder") return "Builder";
+    if (tier === "pro") return "Pro";
+    return "Free";
+  }
+
+  function getPlanDisplayName(plan) {
+    var id = normalizePlanId(plan || getUserPlan());
+    if (id === "free") return "Free";
+    if (id === "builder_monthly") return "Builder (Monthly)";
+    if (id === "builder_yearly") return "Builder (Yearly)";
+    if (id === "pro_monthly") return "Pro (Monthly)";
+    if (id === "pro_yearly") return "Pro (Yearly)";
+    return "Free";
+  }
+
+  function getLimitsForTier(tier) {
+    return TIER_LIMITS[tier] || TIER_LIMITS.free;
   }
 
   function getCurrentLimits() {
-    return getLimitsForPlan(getUserPlan());
+    return getLimitsForTier(getPlanTier());
   }
 
   function readUsageCount(key) {
@@ -76,18 +129,30 @@
     localStorage.setItem(key, String(Math.max(0, value)));
   }
 
+  function readAssociateUses() {
+    var count = readUsageCount(ASSOCIATE_USES_KEY);
+    if (count === 0) {
+      var legacy = readUsageCount(USAGE_KEYS.associate);
+      if (legacy > 0) {
+        writeUsageCount(ASSOCIATE_USES_KEY, legacy);
+        count = legacy;
+      }
+    }
+    return count;
+  }
+
   function isUnlimited(limitValue) {
     return limitValue == null || limitValue === Infinity;
   }
 
-  function limitReachedMessage(featureLabel, plan) {
-    if (plan === "free") {
+  function limitReachedMessage(featureLabel, tier) {
+    if (tier === "free") {
       return (
         featureLabel +
         " limit reached on the Free plan. Upgrade to Builder or Pro for more access."
       );
     }
-    if (plan === "builder") {
+    if (tier === "builder") {
       return (
         featureLabel +
         " limit reached on the Builder plan. Upgrade to Pro for unlimited access."
@@ -107,7 +172,7 @@
     if (used >= maxUses) {
       return {
         allowed: false,
-        message: limitReachedMessage(featureLabel, getUserPlan()),
+        message: limitReachedMessage(featureLabel, getPlanTier()),
         used: used,
         max: maxUses
       };
@@ -126,7 +191,7 @@
       var allSaved = JSON.parse(localStorage.getItem("saved_projects")) || {};
       var list = allSaved[email];
       return Array.isArray(list) ? list.length : 0;
-    } catch {
+    } catch (_) {
       return 0;
     }
   }
@@ -155,8 +220,8 @@
           " project" +
           (max === 1 ? "" : "s") +
           " on " +
-          getUserPlan() +
-          " plan). Upgrade for more saves.",
+          getPlanDisplayName() +
+          "). Upgrade for more saves.",
         used: count,
         max: max
       };
@@ -165,16 +230,27 @@
   }
 
   function canUseAssociate() {
-    var limits = getCurrentLimits();
-    return checkUsageLimit(
-      USAGE_KEYS.associate,
-      limits.associateUses,
-      "Associate mode"
-    );
+    if (!isFree()) {
+      return { allowed: true };
+    }
+    var used = readAssociateUses();
+    var max = TIER_LIMITS.free.associateUses;
+    if (used >= max) {
+      return {
+        allowed: false,
+        message: "You've used your free builds. Upgrade to continue.",
+        used: used,
+        max: max
+      };
+    }
+    return { allowed: true, used: used, max: max };
   }
 
   function recordAssociateUse() {
-    recordUsage(USAGE_KEYS.associate);
+    if (bypassAllLimits()) return;
+    if (!isFree()) return;
+    writeUsageCount(ASSOCIATE_USES_KEY, readAssociateUses() + 1);
+    writeUsageCount(USAGE_KEYS.associate, readAssociateUses());
   }
 
   function canUseApprenticeGeneration() {
@@ -201,6 +277,9 @@
 
   function recordDiagramUse() {
     recordUsage(USAGE_KEYS.diagram);
+    if (!bypassAllLimits()) {
+      localStorage.setItem("diagram_uses", String(readUsageCount(USAGE_KEYS.diagram)));
+    }
   }
 
   function canUseSparkHelper() {
@@ -224,6 +303,12 @@
 
   window.getUserPlan = getUserPlan;
   window.setUserPlan = setUserPlan;
+  window.getPlanTier = getPlanTier;
+  window.getPlanDisplayName = getPlanDisplayName;
+  window.getPlanTierDisplayName = getPlanTierDisplayName;
+  window.isFree = isFree;
+  window.isBuilder = isBuilder;
+  window.isPro = isPro;
   window.bypassAllLimits = bypassAllLimits;
   window.getCurrentPlanLimits = getCurrentLimits;
   window.canSaveProject = canSaveProject;

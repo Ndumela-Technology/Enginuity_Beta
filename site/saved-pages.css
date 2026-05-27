@@ -1,0 +1,107 @@
+/* Saved projects list + project viewer pages */
+.saved-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 2.5rem;
+}
+
+.saved-page__back {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  color: var(--eng-red-deep, #8a0000);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.saved-page__back:hover {
+  text-decoration: underline;
+}
+
+.saved-page__title {
+  margin: 0 0 0.35rem;
+  font-family: "Special Elite", "Courier New", Courier, monospace;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  color: var(--ink, #1e1e1e);
+}
+
+.saved-page__lede {
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+  color: rgba(30, 30, 30, 0.8);
+  max-width: 52ch;
+}
+
+.saved-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.saved-list__card {
+  border: 2px solid rgba(216, 31, 38, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 1rem 1.1rem;
+  box-shadow: 2px 3px 0 rgba(120, 10, 10, 0.08);
+}
+
+.saved-list__card-title {
+  margin: 0 0 0.4rem;
+  font-family: "Special Elite", "Courier New", Courier, monospace;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ink, #1e1e1e);
+}
+
+.saved-list__card-desc {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: rgba(30, 30, 30, 0.82);
+}
+
+.saved-list__open-btn {
+  display: inline-block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 2px solid var(--eng-red, #d81f26);
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--eng-red-deep, #8a0000);
+  font-family: "Special Elite", "Courier New", Courier, monospace;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: center;
+}
+
+.saved-list__open-btn:hover {
+  background: #fff;
+}
+
+.saved-page__empty,
+.saved-page__hint {
+  margin: 0;
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(216, 31, 38, 0.2);
+  line-height: 1.5;
+  color: rgba(30, 30, 30, 0.85);
+}
+
+.saved-page__error {
+  border-color: rgba(216, 31, 38, 0.45);
+  color: var(--eng-red-deep, #8a0000);
+}
+
+@media (max-width: 768px) {
+  .saved-page {
+    padding: 1rem 0.75rem 2rem;
+  }
+
+  .saved-list__open-btn {
+    width: 100%;
+  }
+}
