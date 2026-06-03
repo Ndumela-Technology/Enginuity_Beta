@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enginuity · Sign in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="enginuity.css" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="alternate icon" href="assets/logo.svg" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    .signin-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 1.25rem 1rem 2.5rem;
+    }
+    .signin-card {
+      border: 3px solid rgba(216, 31, 38, 0.25);
+      border-radius: 10px 18px 12px 22px / 14px 10px 18px 12px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 3px 4px 0 rgba(120, 10, 10, 0.1);
+      padding: 1.1rem 1.1rem 1.2rem;
+      text-align: center;
+    }
+    .signin-title {
+      margin: 0 0 0.5rem;
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      color: var(--eng-red-deep);
+    }
+    .signin-lede {
+      margin: 0 0 1rem;
+      line-height: 1.5;
+      color: #333;
+    }
+    .signin-benefits {
+      margin: 0 0 1rem;
+      padding-left: 1.1rem;
+      text-align: left;
+      line-height: 1.5;
+      color: #333;
+    }
+    #welcomeSignIn {
+      margin: 0.75rem 0 0;
+      font-size: 1rem;
+      color: var(--eng-red-deep);
+    }
+  </style>
+</head>
+<body class="enginuity-paper">
+  <div class="signin-wrap">
+    <a class="back" href="index.html">← Home</a>
+    <section class="signin-card">
+      <h1 class="signin-title">Nice work on your first build</h1>
+      <p class="signin-lede">
+        Sign in with Google to save projects, unlock upgrade options, and continue in Apprentice, Associate, or Innovator mode.
+      </p>
+      <ul class="signin-benefits">
+        <li>Save and revisit your projects</li>
+        <li>Access all three learning modes</li>
+        <li>Upgrade when you want more builds and features</li>
+      </ul>
+
+      <div id="g_id_onload"
+           data-client_id="959066797660-g7albkfhaou2bsbc9bjo7qvq1go447bq.apps.googleusercontent.com"
+           data-callback="handleSignInResponse">
+      </div>
+      <div class="g_id_signin"></div>
+      <p id="welcomeSignIn"></p>
+    </section>
+  </div>
+
+  <script>
+    function parseJwt(token) {
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64).split("").map(function (c) {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join("")
+      );
+      return JSON.parse(jsonPayload);
+    }
+
+    function handleSignInResponse(response) {
+      const data = parseJwt(response.credential);
+      localStorage.setItem("user_email", data.email);
+      localStorage.setItem("user_name", data.name);
+      localStorage.setItem("has_started", "true");
+      const welcome = document.getElementById("welcomeSignIn");
+      if (welcome) welcome.textContent = "Welcome, " + data.name + " — taking you home…";
+      window.setTimeout(function () {
+        window.location.href = "index.html";
+      }, 700);
+    }
+
+    window.onload = function () {
+      if (localStorage.getItem("user_email")) {
+        window.location.href = "index.html";
+      }
+    };
+  </script>
+  <script src="enginuity-loading-screen.js" defer></script>
+</body>
+</html>

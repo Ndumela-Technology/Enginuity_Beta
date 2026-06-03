@@ -112,6 +112,9 @@
     var normalized = normalizeLegacyProject(project);
     if (!normalized) return false;
     localStorage.setItem(CURRENT_PROJECT_KEY, JSON.stringify(normalized));
+    document.dispatchEvent(
+      new CustomEvent("enginuity:project-changed", { detail: { project: normalized } })
+    );
     return true;
   }
 
@@ -312,7 +315,7 @@
     container.innerHTML =
       '<a class="saved-projects__link saved-projects__link--top" href="saved.html">View all saved projects →</a>';
 
-    projects.slice(-3).reverse().forEach(function (proj) {
+    projects.slice(-2).reverse().forEach(function (proj) {
       var row = document.createElement("div");
       row.className = "saved-project-card";
       var safeTitle = escapeHtml(proj.title || "Project");

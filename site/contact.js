@@ -2,7 +2,9 @@
 (function () {
   "use strict";
 
-  var API_BASE = "https://enginuity-cpl1.onrender.com";
+  function getApiBase() {
+    return window.ENGINUITY_API_BASE || "https://enginuity-cpl1.onrender.com";
+  }
 
   function mountContactButton(email) {
     var safeEmail = String(email || "").trim();
@@ -18,7 +20,7 @@
 
   async function loadContactConfig() {
     try {
-      var res = await fetch(API_BASE + "/public-config/contact", { method: "GET" });
+      var res = await fetch(getApiBase() + "/public-config/contact", { method: "GET" });
       if (!res.ok) return null;
       var data = await res.json();
       return data && data.email ? String(data.email).trim() : "";

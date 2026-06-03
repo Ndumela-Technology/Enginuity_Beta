@@ -78,6 +78,6 @@ def spark_chat(mode, chat_history, user_message, memory=None, education=None):
             "content": str(user_message)
         })
 
-    reply = generate_chat_reply(messages)
+    reply = generate_chat_reply(messages, mode)
 
     return reply

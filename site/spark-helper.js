@@ -2,7 +2,13 @@
 (function () {
   "use strict";
 
-  var API_BASE = "https://enginuity-cpl1.onrender.com";
+  var API_BASE = window.ENGINUITY_API_BASE || "https://enginuity-cpl1.onrender.com";
+  var SPARK_HELPER_PAGES = [
+    "apprentice.html",
+    "associate.html",
+    "innovator.html",
+    "innovator-lite.html"
+  ];
   var CURRENT_PROJECT_KEY = "current_project";
 
   var chatHistory = [];
@@ -52,6 +58,19 @@
     }
   }
 
+  function projectFingerprint(project) {
+    if (!project) return "";
+    if (project.id) return String(project.id);
+    var stepsLen = Array.isArray(project.steps) ? project.steps.length : 0;
+    return (
+      String(project.title || "") +
+      "|" +
+      stepsLen +
+      "|" +
+      String(project.description || "").slice(0, 48)
+    );
+  }
+
   function resolveHelperMode(project) {
     var mode = (window.MODE || "").trim();
     if (mode) return mode;
@@ -66,6 +85,8 @@
     );
   }
 
+  var MAX_CONTEXT_CHARS = 3200;
+
   function buildProjectContext(project) {
     if (!project) return "";
     var parts = [];
@@ -75,16 +96,29 @@
       parts.push("Materials: " + project.materials.join(", "));
     }
     if (Array.isArray(project.materialsSuggested) && project.materialsSuggested.length) {
-      parts.push("Suggested materials: " + project.materialsSuggested.join(", "));
+      parts.push("Suggested: " + project.materialsSuggested.join(", "));
     }
     if (Array.isArray(project.steps) && project.steps.length) {
-      parts.push("Steps:\n" + project.steps.map(function (s, i) { return (i + 1) + ". " + s; }).join("\n"));
+      var stepLines = project.steps.slice(0, 12).map(function (s, i) {
+        var line = (i + 1) + ". " + String(s);
+        return line.length > 220 ? line.slice(0, 217) + "…" : line;
+      });
+      if (project.steps.length > 12) stepLines.push("…(" + (project.steps.length - 12) + " more steps)");
+      parts.push("Steps:\n" + stepLines.join("\n"));
     }
-    if (project.scienceExplanation) parts.push("Science: " + project.scienceExplanation);
-    if (project.science_explanation) parts.push("Science: " + project.science_explanation);
-    if (project.engineeringExplanation) parts.push("Engineering: " + project.engineeringExplanation);
-    if (project.physicsExplanation) parts.push("Physics: " + project.physicsExplanation);
-    return parts.join("\n\n");
+    var science = project.scienceExplanation || project.science_explanation;
+    if (science) parts.push("Science: " + String(science).slice(0, 500));
+    if (project.engineeringExplanation) {
+      parts.push("Engineering: " + String(project.engineeringExplanation).slice(0, 400));
+    }
+    if (project.physicsExplanation) {
+      parts.push("Physics: " + String(project.physicsExplanation).slice(0, 400));
+    }
+    var text = parts.join("\n\n");
+    if (text.length > MAX_CONTEXT_CHARS) {
+      return text.slice(0, MAX_CONTEXT_CHARS - 16) + "\n…(truncated)";
+    }
+    return text;
   }
 
   function injectWidget() {
@@ -135,14 +169,59 @@
     panelOpen ? closePanel() : openPanel();
   }
 
-  var lastProjectTitle = null;
+  var lastProjectFingerprint = null;
+
+  function readActiveProject() {
+    if (typeof window.getCurrentProject === "function") {
+      return window.getCurrentProject();
+    }
+    return getCurrentProject();
+  }
+
+  function applyActiveProject(project, options) {
+    options = options || {};
+    var fp = projectFingerprint(project);
+
+    if (!project) {
+      lastProjectFingerprint = null;
+      chatHistory = [];
+      var emptyMessages = document.getElementById("sparkHelperMessages");
+      if (emptyMessages && options.updateUi !== false) {
+        emptyMessages.innerHTML = "";
+        appendMessage(
+          "system",
+          "No project loaded. Open or generate a project first, then come back to ask questions."
+        );
+      }
+      disableInput("Open a project first.");
+      return;
+    }
+
+    if (fp === lastProjectFingerprint && !options.force) {
+      return;
+    }
+
+    lastProjectFingerprint = fp;
+    chatHistory = [];
+
+    var messages = document.getElementById("sparkHelperMessages");
+    if (messages && options.updateUi !== false) {
+      messages.innerHTML = "";
+      appendMessage(
+        "system",
+        'Now chatting about: "' + escapeHtml(project.title || "your project") + '"'
+      );
+      enableInput();
+      checkAndApplyLimit();
+    }
+  }
 
   function syncProjectContext() {
-    lastProjectTitle = null;
-    var project = getCurrentProject();
+    var project = readActiveProject();
     if (project) {
       window.MODE = resolveHelperMode(project);
     }
+    applyActiveProject(project, { updateUi: panelOpen });
   }
 
   function openPanel() {
@@ -151,24 +230,7 @@
     panelOpen = true;
     panel.classList.add("is-open");
 
-    var project = getCurrentProject();
-    var currentTitle = project ? (project.title || "") : null;
-
-    if (!project) {
-      var messages = document.getElementById("sparkHelperMessages");
-      if (messages && messages.children.length === 0) {
-        appendMessage("system", "No project loaded. Open or generate a project first, then come back to ask questions.");
-      }
-      disableInput("Open a project first.");
-    } else if (currentTitle !== lastProjectTitle) {
-      lastProjectTitle = currentTitle;
-      chatHistory = [];
-      var messages = document.getElementById("sparkHelperMessages");
-      if (messages) messages.innerHTML = "";
-      appendMessage("system", 'Chatting about: "' + escapeHtml(project.title || "your project") + '"');
-      enableInput();
-      checkAndApplyLimit();
-    }
+    applyActiveProject(readActiveProject(), { updateUi: true });
 
     var input = document.getElementById("sparkHelperInput");
     if (input && !input.disabled) input.focus();
@@ -226,6 +288,119 @@
     return true;
   }
 
+  function showThinkingBubble() {
+    var messages = document.getElementById("sparkHelperMessages");
+    if (!messages) return null;
+    var div = document.createElement("div");
+    div.className = "spark-helper-msg spark-helper-msg--assistant spark-helper-msg--thinking";
+    div.id = "sparkHelperThinking";
+    div.innerHTML =
+      '<span class="spark-thinking-label">SparkHelper is thinking...</span>' +
+      '<span class="spark-thinking-shimmer" aria-hidden="true"></span>' +
+      '<span class="spark-thinking-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>';
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+    return div;
+  }
+
+  function removeThinkingBubble() {
+    var el = document.getElementById("sparkHelperThinking");
+    if (el) el.remove();
+  }
+
+  function ensureStreamingBubble() {
+    removeThinkingBubble();
+    var existing = document.getElementById("sparkHelperStream");
+    if (existing) return existing;
+    var messages = document.getElementById("sparkHelperMessages");
+    if (!messages) return null;
+    var div = document.createElement("div");
+    div.className = "spark-helper-msg spark-helper-msg--assistant";
+    div.id = "sparkHelperStream";
+    messages.appendChild(div);
+    return div;
+  }
+
+  function removeStreamingBubble() {
+    var el = document.getElementById("sparkHelperStream");
+    if (el) el.remove();
+  }
+
+  function readChatStream(response, onDelta) {
+    if (!response.body || typeof response.body.getReader !== "function") {
+      return Promise.reject(new Error("stream_unavailable"));
+    }
+    var reader = response.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = "";
+    var full = "";
+
+    function processBlock(block) {
+      block.split("\n").forEach(function (line) {
+        if (line.indexOf("data: ") !== 0) return;
+        var payload = line.slice(6).trim();
+        if (payload === "[DONE]") return;
+        try {
+          var parsed = JSON.parse(payload);
+          if (parsed.error) throw new Error(parsed.error);
+          if (parsed.delta) {
+            full += parsed.delta;
+            onDelta(full);
+          }
+        } catch (e) {
+          if (e.message && e.message !== "stream_unavailable") throw e;
+        }
+      });
+    }
+
+    function pump() {
+      return reader.read().then(function (result) {
+        if (result.done) return full;
+        buffer += decoder.decode(result.value, { stream: true });
+        var parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+        parts.forEach(processBlock);
+        return pump();
+      });
+    }
+
+    return pump();
+  }
+
+  function requestHelperReply(payload) {
+    return fetch(API_BASE + "/chat-helper", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.assign({}, payload, { stream: true }))
+    }).then(function (res) {
+      if (!res.ok) throw new Error("Server error " + res.status);
+      removeThinkingBubble();
+      var streamEl = ensureStreamingBubble();
+      return readChatStream(res, function (partial) {
+        if (streamEl) streamEl.innerHTML = formatMessageHtml(partial);
+        var messages = document.getElementById("sparkHelperMessages");
+        if (messages) messages.scrollTop = messages.scrollHeight;
+      }).catch(function () {
+        removeStreamingBubble();
+        showThinkingBubble();
+        return fetch(API_BASE + "/chat-helper", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).then(function (res2) {
+          if (!res2.ok) throw new Error("Server error " + res2.status);
+          return res2.json();
+        }).then(function (data) {
+          var reply = (data && typeof data.reply === "string") ? data.reply.trim() : "";
+          return reply;
+        });
+      });
+    }).then(function (reply) {
+      if (typeof reply === "string") return reply;
+      return "";
+    });
+  }
+
   function sendMessage() {
     if (sending) return;
 
@@ -234,7 +409,7 @@
     var text = input.value.trim();
     if (!text) return;
 
-    var project = getCurrentProject();
+    var project = readActiveProject();
     if (!project) {
       appendMessage("system", "No project loaded. Open or generate a project first.");
       disableInput("Open a project first.");
@@ -251,30 +426,36 @@
     var btn = document.getElementById("sparkHelperSend");
     if (btn) {
       btn.disabled = true;
-      btn.textContent = "...";
+      btn.textContent = "…";
     }
 
-    var context = buildProjectContext(project);
+    showThinkingBubble();
 
-    fetch(API_BASE + "/chat-helper", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: text,
-        context: context,
-        history: chatHistory.slice(0, -1),
-        mode: resolveHelperMode(project)
-      })
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error("Server error " + res.status);
-        return res.json();
-      })
-      .then(function (data) {
-        var reply = (data && typeof data.reply === "string") ? data.reply.trim() : "";
-        if (!reply) reply = "Sorry, I couldn't answer that. Try rephrasing.";
+    var payload = {
+      message: text,
+      context: buildProjectContext(project),
+      history: chatHistory.slice(0, -1),
+      mode: resolveHelperMode(project)
+    };
 
-        appendMessage("assistant", reply);
+    requestHelperReply(payload)
+      .then(function (reply) {
+        removeThinkingBubble();
+        var streamEl = document.getElementById("sparkHelperStream");
+        if (streamEl) {
+          streamEl.id = "";
+          if (!reply) {
+            streamEl.remove();
+            reply = "Sorry, I couldn't answer that. Try rephrasing.";
+            appendMessage("assistant", reply);
+          } else {
+            streamEl.innerHTML = formatMessageHtml(reply);
+          }
+        } else {
+          if (!reply) reply = "Sorry, I couldn't answer that. Try rephrasing.";
+          appendMessage("assistant", reply);
+        }
+
         chatHistory.push({ role: "assistant", content: reply });
 
         if (typeof window.recordSparkHelperUse === "function") {
@@ -283,6 +464,8 @@
         checkAndApplyLimit();
       })
       .catch(function (err) {
+        removeThinkingBubble();
+        removeStreamingBubble();
         appendMessage("system", "Request failed: " + (err.message || String(err)));
       })
       .finally(function () {
@@ -295,12 +478,35 @@
       });
   }
 
+  function isSparkHelperPage() {
+    var path = window.location.pathname || "";
+    var page = path.split("/").pop() || "";
+    if (!page) page = "index.html";
+    return SPARK_HELPER_PAGES.indexOf(page) !== -1;
+  }
+
   function initSparkHelper() {
+    if (!isSparkHelperPage()) return;
     injectWidget();
     syncProjectContext();
   }
 
   window.syncSparkHelperContext = syncProjectContext;
+  window.buildSparkProjectContext = buildProjectContext;
+
+  document.addEventListener("enginuity:project-changed", function (e) {
+    var project = (e && e.detail && e.detail.project) || readActiveProject();
+    if (project) {
+      window.MODE = resolveHelperMode(project);
+    }
+    applyActiveProject(project, { updateUi: panelOpen });
+  });
+
+  window.addEventListener("storage", function (e) {
+    if (e.key === CURRENT_PROJECT_KEY) {
+      syncProjectContext();
+    }
+  });
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initSparkHelper);

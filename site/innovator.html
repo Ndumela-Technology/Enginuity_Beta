@@ -109,6 +109,25 @@
             margin-bottom: 16px;
         }
 
+        .innovator-usage-banner {
+            display: none;
+            margin: 0 0 14px;
+            padding: 0.45rem 0.65rem;
+            border: 1.5px solid rgba(216, 31, 38, 0.22);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.92);
+            font-size: 0.82rem;
+            color: #444;
+        }
+
+        .innovator-usage-banner.is-visible {
+            display: block;
+        }
+
+        .innovator-usage-banner strong {
+            color: var(--eng-red-deep, #8b1a1a);
+        }
+
         .chat {
             border: 1px solid #e6e6e6;
             border-radius: 14px;
@@ -240,6 +259,8 @@
             <input type="hidden" id="age" value="" />
         </div>
 
+        <div id="innovatorUsageBanner" class="innovator-usage-banner" role="status" aria-live="polite"></div>
+
         <div class="chat" id="chatPanel">
             <h2>Chat (Innovator Mode)</h2>
             <div class="chat-messages" id="chatMessages"></div>
@@ -256,11 +277,12 @@
         </div>
     </div>
 
+    <script src="api-config.js"></script>
     <script src="user-plan.js"></script>
     <script>
         const MODE = "Innovator";
         window.MODE = MODE;
-        const API_BASE = "https://enginuity-cpl1.onrender.com";
+        const API_BASE = window.ENGINUITY_API_BASE || "https://enginuity-cpl1.onrender.com";
         localStorage.setItem("enginuity_mode", MODE);
 
         // -------------------------
@@ -268,6 +290,68 @@
         // -------------------------
         let chatHistory = []; // { role: 'user'|'assistant', content: string }
         let lastSelectedProjectName = "";
+
+        function refreshInnovatorUsageUi() {
+            const banner = document.getElementById("innovatorUsageBanner");
+            const sendBtn = document.getElementById("sendBtn");
+            const inputEl = document.getElementById("chatInput");
+            if (typeof window.getInnovatorMonthlyStatus !== "function") {
+                return;
+            }
+            const status = window.getInnovatorMonthlyStatus();
+            if (banner) {
+                if (status.unlimited) {
+                    banner.classList.remove("is-visible");
+                    banner.textContent = "";
+                } else if (status.max != null) {
+                    banner.classList.add("is-visible");
+                    banner.innerHTML =
+                        "<strong>Innovator usage:</strong> " +
+                        status.remaining +
+                        " of " +
+                        status.max +
+                        " left this month. " +
+                        (status.resetLabel || "Resets monthly") +
+                        ".";
+                } else {
+                    banner.classList.remove("is-visible");
+                }
+            }
+            const check =
+                typeof window.canUseInnovator === "function"
+                    ? window.canUseInnovator()
+                    : { allowed: true };
+            const blocked = !check.allowed;
+            if (sendBtn) sendBtn.disabled = blocked;
+            if (inputEl) {
+                inputEl.disabled = blocked;
+                inputEl.placeholder = blocked
+                    ? "Monthly Innovator limit reached — upgrade to Pro for unlimited access."
+                    : "Ask SparkAI for help. For example: 'Help me choose a sensor and design the steps.'";
+            }
+        }
+
+        function applyInnovatorAccessGate() {
+            if (typeof window.canUseInnovator !== "function") {
+                return;
+            }
+            const check = window.canUseInnovator();
+            if (!check.allowed) {
+                const panel = document.getElementById("chatPanel");
+                if (panel && !document.getElementById("innovatorAccessNotice")) {
+                    const notice = document.createElement("div");
+                    notice.className = "error";
+                    notice.id = "innovatorAccessNotice";
+                    notice.textContent =
+                        check.message || "Innovator access is not available on your plan.";
+                    panel.parentNode.insertBefore(notice, panel);
+                }
+            }
+            refreshInnovatorUsageUi();
+        }
+
+        document.addEventListener("enginuity:usage-changed", refreshInnovatorUsageUi);
+        document.addEventListener("enginuity:plan-changed", refreshInnovatorUsageUi);
 
         function escapeHtml(str) {
             return String(str)
@@ -439,10 +523,26 @@
             const engineeringField = document.getElementById("engineeringField").value;
             const parts = [
                 `Mode: ${MODE}`,
-                lastSelectedProjectName ? `Selected project: ${lastSelectedProjectName}` : null,
                 age ? `Age group: ${age}` : null,
                 engineeringField ? `Engineering field focus: ${engineeringField}` : null
             ].filter(Boolean);
+
+            if (typeof window.getCurrentProject === "function") {
+                const proj = window.getCurrentProject();
+                if (proj) {
+                    lastSelectedProjectName = proj.title || lastSelectedProjectName;
+                    if (typeof window.buildSparkProjectContext === "function") {
+                        parts.push(window.buildSparkProjectContext(proj));
+                    } else {
+                        parts.push("Current project: " + (proj.title || "Untitled"));
+                        if (proj.description) parts.push("Description: " + proj.description);
+                    }
+                } else if (lastSelectedProjectName) {
+                    parts.push(`Selected project: ${lastSelectedProjectName}`);
+                }
+            } else if (lastSelectedProjectName) {
+                parts.push(`Selected project: ${lastSelectedProjectName}`);
+            }
 
             return parts.join("\n");
         }
@@ -561,6 +661,18 @@
             const userText = inputEl.value.trim();
             if (!userText) return;
 
+            if (typeof window.canUseInnovator === "function") {
+                const innovCheck = window.canUseInnovator();
+                if (!innovCheck.allowed) {
+                    alert(
+                        innovCheck.message ||
+                            "You've reached your monthly Innovator limit. Upgrade to Pro for unlimited access."
+                    );
+                    refreshInnovatorUsageUi();
+                    return;
+                }
+            }
+
             appendChatMessage("user", userText);
             chatHistory.push({ role: "user", content: userText });
             const historyForApi = chatHistory.slice(0, -1);
@@ -616,6 +728,11 @@
 
                 appendChatMessage("assistant", replyText);
                 chatHistory.push({ role: "assistant", content: replyText });
+
+                if (typeof window.recordInnovatorUse === "function") {
+                    window.recordInnovatorUse();
+                }
+                refreshInnovatorUsageUi();
             } catch (e) {
                 appendChatMessage("assistant", `Request failed: ${e && e.message ? e.message : String(e)}`);
             } finally {
@@ -646,6 +763,7 @@
             "Hi! I'm SparkAI in Innovator mode. You lead the build—tell me your next decision (materials, design, steps) and I'll help you refine it."
         );
         resumeSavedProjectIfAny();
+        applyInnovatorAccessGate();
     </script>
     <script src="upgrade.js"></script>
     <script src="contact.js"></script>

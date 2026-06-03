@@ -3,17 +3,15 @@
 <head>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="alternate icon" href="assets/logo.svg">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Enginuity · First Project</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="enginuity.css" />
-  <link rel="stylesheet" href="contact.css" />
-   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
-  <style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enginuity · Before your first build</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="enginuity.css" />
+    <link rel="stylesheet" href="contact.css" />
+    <style>
     .wrap {
       max-width: 980px;
       margin: 0 auto;
@@ -42,18 +40,23 @@
       letter-spacing: 0.06em;
       font-size: clamp(1.6rem, 4.6vw, 2.2rem);
       color: var(--ink);
-      transform: rotate(0.2deg);
     }
 
-    .lede {
+    .lede, .section-text {
       margin: 0.6rem 0 0;
       line-height: 1.5;
       color: rgba(30, 30, 30, 0.85);
       max-width: 70ch;
     }
 
+    .section-title {
+      margin: 1rem 0 0.35rem;
+      font-size: 1.05rem;
+      color: var(--eng-red-deep);
+    }
+
     .list {
-      margin: 0.8rem 0 0;
+      margin: 0.5rem 0 0;
       padding-left: 1.1rem;
       line-height: 1.5;
       color: rgba(30, 30, 30, 0.85);
@@ -68,16 +71,11 @@
       padding: 0.75rem 0.85rem;
     }
 
-    .safety strong {
-      font-family: "Special Elite", "Courier New", Courier, monospace;
-      letter-spacing: 0.04em;
-    }
-
     .actions {
       display: flex;
       gap: 0.75rem;
       flex-wrap: wrap;
-      margin-top: 1rem;
+      margin-top: 1.2rem;
     }
 
     .btn {
@@ -92,38 +90,24 @@
       letter-spacing: 0.04em;
       text-decoration: none;
       box-shadow: 3px 4px 0 rgba(120, 10, 10, 0.12);
-      transform: rotate(-0.25deg);
       white-space: nowrap;
     }
 
     .btn:hover {
       background: #fff;
-      transform: rotate(0deg) translateY(-1px);
+      transform: translateY(-1px);
     }
 
     .btn.secondary {
       border-color: rgba(216, 31, 38, 0.35);
-      color: rgba(70, 20, 20, 0.9);
       font-weight: 800;
-      box-shadow: 2px 3px 0 rgba(120, 10, 10, 0.09);
-    }
-      @media (max-width: 768px) {
-    body {
-        padding: 12px;
     }
 
-    h1 {
-        font-size: 24px;
+    @media (max-width: 768px) {
+      body { padding: 12px; }
+      .btn { width: 100%; text-align: center; }
     }
-
-    .mode-grid {
-        grid-template-columns: 1fr;
-    }
-    button {
-        width: 100%;
-    }
-}
-  </style>
+    </style>
 </head>
 <body class="enginuity-paper">
   <div class="wrap">
@@ -131,35 +115,42 @@
 
     <section class="hero">
       <div class="card">
-        <h1 class="title">Your first build (guided)</h1>
+        <h1 class="title">Welcome to Enginuity</h1>
         <p class="lede">
-          Enginuity has three modes. For your first project, we’ll use <strong>Apprentice mode</strong> so SparkAI guides you step-by-step.
+          Enginuity helps you turn everyday materials into real engineering builds. SparkAI guides you with steps,
+          diagrams, progress tracking, and a helper you can ask when you get stuck.
         </p>
 
+        <h2 class="section-title">The three modes</h2>
         <ul class="list">
-          <li><strong>Apprentice</strong>: SparkAI guides you step by step and explains everything. Best for beginners learning the basics.</li>
-          <li><strong>Associate</strong>: SparkAI is still holding the wheel, but you make more choices, have more authority. Good if you already know a little.</li>
-          <li><strong>Innovator</strong>: You lead the project, SparkAI supports you when needed. Best for creative or advanced users.</li>
+          <li><strong>Apprentice</strong> — SparkAI leads step by step. Best if you are new.</li>
+          <li><strong>Associate</strong> — You and SparkAI build together. Good when you want more control.</li>
+          <li><strong>Innovator</strong> — You lead the idea; SparkAI supports when you need it.</li>
         </ul>
 
+        <h2 class="section-title">Your first project: Innovator Lite</h2>
+        <p class="section-text">
+          You will start with <strong>Innovator Lite</strong> — a short 15–20 minute build using items you already have at home.
+          You will list your materials, generate a project, follow the steps, try a visual diagram, track progress, and ask SparkHelper questions.
+        </p>
+
         <div class="safety">
-          <strong>Safety note</strong>
+          <strong>Safety</strong>
           <div style="margin-top:0.35rem; line-height:1.5;">
-            Please don’t try to build anything dangerous (fire, explosives, toxic chemicals, high voltage).
-            If a project feels unsafe, stop and choose a safer version.
+            Do not build anything dangerous (fire, explosives, toxic chemicals, high voltage). If a step feels unsafe, stop and pick a safer version.
           </div>
         </div>
 
         <div class="actions">
-          <a class="btn" href="apprentice.html">Start First Project →</a>
-          <a class="btn secondary" href="index.html">Finish / Go Home</a>
+          <a class="btn" href="innovator-lite.html">Start Innovator Lite →</a>
+          <a class="btn secondary" href="index.html">Back to home</a>
         </div>
       </div>
     </section>
   </div>
 
+  <script src="api-config.js"></script>
   <script src="contact.js"></script>
   <script src="enginuity-loading-screen.js" defer></script>
 </body>
 </html>
-

@@ -2,7 +2,7 @@
 (function () {
   "use strict";
 
-  var EXCLUDED_PAGES = ["tutorial.html"];
+  var EXCLUDED_PAGES = ["tutorial.html", "sign-in.html"];
 
   var PLAN_FEATURES = {
     free: [
@@ -14,13 +14,14 @@
     builder: [
       "Unlimited Apprentice",
       "Unlimited Associate",
+      "5 Innovator uses per month (resets monthly)",
       "5 saved projects",
       "10 visual diagrams",
       "Unlimited SparkHelper"
     ],
     pro: [
       "Unlimited everything",
-      "Innovator access",
+      "Unlimited Innovator access",
       "Unlimited diagrams",
       "15 saved projects",
       "Beta access & early updates"

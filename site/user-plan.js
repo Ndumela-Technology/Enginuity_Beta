@@ -25,6 +25,8 @@
     sparkHelper: "enginuity_usage_sparkhelper"
   };
 
+  var INNOVATOR_MONTHLY_KEY = "enginuity_innovator_monthly";
+
   var TIER_LIMITS = {
     free: {
       associateUses: 5,
@@ -38,7 +40,8 @@
       maxSavedProjects: 5,
       maxDiagramUses: 10,
       sparkHelperUses: null,
-      apprenticeGenerations: null
+      apprenticeGenerations: null,
+      innovatorUsesPerMonth: 5
     },
     pro: {
       associateUses: null,
@@ -183,6 +186,7 @@
   function recordUsage(usageKey) {
     if (bypassAllLimits()) return;
     writeUsageCount(usageKey, readUsageCount(usageKey) + 1);
+    document.dispatchEvent(new CustomEvent("enginuity:usage-changed"));
   }
 
   function countSavedProjectsForEmail(email) {
@@ -251,6 +255,7 @@
     if (!isFree()) return;
     writeUsageCount(ASSOCIATE_USES_KEY, readAssociateUses() + 1);
     writeUsageCount(USAGE_KEYS.associate, readAssociateUses());
+    document.dispatchEvent(new CustomEvent("enginuity:usage-changed"));
   }
 
   function canUseApprenticeGeneration() {
@@ -295,8 +300,153 @@
     recordUsage(USAGE_KEYS.sparkHelper);
   }
 
+  function pad2(n) {
+    return n < 10 ? "0" + n : String(n);
+  }
+
+  function currentBillingPeriod() {
+    var d = new Date();
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1);
+  }
+
+  function nextMonthResetLabel() {
+    var d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + 1);
+    var names = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ];
+    return "Resets " + names[d.getMonth()] + " 1";
+  }
+
+  function readInnovatorMonthlyUsed() {
+    if (!isBuilder()) {
+      return 0;
+    }
+    try {
+      var raw = JSON.parse(localStorage.getItem(INNOVATOR_MONTHLY_KEY) || "{}");
+      if (raw.period !== currentBillingPeriod()) {
+        return 0;
+      }
+      var used = parseInt(raw.used, 10);
+      return isNaN(used) || used < 0 ? 0 : used;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function writeInnovatorMonthlyUsed(used) {
+    localStorage.setItem(
+      INNOVATOR_MONTHLY_KEY,
+      JSON.stringify({
+        period: currentBillingPeriod(),
+        used: Math.max(0, used)
+      })
+    );
+  }
+
+  function getInnovatorMonthlyLimit() {
+    if (isPro()) {
+      return null;
+    }
+    if (isBuilder()) {
+      return TIER_LIMITS.builder.innovatorUsesPerMonth;
+    }
+    return 0;
+  }
+
+  function getInnovatorMonthlyStatus() {
+    if (isPro()) {
+      return { allowed: true, unlimited: true, used: 0, max: null, remaining: null };
+    }
+    var max = getInnovatorMonthlyLimit();
+    if (max === 0) {
+      return {
+        allowed: false,
+        unlimited: false,
+        used: 0,
+        max: 0,
+        remaining: 0,
+        resetLabel: nextMonthResetLabel()
+      };
+    }
+    var used = readInnovatorMonthlyUsed();
+    var remaining = Math.max(0, max - used);
+    return {
+      allowed: remaining > 0,
+      unlimited: false,
+      used: used,
+      max: max,
+      remaining: remaining,
+      resetLabel: nextMonthResetLabel()
+    };
+  }
+
+  function canUseInnovator() {
+    if (isPro()) {
+      return { allowed: true };
+    }
+    var status = getInnovatorMonthlyStatus();
+    if (!status.allowed) {
+      var tier = getPlanTier();
+      var message =
+        tier === "free"
+          ? "Innovator mode requires Builder or Pro. Upgrade to unlock it."
+          : "You've used all " +
+            status.max +
+            " Innovator uses this month. " +
+            status.resetLabel +
+            ". Upgrade to Pro for unlimited Innovator access.";
+      return {
+        allowed: false,
+        message: message,
+        used: status.used,
+        max: status.max,
+        remaining: status.remaining,
+        resetLabel: status.resetLabel
+      };
+    }
+    return {
+      allowed: true,
+      used: status.used,
+      max: status.max,
+      remaining: status.remaining,
+      resetLabel: status.resetLabel
+    };
+  }
+
+  function recordInnovatorUse() {
+    if (isPro()) {
+      return;
+    }
+    if (!isBuilder()) {
+      return;
+    }
+    var max = getInnovatorMonthlyLimit();
+    if (max == null) {
+      return;
+    }
+    writeInnovatorMonthlyUsed(readInnovatorMonthlyUsed() + 1);
+    document.dispatchEvent(new CustomEvent("enginuity:usage-changed"));
+  }
+
   function applyFreePlanDefaults() {
     getUserPlan();
+  }
+
+  function canAccessInnovator() {
+    return canUseInnovator().allowed;
   }
 
   applyFreePlanDefaults();
@@ -320,4 +470,8 @@
   window.recordDiagramUse = recordDiagramUse;
   window.canUseSparkHelper = canUseSparkHelper;
   window.recordSparkHelperUse = recordSparkHelperUse;
+  window.canAccessInnovator = canAccessInnovator;
+  window.canUseInnovator = canUseInnovator;
+  window.recordInnovatorUse = recordInnovatorUse;
+  window.getInnovatorMonthlyStatus = getInnovatorMonthlyStatus;
 })();

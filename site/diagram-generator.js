@@ -2,7 +2,9 @@
 (function () {
   "use strict";
 
-  var API_BASE = "https://enginuity-cpl1.onrender.com";
+  function getApiBase() {
+    return window.ENGINUITY_API_BASE || "https://enginuity-cpl1.onrender.com";
+  }
 
   function decodeStepText(btn) {
     var raw = btn.getAttribute("data-step");
@@ -62,7 +64,7 @@
     btn.textContent = "Generating diagram...";
     setSlotMessage(slot, "Generating diagram...", "project-output__diagram-slot--loading");
 
-    fetch(API_BASE + "/generate-diagram", {
+    fetch(getApiBase() + "/generate-diagram", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ step: stepText })

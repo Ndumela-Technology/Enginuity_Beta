@@ -14,15 +14,16 @@
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
   <link rel="alternate icon" href="assets/logo.svg" />
   <style>
-    .lite-wrap { max-width: 980px; margin: 0 auto; }
+    .lite-wrap { max-width: 980px; margin: 0 auto; padding: 0 0.4rem 2rem; }
     .lite-panel {
-      border: 1px solid #e7e7e7;
-      border-radius: 14px;
-      background: #fff;
-      padding: 1rem 1.1rem;
+      border: 3px solid rgba(216, 31, 38, 0.25);
+      border-radius: 10px 18px 12px 22px / 14px 10px 18px 12px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 3px 4px 0 rgba(120, 10, 10, 0.1);
+      padding: 1rem 1.1rem 1.1rem;
       margin-bottom: 1rem;
     }
-    .lite-title { margin: 0 0 0.4rem; font-size: 2rem; }
+    .lite-title { margin: 0 0 0.4rem; font-size: 2rem; color: var(--eng-red-deep); }
     .lite-sub { margin: 0; color: #333; line-height: 1.45; }
     .lite-materials { min-height: 88px; width: 100%; box-sizing: border-box; }
     .lite-actions { margin-top: 0.75rem; display: flex; gap: 0.6rem; flex-wrap: wrap; }
@@ -59,13 +60,42 @@
       padding: 0.65rem 0.8rem;
       display: none;
     }
+    .lite-done-wrap {
+      margin-top: 1rem;
+      padding-top: 0.5rem;
+      display: none;
+    }
+    .lite-done-wrap.is-visible { display: block; }
+    .lite-done-btn {
+      width: 100%;
+      max-width: 420px;
+      padding: 0.7rem 1rem;
+      border: 3px solid var(--eng-red, #d81f26);
+      border-radius: 10px;
+      background: var(--eng-red-deep, #8b1a1a);
+      color: #fff;
+      font-family: "Special Elite", "Courier New", Courier, monospace;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .lite-done-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .lite-done-hint {
+      margin: 0.45rem 0 0;
+      font-size: 0.85rem;
+      color: #555;
+      line-height: 1.4;
+    }
   </style>
 </head>
 <body class="enginuity-paper">
   <div class="lite-wrap">
-    <a class="back" href="index.html">← Back</a>
+    <a class="back" href="tutorial.html">← Back</a>
     <section class="lite-panel">
-      <h1 class="lite-title">Innovator Lite</h1>
+      <h1 class="lite-title">Enginuity · Innovator Lite</h1>
       <p class="lite-sub">
         Your first Enginuity build. Quick, fun, and visual. Share the materials you already have and SparkAI will craft a 15-20 minute project.
       </p>
@@ -82,29 +112,50 @@
     <div id="liteComplete" class="lite-complete">
       Nice work — you completed your Innovator Lite project.
     </div>
+
+    <div id="liteDoneWrap" class="lite-done-wrap">
+      <button type="button" id="liteDoneBtn" class="lite-done-btn" disabled>Done — continue to sign in</button>
+      <p id="liteDoneHint" class="lite-done-hint">
+        Complete all steps (and try a diagram or SparkHelper if you like), then tap Done.
+      </p>
+    </div>
   </div>
 
+  <script src="api-config.js"></script>
   <script src="user-plan.js"></script>
   <script src="project-output.js"></script>
   <script src="saved-projects.js"></script>
   <script src="diagram-generator.js"></script>
-  <script src="spark-helper.js"></script>
+  <script src="spark-helper.js" defer></script>
   <script>
     (function () {
-      var API_BASE = "https://enginuity-cpl1.onrender.com";
+      var API_BASE = window.ENGINUITY_API_BASE || "https://enginuity-cpl1.onrender.com";
       var COMPLETED_KEY = "innovator_lite_completed";
       var PROGRESS_KEY = "innovator_lite_progress";
+      var HAS_STARTED_KEY = "has_started";
       var MODE = "Innovator Lite";
       var currentProject = null;
+      var guestUsedDiagram = false;
+      var guestUsedSparkHelper = false;
+
+      function isGuest() {
+        return !localStorage.getItem("user_email");
+      }
 
       window.MODE = MODE;
       localStorage.setItem("enginuity_mode", MODE);
 
       // Temporary onboarding access without plan restrictions.
       window.canUseDiagram = function () { return { allowed: true }; };
-      window.recordDiagramUse = function () {};
+      window.recordDiagramUse = function () {
+        guestUsedDiagram = true;
+        updateDoneButtonState();
+      };
       window.canUseSparkHelper = function () { return { allowed: true }; };
-      window.recordSparkHelperUse = function () {};
+      window.recordSparkHelperUse = function () {
+        guestUsedSparkHelper = true;
+        updateDoneButtonState();
+      };
 
       function escapeHtml(str) {
         return String(str)
@@ -173,6 +224,63 @@
         } else {
           complete.style.display = "none";
         }
+        updateDoneButtonState();
+      }
+
+      function allStepsComplete() {
+        if (!currentProject) return false;
+        var steps = Array.isArray(currentProject.steps) ? currentProject.steps : [];
+        if (!steps.length) return false;
+        var checks = getStepChecks(currentProject, steps.length);
+        return checks.every(Boolean);
+      }
+
+      function guestReadyToFinish() {
+        if (!isGuest()) return allStepsComplete();
+        return allStepsComplete() && (guestUsedDiagram || guestUsedSparkHelper);
+      }
+
+      function updateDoneButtonState() {
+        var wrap = document.getElementById("liteDoneWrap");
+        var btn = document.getElementById("liteDoneBtn");
+        var hint = document.getElementById("liteDoneHint");
+        if (!wrap || !btn) return;
+
+        if (!currentProject) {
+          wrap.classList.remove("is-visible");
+          btn.disabled = true;
+          return;
+        }
+
+        wrap.classList.add("is-visible");
+        var ready = guestReadyToFinish();
+        btn.disabled = !ready;
+
+        if (hint) {
+          if (isGuest()) {
+            hint.textContent = ready
+              ? "Tap Done to sign in and unlock the full Enginuity home."
+              : "Check off every step, then try at least one diagram or SparkHelper question.";
+          } else {
+            hint.textContent = ready
+              ? "Tap Done to return home."
+              : "Complete all steps to continue.";
+          }
+        }
+
+        if (!isGuest()) {
+          btn.textContent = "Done — back to home";
+        }
+      }
+
+      function finishLiteFlow() {
+        localStorage.setItem(HAS_STARTED_KEY, "true");
+        localStorage.setItem(COMPLETED_KEY, "true");
+        if (isGuest()) {
+          window.location.href = "sign-in.html";
+          return;
+        }
+        window.location.href = "index.html";
       }
 
       function hydrateChecklist() {
@@ -237,6 +345,7 @@
 
         hydrateChecklist();
         updateProgressUi();
+        updateDoneButtonState();
       }
 
       function normalizeLiteProject(data, materials) {
@@ -275,17 +384,52 @@
           return;
         }
 
-        status.textContent = "Generating your Innovator Lite experience...";
+        status.textContent = "SparkAI is designing your project...";
         btn.disabled = true;
         btn.textContent = "Generating...";
 
         try {
-          var res = await fetch(API_BASE + "/generate-innovator-lite", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ materials: materials })
-          });
-          if (!res.ok) throw new Error("Server returned " + res.status);
+          async function requestLite(base) {
+            return fetch(base + "/generate-innovator-lite", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ materials: materials })
+            });
+          }
+
+          var res;
+          var usedFallbackBase = false;
+          try {
+            res = await requestLite(API_BASE);
+          } catch (fetchErr) {
+            var isLocalBase =
+              API_BASE.indexOf("127.0.0.1") !== -1 ||
+              API_BASE.indexOf("localhost") !== -1;
+            if (!isLocalBase) throw fetchErr;
+            // Fallback to production API if local backend is unreachable.
+            res = await requestLite("https://enginuity-cpl1.onrender.com");
+            usedFallbackBase = true;
+          }
+
+          if (
+            res &&
+            res.status === 404 &&
+            !usedFallbackBase &&
+            (API_BASE.indexOf("127.0.0.1") !== -1 || API_BASE.indexOf("localhost") !== -1)
+          ) {
+            // Local backend is up but missing this route; retry hosted API.
+            res = await requestLite("https://enginuity-cpl1.onrender.com");
+            usedFallbackBase = true;
+          }
+          if (!res.ok) {
+            if (res.status === 404) {
+              throw new Error(
+                "Innovator Lite API not found (404). Redeploy the backend with /generate-innovator-lite, " +
+                "or run it locally at " + API_BASE + "."
+              );
+            }
+            throw new Error("Server returned " + res.status);
+          }
 
           var data = await res.json();
           if (data && data.error) {
@@ -310,9 +454,14 @@
       }
 
       document.getElementById("liteGenerateBtn").addEventListener("click", generateLiteProject);
+      document.getElementById("liteDoneBtn").addEventListener("click", function () {
+        if (!guestReadyToFinish() && isGuest()) return;
+        if (!allStepsComplete() && !isGuest()) return;
+        finishLiteFlow();
+      });
     })();
   </script>
-  <script src="contact.js"></script>
+  <script src="contact.js" defer></script>
   <script src="enginuity-loading-screen.js" defer></script>
 </body>
 </html>
