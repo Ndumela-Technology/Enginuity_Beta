@@ -299,50 +299,6 @@
             color: var(--eng-red-deep);
         }
 
-        .home-plan-strip {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 0.28rem 0.45rem;
-            margin: 0;
-            padding: 0.22rem 0.45rem;
-            width: 100%;
-            max-width: 100%;
-            border: 1.5px solid rgba(216, 31, 38, 0.2);
-            border-radius: 7px;
-            background: rgba(255, 255, 255, 0.9);
-            font-size: 0.68rem;
-            line-height: 1.25;
-        }
-
-        .home-plan-strip__label {
-            color: rgba(30, 30, 30, 0.65);
-            font-size: 0.62rem;
-            white-space: nowrap;
-        }
-
-        .home-plan-strip__value {
-            font-family: "Special Elite", "Courier New", Courier, monospace;
-            font-weight: 900;
-            font-size: 0.72rem;
-            color: var(--eng-red-deep);
-            white-space: nowrap;
-        }
-
-        .home-plan-strip__upgrade {
-            margin-left: 0.15rem;
-            padding: 0.12rem 0.38rem;
-            border: 1.5px solid var(--eng-red);
-            border-radius: 5px;
-            background: #fff;
-            color: var(--eng-red-deep);
-            font-weight: 800;
-            font-size: 0.62rem;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
         /* Signed-in: path ends with a downward cue (no bottom CTA button) */
         body:not(.is-guest) .path-layer {
             bottom: -12%;
@@ -543,11 +499,20 @@
             display: none;
         }
 
+        /* Signed-in: single front-layer panel (no outer back-layer chrome) */
+        body:not(.is-guest) .saved-section--panel {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            backdrop-filter: none;
+            padding: 0;
+        }
+
         .footer-note {
             position: relative;
             z-index: 2;
             max-width: 640px;
-            margin: 2rem auto 0;
+            margin: calc(2rem + 30%) auto 0;
             padding: 0 0.5rem;
             font-size: 0.82rem;
             line-height: 1.45;
@@ -667,11 +632,6 @@
                 <a href="profile.html" id="profileLink" class="saved-projects__link" style="display:none;">Account</a>
                 <button id="signOutBtn" type="button" class="btn-signout" style="display:none;">Sign out</button>
             </div>
-            <div class="home-plan-strip" id="homePlanStrip" hidden aria-label="Current plan">
-                <span class="home-plan-strip__label">Plan</span>
-                <span class="home-plan-strip__value" id="homePlanName">Free</span>
-                <button type="button" class="home-plan-strip__upgrade" id="homePlanUpgradeBtn">Upgrade</button>
-            </div>
         </div>
     </div>
 </header>
@@ -743,8 +703,7 @@
 
             <section class="saved-section saved-section--panel" aria-label="Saved projects">
                 <h2>📁 Your Saved Projects</h2>
-                <p class="saved-section__sub"><a class="saved-projects__link" href="saved.html">View all →</a></p>
-                <div id="savedProjects"></div>
+                <div id="savedProjects" data-preview-only="true"></div>
             </section>
 
             <a class="mode-node mode-node--apprentice" href="apprentice.html" data-mode-href="apprentice.html">
@@ -1199,17 +1158,10 @@ function canAccessInnovatorMode() {
 function updateHomePlanUi() {
     const email = localStorage.getItem("user_email");
     const isGuest = !email;
-    const strip = document.getElementById("homePlanStrip");
-    const planNameEl = document.getElementById("homePlanName");
     const apprenticeBadge = document.getElementById("apprenticePlanBadge");
     const associateBadge = document.getElementById("associatePlanBadge");
     const innovatorBadge = document.getElementById("innovatorPlanBadge");
     const innovatorNode = document.querySelector(".mode-node--innovator");
-
-    if (strip) strip.hidden = isGuest;
-    if (planNameEl && typeof window.getPlanDisplayName === "function") {
-        planNameEl.textContent = window.getPlanDisplayName();
-    }
 
     const isFreePlan = typeof window.isFree === "function" && window.isFree();
     const innovatorLocked = !canAccessInnovatorMode();
@@ -1298,15 +1250,6 @@ function updateHomePlanUi() {
 }
 
 function wireHomePlanUi() {
-    const upgradeBtn = document.getElementById("homePlanUpgradeBtn");
-    if (upgradeBtn) {
-        upgradeBtn.addEventListener("click", function () {
-            if (typeof window.openUpgradeModal === "function") {
-                window.openUpgradeModal();
-            }
-        });
-    }
-
     const innovatorNode = document.querySelector(".mode-node--innovator");
     if (innovatorNode) {
         innovatorNode.addEventListener("click", function (e) {
