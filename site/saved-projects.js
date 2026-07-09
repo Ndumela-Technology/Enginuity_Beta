@@ -297,7 +297,6 @@
     if (!container) return;
 
     var email = getEmail();
-    var previewOnly = container.dataset.previewOnly === "true";
     if (!email) {
       container.innerHTML =
         '<p class="saved-projects__hint">Please sign in to see your projects.</p>';
@@ -309,15 +308,12 @@
     if (projects.length === 0) {
       container.innerHTML =
         '<p class="saved-projects__hint">No saved projects yet.</p>' +
-        (previewOnly
-          ? ""
-          : '<a class="saved-projects__link" href="saved.html">Go to Saved Projects →</a>');
+        '<a class="saved-projects__link" href="saved.html">Go to Saved Projects →</a>';
       return;
     }
 
-    container.innerHTML = previewOnly
-      ? ""
-      : '<a class="saved-projects__link saved-projects__link--top" href="saved.html">View all saved projects →</a>';
+    container.innerHTML =
+      '<a class="saved-projects__link saved-projects__link--top" href="saved.html">View all saved projects →</a>';
 
     projects.slice(-2).reverse().forEach(function (proj) {
       var row = document.createElement("div");
