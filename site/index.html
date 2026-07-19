@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Enginuity</title>
+    <title>Enginuity Beta</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="project-output.css" />
     <link rel="stylesheet" href="upgrade.css" />
     <link rel="stylesheet" href="contact.css" />
+    <link rel="stylesheet" href="beta-feedback.css" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
@@ -612,11 +613,11 @@
 </head>
 <body class="enginuity-paper">
     <header class="site-header">
-    <a class="brand-mark" href="index.html" data-no-loader="true" aria-label="Enginuity home">
+    <a class="brand-mark" href="index.html" data-no-loader="true" aria-label="Enginuity Beta home">
         <img src="assets/logo.svg" width="72" height="62" alt="" />
     </a>
 
-    <h1 class="site-title">Enginuity</h1>
+    <h1 class="site-title">Enginuity Beta</h1>
 
     <div class="header-right">
         <!-- Google config-->
@@ -757,7 +758,7 @@
             <div id="liteError" class="error" style="display:none; margin-top:0.6rem;"></div>
             <div id="liteOutput" style="margin-top:0.8rem;"></div>
             <section id="liteCompletion" class="onboarding-complete" style="display:none;">
-                <h3 style="margin:0 0 0.45rem;">You just experienced Enginuity.</h3>
+                <h3 style="margin:0 0 0.45rem;">You just experienced Enginuity Beta.</h3>
                 <p style="margin:0 0 0.5rem;">
                     Ready to build bigger, smarter, and more advanced projects?
                 </p>
@@ -773,6 +774,7 @@
     <script src="user-plan.js"></script>
     <script src="upgrade.js"></script>
     <script src="contact.js"></script>
+    <script src="beta-feedback.js"></script>
     <script src="enginuity-loading-screen.js" defer></script>
     <script src="project-output.js"></script>
     <script src="diagram-generator.js"></script>
@@ -924,6 +926,11 @@ function updateLiteProgressUi() {
     if (steps.length && done === steps.length) {
         localStorage.setItem(LITE_COMPLETED_KEY, "true");
         localStorage.setItem(HAS_STARTED_KEY, "true");
+        if (typeof window.recordInnovatorLiteCompletion === "function") {
+            window.recordInnovatorLiteCompletion(
+                liteProject && liteProject.id ? liteProject.id : "home-lite-default"
+            );
+        }
         if (completion) completion.style.display = "block";
         updateAuthUi();
     } else if (completion) {
@@ -1007,6 +1014,13 @@ function renderLiteProject(project) {
 }
 
 async function generateFirstBuild() {
+    if (typeof window.canUseInnovatorLite === "function") {
+        const liteCheck = window.canUseInnovatorLite();
+        if (!liteCheck.allowed) {
+            setLiteError(liteCheck.message || "Innovator Lite Beta limit reached.");
+            return;
+        }
+    }
     const mat1 = (document.getElementById("liteMaterial1").value || "").trim();
     const mat2 = (document.getElementById("liteMaterial2").value || "").trim();
     const mat3 = (document.getElementById("liteMaterial3").value || "").trim();
@@ -1224,7 +1238,10 @@ function updateHomePlanUi() {
         } else if (innovatorLocked) {
             innovatorBadge.hidden = false;
             if (isFreePlan) {
-                innovatorBadge.textContent = "Builder or Pro required";
+                innovatorBadge.textContent =
+                    typeof window.isBetaMode === "function" && window.isBetaMode()
+                        ? "Launches after Beta — try Innovator Lite"
+                        : "Builder or Pro required";
             } else if (typeof window.getInnovatorMonthlyStatus === "function") {
                 const st = window.getInnovatorMonthlyStatus();
                 innovatorBadge.textContent =

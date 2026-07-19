@@ -244,6 +244,11 @@
       writeAllSaved(allSaved);
     }
 
+    if (typeof window.markBetaHasSaved === "function") {
+      window.markBetaHasSaved();
+    }
+    document.dispatchEvent(new CustomEvent("enginuity:project-saved"));
+
     if (typeof window.loadSavedProjects === "function") {
       window.loadSavedProjects();
     }

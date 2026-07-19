@@ -12,7 +12,7 @@
     if (document.querySelector(".eng-contact-btn")) return;
     var link = document.createElement("a");
     link.className = "eng-contact-btn";
-    link.href = "mailto:" + safeEmail + "?subject=Enginuity%20Feedback";
+    link.href = "mailto:" + safeEmail + "?subject=Enginuity%20Beta%20Feedback";
     link.setAttribute("aria-label", "Contact support");
     link.textContent = "Contact";
     document.body.appendChild(link);

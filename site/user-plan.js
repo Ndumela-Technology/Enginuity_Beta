@@ -1,9 +1,20 @@
 // User plan system (localStorage). Stripe-ready plan IDs.
+// Enginuity Beta: public testing limits; paid tiers preserved for post-Beta launch.
 (function () {
   "use strict";
 
   var PLAN_KEY = "user_plan";
   var ASSOCIATE_USES_KEY = "associate_uses";
+  var ASSOCIATE_BETA_USES_KEY = "associate_beta_uses";
+  var INNOVATOR_BETA_USES_KEY = "innovator_beta_uses";
+  var INNOVATOR_BETA_COUNTED_KEY = "innovator_beta_counted_ids";
+  var BETA_HAS_SAVED_KEY = "beta_has_saved";
+
+  /** Public Beta period — paid purchases disabled in upgrade UI. */
+  var BETA_MODE = true;
+  var BETA_ASSOCIATE_MAX = 5;
+  var BETA_INNOVATOR_LITE_MAX = 3;
+  var BETA_SAVED_MAX = 2;
 
   var VALID_PLAN_IDS = [
     "free",
@@ -27,13 +38,15 @@
 
   var INNOVATOR_MONTHLY_KEY = "enginuity_innovator_monthly";
 
+  // Free tier = Enginuity Beta experience limits.
+  // Builder/Pro kept for post-Beta architecture (pricing UI still shows them).
   var TIER_LIMITS = {
     free: {
-      associateUses: 5,
-      maxSavedProjects: 5,
-      maxDiagramUses: 2,
-      sparkHelperUses: 10,
-      apprenticeGenerations: 5
+      associateUses: BETA_ASSOCIATE_MAX,
+      maxSavedProjects: BETA_SAVED_MAX,
+      maxDiagramUses: null,
+      sparkHelperUses: null,
+      apprenticeGenerations: null
     },
     builder: {
       associateUses: null,
@@ -93,6 +106,10 @@
     return getPlanTier() === "pro";
   }
 
+  function isBetaMode() {
+    return BETA_MODE;
+  }
+
   function bypassAllLimits() {
     return isPro();
   }
@@ -101,17 +118,17 @@
     var tier = getPlanTier(plan);
     if (tier === "builder") return "Builder";
     if (tier === "pro") return "Pro";
-    return "Free";
+    return BETA_MODE ? "Beta" : "Free";
   }
 
   function getPlanDisplayName(plan) {
     var id = normalizePlanId(plan || getUserPlan());
-    if (id === "free") return "Free";
+    if (id === "free") return BETA_MODE ? "Enginuity Beta" : "Free";
     if (id === "builder_monthly") return "Builder (Monthly)";
     if (id === "builder_yearly") return "Builder (Yearly)";
     if (id === "pro_monthly") return "Pro (Monthly)";
     if (id === "pro_yearly") return "Pro (Yearly)";
-    return "Free";
+    return BETA_MODE ? "Enginuity Beta" : "Free";
   }
 
   function getLimitsForTier(tier) {
@@ -132,13 +149,16 @@
     localStorage.setItem(key, String(Math.max(0, value)));
   }
 
-  function readAssociateUses() {
-    var count = readUsageCount(ASSOCIATE_USES_KEY);
+  function readAssociateBetaUses() {
+    var count = readUsageCount(ASSOCIATE_BETA_USES_KEY);
     if (count === 0) {
-      var legacy = readUsageCount(USAGE_KEYS.associate);
-      if (legacy > 0) {
-        writeUsageCount(ASSOCIATE_USES_KEY, legacy);
-        count = legacy;
+      var legacyBeta = readUsageCount(ASSOCIATE_USES_KEY);
+      if (legacyBeta === 0) {
+        legacyBeta = readUsageCount(USAGE_KEYS.associate);
+      }
+      if (legacyBeta > 0) {
+        writeUsageCount(ASSOCIATE_BETA_USES_KEY, legacyBeta);
+        count = legacyBeta;
       }
     }
     return count;
@@ -149,6 +169,9 @@
   }
 
   function limitReachedMessage(featureLabel, tier) {
+    if (BETA_MODE && tier === "free") {
+      return featureLabel + " limit reached during Enginuity Beta.";
+    }
     if (tier === "free") {
       return (
         featureLabel +
@@ -200,6 +223,14 @@
     }
   }
 
+  function markBetaHasSaved() {
+    localStorage.setItem(BETA_HAS_SAVED_KEY, "true");
+  }
+
+  function hasUsedSaveFeature() {
+    return localStorage.getItem(BETA_HAS_SAVED_KEY) === "true";
+  }
+
   function canSaveProject(email) {
     if (bypassAllLimits()) {
       return { allowed: true };
@@ -218,14 +249,15 @@
     if (count >= max) {
       return {
         allowed: false,
-        message:
-          "Save limit reached (" +
-          max +
-          " project" +
-          (max === 1 ? "" : "s") +
-          " on " +
-          getPlanDisplayName() +
-          "). Upgrade for more saves.",
+        message: BETA_MODE
+          ? "You've reached the Enginuity Beta save limit."
+          : "Save limit reached (" +
+            max +
+            " project" +
+            (max === 1 ? "" : "s") +
+            " on " +
+            getPlanDisplayName() +
+            "). Upgrade for more saves.",
         used: count,
         max: max
       };
@@ -237,12 +269,14 @@
     if (!isFree()) {
       return { allowed: true };
     }
-    var used = readAssociateUses();
-    var max = TIER_LIMITS.free.associateUses;
+    var used = readAssociateBetaUses();
+    var max = BETA_MODE ? BETA_ASSOCIATE_MAX : TIER_LIMITS.free.associateUses;
     if (used >= max) {
       return {
         allowed: false,
-        message: "You've used your free builds. Upgrade to continue.",
+        message: BETA_MODE
+          ? "You've completed the Associate Beta experience."
+          : "You've used your free builds. Upgrade to continue.",
         used: used,
         max: max
       };
@@ -253,9 +287,16 @@
   function recordAssociateUse() {
     if (bypassAllLimits()) return;
     if (!isFree()) return;
-    writeUsageCount(ASSOCIATE_USES_KEY, readAssociateUses() + 1);
-    writeUsageCount(USAGE_KEYS.associate, readAssociateUses());
+    var next = readAssociateBetaUses() + 1;
+    writeUsageCount(ASSOCIATE_BETA_USES_KEY, next);
+    writeUsageCount(ASSOCIATE_USES_KEY, next);
+    writeUsageCount(USAGE_KEYS.associate, next);
     document.dispatchEvent(new CustomEvent("enginuity:usage-changed"));
+    document.dispatchEvent(
+      new CustomEvent("enginuity:beta-milestone", {
+        detail: { type: "associate" }
+      })
+    );
   }
 
   function canUseApprenticeGeneration() {
@@ -298,6 +339,64 @@
 
   function recordSparkHelperUse() {
     recordUsage(USAGE_KEYS.sparkHelper);
+  }
+
+  function readInnovatorBetaUses() {
+    return readUsageCount(INNOVATOR_BETA_USES_KEY);
+  }
+
+  function readInnovatorBetaCountedIds() {
+    try {
+      var raw = JSON.parse(localStorage.getItem(INNOVATOR_BETA_COUNTED_KEY) || "[]");
+      return Array.isArray(raw) ? raw : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function writeInnovatorBetaCountedIds(ids) {
+    localStorage.setItem(INNOVATOR_BETA_COUNTED_KEY, JSON.stringify(ids || []));
+  }
+
+  function canUseInnovatorLite() {
+    if (!BETA_MODE) {
+      return { allowed: true };
+    }
+    if (bypassAllLimits()) {
+      return { allowed: true };
+    }
+    var used = readInnovatorBetaUses();
+    var max = BETA_INNOVATOR_LITE_MAX;
+    if (used >= max) {
+      return {
+        allowed: false,
+        message: "You've completed the Innovator Lite Beta experience.",
+        used: used,
+        max: max
+      };
+    }
+    return { allowed: true, used: used, max: max };
+  }
+
+  function recordInnovatorLiteCompletion(projectId) {
+    if (!BETA_MODE) return false;
+    if (bypassAllLimits()) return false;
+    var id = String(projectId || "").trim();
+    if (!id) id = "anon-" + Date.now();
+    var counted = readInnovatorBetaCountedIds();
+    if (counted.indexOf(id) !== -1) {
+      return false;
+    }
+    counted.push(id);
+    writeInnovatorBetaCountedIds(counted);
+    writeUsageCount(INNOVATOR_BETA_USES_KEY, readInnovatorBetaUses() + 1);
+    document.dispatchEvent(new CustomEvent("enginuity:usage-changed"));
+    document.dispatchEvent(
+      new CustomEvent("enginuity:beta-milestone", {
+        detail: { type: "innovator_lite" }
+      })
+    );
+    return true;
   }
 
   function pad2(n) {
@@ -402,7 +501,9 @@
       var tier = getPlanTier();
       var message =
         tier === "free"
-          ? "Innovator mode requires Builder or Pro. Upgrade to unlock it."
+          ? BETA_MODE
+            ? "Full Innovator mode launches with Builder and Pro after Enginuity Beta. Try Innovator Lite meanwhile."
+            : "Innovator mode requires Builder or Pro. Upgrade to unlock it."
           : "You've used all " +
             status.max +
             " Innovator uses this month. " +
@@ -441,6 +542,20 @@
     document.dispatchEvent(new CustomEvent("enginuity:usage-changed"));
   }
 
+  function shouldOfferBetaFeedback() {
+    if (!BETA_MODE) return false;
+    if (localStorage.getItem("beta_feedback_completed") === "true") return false;
+
+    var associateBlocked =
+      typeof canUseAssociate === "function" && !canUseAssociate().allowed;
+    var liteBlocked =
+      typeof canUseInnovatorLite === "function" && !canUseInnovatorLite().allowed;
+    var saveBlocked = !canSaveProject().allowed;
+    var hasSaved = hasUsedSaveFeature();
+
+    return associateBlocked || liteBlocked || saveBlocked || hasSaved;
+  }
+
   function applyFreePlanDefaults() {
     getUserPlan();
   }
@@ -459,9 +574,12 @@
   window.isFree = isFree;
   window.isBuilder = isBuilder;
   window.isPro = isPro;
+  window.isBetaMode = isBetaMode;
   window.bypassAllLimits = bypassAllLimits;
   window.getCurrentPlanLimits = getCurrentLimits;
   window.canSaveProject = canSaveProject;
+  window.markBetaHasSaved = markBetaHasSaved;
+  window.hasUsedSaveFeature = hasUsedSaveFeature;
   window.canUseAssociate = canUseAssociate;
   window.recordAssociateUse = recordAssociateUse;
   window.canUseApprenticeGeneration = canUseApprenticeGeneration;
@@ -470,6 +588,10 @@
   window.recordDiagramUse = recordDiagramUse;
   window.canUseSparkHelper = canUseSparkHelper;
   window.recordSparkHelperUse = recordSparkHelperUse;
+  window.canUseInnovatorLite = canUseInnovatorLite;
+  window.recordInnovatorLiteCompletion = recordInnovatorLiteCompletion;
+  window.getInnovatorBetaUses = readInnovatorBetaUses;
+  window.shouldOfferBetaFeedback = shouldOfferBetaFeedback;
   window.canAccessInnovator = canAccessInnovator;
   window.canUseInnovator = canUseInnovator;
   window.recordInnovatorUse = recordInnovatorUse;
