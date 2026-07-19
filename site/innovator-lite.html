@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Enginuity · Innovator Lite</title>
+  <title>Enginuity Beta · Innovator Lite</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="project-output.css" />
   <link rel="stylesheet" href="spark-helper.css" />
   <link rel="stylesheet" href="contact.css" />
+  <link rel="stylesheet" href="beta-feedback.css" />
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
   <link rel="alternate icon" href="assets/logo.svg" />
   <style>
@@ -95,9 +96,9 @@
   <div class="lite-wrap">
     <a class="back" href="tutorial.html">← Back</a>
     <section class="lite-panel">
-      <h1 class="lite-title">Enginuity · Innovator Lite</h1>
+      <h1 class="lite-title">Enginuity Beta · Innovator Lite</h1>
       <p class="lite-sub">
-        Your first Enginuity build. Quick, fun, and visual. Share the materials you already have and SparkAI will craft a 15-20 minute project.
+        Your first Enginuity Beta build. Quick, fun, and visual. Share the materials you already have and SparkAI will craft a 15-20 minute project.
       </p>
       <label for="liteMaterials"><strong>Available materials (comma or new line)</strong></label>
       <textarea id="liteMaterials" class="lite-materials" placeholder="Example: paper cups, tape, string, coins"></textarea>
@@ -220,6 +221,11 @@
 
         if (steps.length && done === steps.length) {
           localStorage.setItem(COMPLETED_KEY, "true");
+          if (typeof window.recordInnovatorLiteCompletion === "function") {
+            window.recordInnovatorLiteCompletion(
+              currentProject && currentProject.id ? currentProject.id : "lite-default"
+            );
+          }
           complete.style.display = "block";
         } else {
           complete.style.display = "none";
@@ -259,7 +265,7 @@
         if (hint) {
           if (isGuest()) {
             hint.textContent = ready
-              ? "Tap Done to sign in and unlock the full Enginuity home."
+              ? "Tap Done to sign in and unlock the full Enginuity Beta home."
               : "Check off every step, then try at least one diagram or SparkHelper question.";
           } else {
             hint.textContent = ready
@@ -376,6 +382,13 @@
 
       async function generateLiteProject() {
         setError("");
+        if (typeof window.canUseInnovatorLite === "function") {
+          var liteCheck = window.canUseInnovatorLite();
+          if (!liteCheck.allowed) {
+            setError(liteCheck.message || "Innovator Lite Beta limit reached.");
+            return;
+          }
+        }
         var status = document.getElementById("liteStatus");
         var btn = document.getElementById("liteGenerateBtn");
         var materials = getMaterialsList();
@@ -462,6 +475,7 @@
     })();
   </script>
   <script src="contact.js" defer></script>
+  <script src="beta-feedback.js" defer></script>
   <script src="enginuity-loading-screen.js" defer></script>
 </body>
 </html>

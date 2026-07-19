@@ -1,4 +1,5 @@
 // Global Upgrade button + pricing modal (localStorage only; Stripe-ready).
+// Enginuity Beta: purchases disabled — show "Coming after Beta".
 (function () {
   "use strict";
 
@@ -6,10 +7,12 @@
 
   var PLAN_FEATURES = {
     free: [
-      "Limited Apprentice & Associate builds",
-      "Up to 5 saved projects",
-      "Basic SparkHelper access",
-      "2 visual diagrams"
+      "Unlimited Apprentice during Beta",
+      "5 Associate Beta projects",
+      "3 Innovator Lite Beta projects",
+      "Up to 2 saved projects",
+      "Unlimited SparkHelper",
+      "Unlimited visual diagrams"
     ],
     builder: [
       "Unlimited Apprentice",
@@ -24,7 +27,8 @@
       "Unlimited Innovator access",
       "Unlimited diagrams",
       "15 saved projects",
-      "Beta access & early updates"
+      "Early access to new features",
+      "Priority updates"
     ]
   };
 
@@ -44,6 +48,10 @@
 
   function shouldShowUpgrade() {
     return EXCLUDED_PAGES.indexOf(currentPageName()) === -1;
+  }
+
+  function isBetaMode() {
+    return typeof window.isBetaMode === "function" ? window.isBetaMode() : true;
   }
 
   function planIdForTier(tier, cycle) {
@@ -102,9 +110,17 @@
     modalEl.innerHTML =
       '<div class="eng-upgrade-modal__card">' +
       '<div class="eng-upgrade-modal__head">' +
-      '<div><h2>Choose your plan</h2><p class="eng-upgrade-modal__sub">Switch anytime. Payments coming soon.</p></div>' +
+      "<div><h2>Choose your plan</h2>" +
+      '<p class="eng-upgrade-modal__sub">' +
+      (isBetaMode()
+        ? "Builder and Pro will launch after the Enginuity Beta period."
+        : "Switch anytime. Payments coming soon.") +
+      "</p></div>" +
       '<button type="button" class="eng-upgrade-modal__close" aria-label="Close">&times;</button>' +
       "</div>" +
+      (isBetaMode()
+        ? '<p class="eng-upgrade-modal__beta-note">Purchasing is paused during Beta. Explore Enginuity Beta freely and share feedback.</p>'
+        : "") +
       '<div class="eng-upgrade-billing-toggle" role="tablist" aria-label="Billing period">' +
       '<button type="button" data-cycle="monthly" class="is-active">Monthly</button>' +
       '<button type="button" data-cycle="yearly">Yearly</button>' +
@@ -144,9 +160,10 @@
 
     var currentPlan =
       typeof window.getUserPlan === "function" ? window.getUserPlan() : "free";
+    var beta = isBetaMode();
 
     var tiers = [
-      { tier: "free", title: "Free", price: "€0" },
+      { tier: "free", title: beta ? "Beta" : "Free", price: "€0" },
       { tier: "builder", title: "Builder", price: PRICES.builder[billingCycle], recommended: true },
       { tier: "pro", title: "Pro", price: PRICES.pro[billingCycle] }
     ];
@@ -154,7 +171,10 @@
     root.innerHTML = tiers
       .map(function (item) {
         var planId = planIdForTier(item.tier, billingCycle);
-        var isCurrent = currentPlan === planId;
+        var isCurrent =
+          item.tier === "free"
+            ? currentPlan === "free"
+            : currentPlan === planId;
 
         var badge = "";
         if (item.recommended) {
@@ -170,8 +190,19 @@
           })
           .join("");
 
-        var selectLabel = isCurrent ? "Current plan" : "Select plan";
-        var disabled = isCurrent ? " disabled" : "";
+        var selectLabel;
+        var disabled = "";
+        var isPaid = item.tier === "builder" || item.tier === "pro";
+
+        if (beta && isPaid) {
+          selectLabel = "Coming after Beta";
+          disabled = " disabled";
+        } else if (isCurrent) {
+          selectLabel = "Current plan";
+          disabled = " disabled";
+        } else {
+          selectLabel = "Select plan";
+        }
 
         return (
           '<article class="eng-upgrade-plan' +
@@ -206,6 +237,7 @@
         var card = btn.closest(".eng-upgrade-plan");
         var planId = card && card.getAttribute("data-plan-id");
         if (!planId) return;
+        if (beta && planId !== "free") return;
         if (typeof window.setUserPlan === "function") {
           window.setUserPlan(planId);
         } else {
