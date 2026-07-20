@@ -1,38 +1,88 @@
-// Enginuity Beta feedback modal (localStorage only — no backend).
+// Enginuity Beta feedback popup — after first Associate or Innovator session.
 (function () {
   "use strict";
 
   var COMPLETED_KEY = "beta_feedback_completed";
   var RESPONSES_KEY = "beta_feedback_responses";
-  var DEFERRED_KEY = "beta_feedback_deferred";
+  var SNOOZE_AT_KEY = "beta_feedback_snooze_at_count";
+  var LAST_SESSION_TYPE_KEY = "beta_feedback_last_session_type";
+  var ASSOCIATE_SESSIONS_KEY = "beta_feedback_associate_sessions";
+  var INNOVATOR_SESSIONS_KEY = "beta_feedback_innovator_sessions";
+
   var modalEl = null;
   var selectedRating = 0;
-  var showingThanks = false;
+  var pendingSessionType = "Associate";
+  var openTimer = null;
 
   function isBetaMode() {
     return typeof window.isBetaMode !== "function" || window.isBetaMode();
   }
 
-  function alreadyCompleted() {
+  function alreadySubmitted() {
     return localStorage.getItem(COMPLETED_KEY) === "true";
   }
 
-  function shouldShow() {
-    if (!isBetaMode()) return false;
-    if (alreadyCompleted()) return false;
-    if (typeof window.shouldOfferBetaFeedback === "function") {
-      return window.shouldOfferBetaFeedback();
-    }
-    return false;
+  function readCount(key) {
+    var n = parseInt(localStorage.getItem(key), 10);
+    return isNaN(n) || n < 0 ? 0 : n;
   }
 
-  function escapeHtml(str) {
-    return String(str)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
+  function writeCount(key, value) {
+    localStorage.setItem(key, String(Math.max(0, value)));
+  }
+
+  function totalSessions() {
+    return readCount(ASSOCIATE_SESSIONS_KEY) + readCount(INNOVATOR_SESSIONS_KEY);
+  }
+
+  function syncLegacySessionCounts() {
+    if (typeof window.getAssociateBetaUses === "function") {
+      var associateUses = window.getAssociateBetaUses();
+      if (associateUses > readCount(ASSOCIATE_SESSIONS_KEY)) {
+        writeCount(ASSOCIATE_SESSIONS_KEY, associateUses);
+      }
+    } else {
+      var legacyAssociate = parseInt(localStorage.getItem("associate_beta_uses"), 10) || 0;
+      if (legacyAssociate > readCount(ASSOCIATE_SESSIONS_KEY)) {
+        writeCount(ASSOCIATE_SESSIONS_KEY, legacyAssociate);
+      }
+    }
+    if (typeof window.getInnovatorBetaUses === "function") {
+      var innovatorUses = window.getInnovatorBetaUses();
+      if (innovatorUses > readCount(INNOVATOR_SESSIONS_KEY)) {
+        writeCount(INNOVATOR_SESSIONS_KEY, innovatorUses);
+      }
+    }
+  }
+
+  function shouldOfferAfterSession() {
+    if (!isBetaMode()) return false;
+    if (alreadySubmitted()) return false;
+    syncLegacySessionCounts();
+    if (totalSessions() < 1) return false;
+
+    var snoozeAt = parseInt(localStorage.getItem(SNOOZE_AT_KEY), 10);
+    if (!isNaN(snoozeAt) && totalSessions() <= snoozeAt) {
+      return false;
+    }
+    return true;
+  }
+
+  function getUserId() {
+    return (
+      localStorage.getItem("user_email") ||
+      localStorage.getItem("enginuity_guest_id") ||
+      ""
+    );
+  }
+
+  function ensureGuestId() {
+    if (localStorage.getItem("user_email")) return;
+    if (localStorage.getItem("enginuity_guest_id")) return;
+    localStorage.setItem(
+      "enginuity_guest_id",
+      "guest-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8)
+    );
   }
 
   function buildModal() {
@@ -42,23 +92,19 @@
     modalEl.className = "eng-beta-feedback-modal";
     modalEl.setAttribute("role", "dialog");
     modalEl.setAttribute("aria-modal", "true");
-    modalEl.setAttribute("aria-label", "Enginuity Beta feedback");
+    modalEl.setAttribute("aria-label", "Help us improve Enginuity");
     modalEl.innerHTML =
       '<div class="eng-beta-feedback-modal__card" id="engBetaFeedbackCard"></div>';
 
     modalEl.addEventListener("click", function (e) {
-      if (e.target === modalEl && !showingThanks) {
+      if (e.target === modalEl) {
         deferFeedback();
       }
     });
 
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && modalEl && modalEl.classList.contains("is-open")) {
-        if (showingThanks) {
-          closeModal();
-        } else {
-          deferFeedback();
-        }
+        deferFeedback();
       }
     });
 
@@ -68,14 +114,12 @@
 
   function renderForm() {
     selectedRating = 0;
-    showingThanks = false;
     var card = document.getElementById("engBetaFeedbackCard");
     if (!card) return;
 
     card.innerHTML =
-      '<h2 class="eng-beta-feedback-modal__title">🎉 Thank you for trying Enginuity Beta!</h2>' +
-      '<p class="eng-beta-feedback-modal__lead">You\'ve completed the Enginuity Beta experience.</p>' +
-      '<p class="eng-beta-feedback-modal__lead">Your feedback will directly influence the future of Enginuity before the commercial launch.</p>' +
+      '<h2 class="eng-beta-feedback-modal__title">Help us improve Enginuity</h2>' +
+      '<p class="eng-beta-feedback-modal__lead">Thank you for trying Enginuity Beta. We\'d love to hear about your experience. Your feedback helps us improve the platform before launch.</p>' +
       '<div class="eng-beta-feedback-stars" role="group" aria-label="Star rating">' +
       [1, 2, 3, 4, 5]
         .map(function (n) {
@@ -84,7 +128,7 @@
             n +
             '" aria-label="' +
             n +
-            ' star' +
+            " star" +
             (n === 1 ? "" : "s") +
             '">★</button>'
           );
@@ -92,16 +136,8 @@
         .join("") +
       "</div>" +
       '<div class="eng-beta-feedback-field">' +
-      '<label for="engBetaEnjoy">1. What did you enjoy most?</label>' +
-      '<textarea id="engBetaEnjoy" maxlength="2000"></textarea>' +
-      "</div>" +
-      '<div class="eng-beta-feedback-field">' +
-      '<label for="engBetaImprove">2. What could be improved?</label>' +
-      '<textarea id="engBetaImprove" maxlength="2000"></textarea>' +
-      "</div>" +
-      '<div class="eng-beta-feedback-field">' +
-      '<label for="engBetaFeature">3. What feature would you most like to see added?</label>' +
-      '<textarea id="engBetaFeature" maxlength="2000"></textarea>' +
+      '<label class="eng-beta-feedback-sr" for="engBetaComment">Feedback</label>' +
+      '<textarea id="engBetaComment" maxlength="4000" placeholder="Tell us what worked well or what we could improve..."></textarea>' +
       "</div>" +
       '<div class="eng-beta-feedback-actions">' +
       '<button type="button" class="eng-beta-feedback-submit" id="engBetaSubmit">Submit Feedback</button>' +
@@ -139,63 +175,53 @@
     });
   }
 
-  function submitFeedback() {
-    var payload = {
+  function buildFeedbackRecord(comment) {
+    ensureGuestId();
+    return {
+      user_id: getUserId() || "anonymous",
+      session_type: pendingSessionType || "Associate",
       rating: selectedRating,
-      enjoyMost: (document.getElementById("engBetaEnjoy") || {}).value || "",
-      improve: (document.getElementById("engBetaImprove") || {}).value || "",
-      featureWish: (document.getElementById("engBetaFeature") || {}).value || "",
-      submittedAt: new Date().toISOString()
+      feedback: String(comment || "").trim(),
+      timestamp: new Date().toISOString()
     };
+  }
 
+  function saveFeedbackLocally(record) {
     try {
       var existing = JSON.parse(localStorage.getItem(RESPONSES_KEY) || "[]");
       if (!Array.isArray(existing)) existing = [];
-      existing.push(payload);
+      existing.push(record);
       localStorage.setItem(RESPONSES_KEY, JSON.stringify(existing));
     } catch (_) {
-      localStorage.setItem(RESPONSES_KEY, JSON.stringify([payload]));
+      localStorage.setItem(RESPONSES_KEY, JSON.stringify([record]));
     }
-
-    localStorage.setItem(COMPLETED_KEY, "true");
-    localStorage.removeItem(DEFERRED_KEY);
-    renderThanks();
   }
 
-  function renderThanks() {
-    showingThanks = true;
-    var card = document.getElementById("engBetaFeedbackCard");
-    if (!card) return;
-    card.innerHTML =
-      '<div class="eng-beta-feedback-thanks">' +
-      "<h3>Thank you for helping shape Enginuity.</h3>" +
-      "<p>Builder and Pro will launch after the Beta period with:</p>" +
-      "<ul>" +
-      "<li>Unlimited Associate</li>" +
-      "<li>Unlimited Innovator</li>" +
-      "<li>Unlimited Saved Projects</li>" +
-      "<li>Early access to new features</li>" +
-      "<li>Priority updates</li>" +
-      "</ul>" +
-      '<span class="eng-beta-feedback-coming" role="button" aria-disabled="true">Coming Soon</span>' +
-      '<div class="eng-beta-feedback-actions" style="margin-top:1rem;">' +
-      '<button type="button" class="eng-beta-feedback-later" id="engBetaCloseThanks">Close</button>' +
-      "</div>" +
-      "</div>";
-    var closeBtn = document.getElementById("engBetaCloseThanks");
-    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+  function postFeedbackToBackend(record) {
+    var apiBase = window.ENGINUITY_API_BASE || "";
+    if (!apiBase) return;
+    try {
+      fetch(apiBase + "/beta-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(record)
+      }).catch(function () {});
+    } catch (_) {}
+  }
+
+  function submitFeedback() {
+    var commentEl = document.getElementById("engBetaComment");
+    var record = buildFeedbackRecord(commentEl ? commentEl.value : "");
+    saveFeedbackLocally(record);
+    postFeedbackToBackend(record);
+    localStorage.setItem(COMPLETED_KEY, "true");
+    localStorage.removeItem(SNOOZE_AT_KEY);
+    closeModal();
   }
 
   function deferFeedback() {
-    // "Only display once" — dismiss permanently without a written response.
-    localStorage.setItem(COMPLETED_KEY, "true");
-    localStorage.setItem(DEFERRED_KEY, String(Date.now()));
-    try {
-      var existing = JSON.parse(localStorage.getItem(RESPONSES_KEY) || "[]");
-      if (!Array.isArray(existing)) existing = [];
-      existing.push({ deferred: true, deferredAt: new Date().toISOString() });
-      localStorage.setItem(RESPONSES_KEY, JSON.stringify(existing));
-    } catch (_) {}
+    // Close for now; show again after the next completed Associate/Innovator session.
+    localStorage.setItem(SNOOZE_AT_KEY, String(totalSessions()));
     closeModal();
   }
 
@@ -207,43 +233,67 @@
 
   function openFeedbackModal(force) {
     if (!isBetaMode()) return false;
-    if (alreadyCompleted()) return false;
-    if (!force && !shouldShow()) return false;
+    if (alreadySubmitted()) return false;
+    if (!force && !shouldOfferAfterSession()) return false;
+
+    pendingSessionType =
+      localStorage.getItem(LAST_SESSION_TYPE_KEY) || pendingSessionType || "Associate";
 
     buildModal();
     renderForm();
+    // Force reflow so CSS enter animation runs.
+    void modalEl.offsetWidth;
     modalEl.classList.add("is-open");
     document.body.style.overflow = "hidden";
     return true;
   }
 
   function maybeShowFeedback() {
-    if (!shouldShow()) return;
-    // Avoid stacking over other open modals.
-    if (document.querySelector(".eng-upgrade-modal.is-open, .onboarding-modal.is-open")) {
+    if (!shouldOfferAfterSession()) return;
+    if (
+      document.querySelector(
+        ".eng-upgrade-modal.is-open, .onboarding-modal.is-open, .eng-beta-feedback-modal.is-open"
+      )
+    ) {
       return;
     }
     openFeedbackModal(false);
   }
 
+  function scheduleFeedbackPrompt(sessionType) {
+    pendingSessionType = sessionType || "Associate";
+    localStorage.setItem(LAST_SESSION_TYPE_KEY, pendingSessionType);
+    if (openTimer) clearTimeout(openTimer);
+    // After the session UI has settled — never mid-generation.
+    openTimer = setTimeout(maybeShowFeedback, 700);
+  }
+
+  function recordBetaSessionCompleted(sessionType) {
+    if (!isBetaMode()) return;
+    if (alreadySubmitted()) return;
+
+    var type = String(sessionType || "").toLowerCase();
+    var normalized = type.indexOf("innovator") !== -1 ? "Innovator" : "Associate";
+
+    if (normalized === "Innovator") {
+      writeCount(INNOVATOR_SESSIONS_KEY, readCount(INNOVATOR_SESSIONS_KEY) + 1);
+    } else {
+      writeCount(ASSOCIATE_SESSIONS_KEY, readCount(ASSOCIATE_SESSIONS_KEY) + 1);
+    }
+
+    localStorage.setItem(LAST_SESSION_TYPE_KEY, normalized);
+    scheduleFeedbackPrompt(normalized);
+  }
+
   function init() {
     if (!isBetaMode()) return;
-
-    document.addEventListener("enginuity:beta-milestone", function () {
-      setTimeout(maybeShowFeedback, 400);
-    });
-    document.addEventListener("enginuity:usage-changed", function () {
-      setTimeout(maybeShowFeedback, 400);
-    });
-    document.addEventListener("enginuity:project-saved", function () {
-      setTimeout(maybeShowFeedback, 400);
-    });
-
-    setTimeout(maybeShowFeedback, 800);
+    // Feedback is scheduled only from recordBetaSessionCompleted after a finished session.
   }
 
   window.openBetaFeedbackModal = openFeedbackModal;
   window.maybeShowBetaFeedback = maybeShowFeedback;
+  window.recordBetaSessionCompleted = recordBetaSessionCompleted;
+  window.shouldOfferBetaFeedback = shouldOfferAfterSession;
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);

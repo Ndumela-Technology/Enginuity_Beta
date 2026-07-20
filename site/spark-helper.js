@@ -197,20 +197,23 @@
       return;
     }
 
-    if (fp === lastProjectFingerprint && !options.force) {
+    var projectChanged = fp !== lastProjectFingerprint;
+    if (projectChanged) {
+      lastProjectFingerprint = fp;
+      chatHistory = [];
+    } else if (!options.force && !options.updateUi) {
       return;
     }
 
-    lastProjectFingerprint = fp;
-    chatHistory = [];
-
-    var messages = document.getElementById("sparkHelperMessages");
-    if (messages && options.updateUi !== false) {
-      messages.innerHTML = "";
-      appendMessage(
-        "system",
-        'Now chatting about: "' + escapeHtml(project.title || "your project") + '"'
-      );
+    if (options.updateUi !== false) {
+      var messages = document.getElementById("sparkHelperMessages");
+      if (messages && projectChanged) {
+        messages.innerHTML = "";
+        appendMessage(
+          "system",
+          'Now chatting about: "' + escapeHtml(project.title || "your project") + '"'
+        );
+      }
       enableInput();
       checkAndApplyLimit();
     }
@@ -230,7 +233,7 @@
     panelOpen = true;
     panel.classList.add("is-open");
 
-    applyActiveProject(readActiveProject(), { updateUi: true });
+    applyActiveProject(readActiveProject(), { updateUi: true, force: true });
 
     var input = document.getElementById("sparkHelperInput");
     if (input && !input.disabled) input.focus();
@@ -409,6 +412,7 @@
     var text = input.value.trim();
     if (!text) return;
 
+    syncProjectContext();
     var project = readActiveProject();
     if (!project) {
       appendMessage("system", "No project loaded. Open or generate a project first.");

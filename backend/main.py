@@ -313,3 +313,51 @@ async def generate_diagram(data: dict):
     image_base64 = result.data[0].b64_json
     image_url = f"data:image/png;base64,{image_base64}"
     return {"image_url": image_url}
+
+
+class BetaFeedbackRequest(BaseModel):
+    user_id: Optional[str] = None
+    session_type: str = "Associate"
+    rating: int = 0
+    feedback: Optional[str] = ""
+    timestamp: Optional[str] = None
+
+
+@app.post("/beta-feedback")
+async def submit_beta_feedback(payload: BetaFeedbackRequest):
+    """Store beta feedback for analytics / future admin dashboard."""
+    from datetime import datetime, timezone
+    from pathlib import Path
+
+    session_type = (payload.session_type or "Associate").strip()
+    if session_type not in ("Associate", "Innovator"):
+        if "innovator" in session_type.lower():
+            session_type = "Innovator"
+        else:
+            session_type = "Associate"
+
+    rating = payload.rating if isinstance(payload.rating, int) else 0
+    if rating < 0:
+        rating = 0
+    if rating > 5:
+        rating = 5
+
+    record = {
+        "user_id": (payload.user_id or "anonymous").strip() or "anonymous",
+        "session_type": session_type,
+        "rating": rating,
+        "feedback": (payload.feedback or "").strip(),
+        "timestamp": (payload.timestamp or "").strip()
+        or datetime.now(timezone.utc).isoformat(),
+    }
+
+    data_dir = Path(__file__).resolve().parent / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    out_path = data_dir / "beta_feedback.jsonl"
+
+    def _append():
+        with out_path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    await asyncio.to_thread(_append)
+    return {"ok": True, "record": record}

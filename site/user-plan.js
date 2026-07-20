@@ -12,9 +12,9 @@
 
   /** Public Beta period — paid purchases disabled in upgrade UI. */
   var BETA_MODE = true;
-  var BETA_ASSOCIATE_MAX = 5;
-  var BETA_INNOVATOR_LITE_MAX = 3;
-  var BETA_SAVED_MAX = 2;
+  var BETA_ASSOCIATE_MAX = 3;
+  var BETA_INNOVATOR_LITE_MAX = 2;
+  var BETA_SAVED_MAX = 1;
 
   var VALID_PLAN_IDS = [
     "free",
@@ -297,6 +297,9 @@
         detail: { type: "associate" }
       })
     );
+    if (typeof window.recordBetaSessionCompleted === "function") {
+      window.recordBetaSessionCompleted("Associate");
+    }
   }
 
   function canUseApprenticeGeneration() {
@@ -396,6 +399,9 @@
         detail: { type: "innovator_lite" }
       })
     );
+    if (typeof window.recordBetaSessionCompleted === "function") {
+      window.recordBetaSessionCompleted("Innovator");
+    }
     return true;
   }
 
@@ -546,14 +552,27 @@
     if (!BETA_MODE) return false;
     if (localStorage.getItem("beta_feedback_completed") === "true") return false;
 
-    var associateBlocked =
-      typeof canUseAssociate === "function" && !canUseAssociate().allowed;
-    var liteBlocked =
-      typeof canUseInnovatorLite === "function" && !canUseInnovatorLite().allowed;
-    var saveBlocked = !canSaveProject().allowed;
-    var hasSaved = hasUsedSaveFeature();
+    var associateSessions = readUsageCount(ASSOCIATE_BETA_USES_KEY);
+    var innovatorSessions = readInnovatorBetaUses();
+    var feedbackAssociate = parseInt(
+      localStorage.getItem("beta_feedback_associate_sessions"),
+      10
+    );
+    var feedbackInnovator = parseInt(
+      localStorage.getItem("beta_feedback_innovator_sessions"),
+      10
+    );
+    if (isNaN(feedbackAssociate)) feedbackAssociate = 0;
+    if (isNaN(feedbackInnovator)) feedbackInnovator = 0;
 
-    return associateBlocked || liteBlocked || saveBlocked || hasSaved;
+    var total =
+      Math.max(associateSessions, feedbackAssociate) +
+      Math.max(innovatorSessions, feedbackInnovator);
+    if (total < 1) return false;
+
+    var snoozeAt = parseInt(localStorage.getItem("beta_feedback_snooze_at_count"), 10);
+    if (!isNaN(snoozeAt) && total <= snoozeAt) return false;
+    return true;
   }
 
   function applyFreePlanDefaults() {
@@ -590,6 +609,7 @@
   window.recordSparkHelperUse = recordSparkHelperUse;
   window.canUseInnovatorLite = canUseInnovatorLite;
   window.recordInnovatorLiteCompletion = recordInnovatorLiteCompletion;
+  window.getAssociateBetaUses = readAssociateBetaUses;
   window.getInnovatorBetaUses = readInnovatorBetaUses;
   window.shouldOfferBetaFeedback = shouldOfferBetaFeedback;
   window.canAccessInnovator = canAccessInnovator;

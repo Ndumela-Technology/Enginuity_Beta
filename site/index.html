@@ -39,9 +39,13 @@
             transform: translate(8px, 12px) rotate(-1.2deg);
         }
 
+        body.is-guest .brand-mark {
+            transform: translate(calc(8px - 10vw), calc(12px + 6vh)) rotate(-1.2deg);
+        }
+
         .brand-mark img {
             /* +20% size boost while keeping responsive behavior */
-            width: clamp(91px, 19.2vw, 132px);
+            width: clamp(127px, 26.9vw, 185px);
             height: auto;
             display: block;
             filter:
@@ -68,6 +72,7 @@
             gap: 0.9rem;
             justify-self: end;
             min-width: 0; /* allow grid track to shrink */
+            transform: translateX(100px);
         }
 
         .header-account-stack {
@@ -173,6 +178,10 @@
             opacity: 0.92;
         }
 
+        body.is-guest .home-tagline {
+            transform: translateY(-5vh);
+        }
+
         .home-path {
             position: relative;
             min-height: clamp(520px, 78vh, 720px);
@@ -193,10 +202,10 @@
         }
 
         .path-layer svg {
-            width: 100%;
-            height: 100%;
+            width: 120%;
+            height: 120%;
             display: block;
-            transform: translate(3%, 5%);
+            transform: translate(-8%, 5%);
         }
 
         #path1 {
@@ -260,20 +269,20 @@
         }
 
         .mode-node--apprentice {
-            top: 6%;
-            right: -6%;
+            top: 25%;
+            right: -15%;
             transform: rotate(-0.8deg);
         }
 
         .mode-node--associate {
-            top: 38%;
-            left: 1%;
+            top: 60%;
+            left: -13%;
             transform: rotate(0.9deg);
         }
 
         .mode-node--innovator {
-            bottom: 25%;
-            right: -5%;
+            bottom: -47%;
+            right: 38%;
             transform: rotate(-1.1deg);
         }
 
@@ -300,19 +309,31 @@
             color: var(--eng-red-deep);
         }
 
-        /* Signed-in: path ends with a downward cue (no bottom CTA button) */
+        /* Signed-in: path extends (no bottom CTA button); same arrow as signed-out */
         body:not(.is-guest) .path-layer {
             bottom: -12%;
             height: 142%;
         }
 
-        body:not(.is-guest) #path1 {
-            marker-end: url(#ArrowDown);
+        #path1 {
+            marker-end: url(#RoundedArrow);
         }
 
-        body.is-guest #path1,
-        body.onboarding-pending #path1 {
-            marker-end: url(#RoundedArrow);
+        /* Guest / signed-out: show Innovator Lite, hide full Innovator */
+        body.is-guest .mode-node--innovator {
+            display: none;
+        }
+
+        body.is-guest .mode-node--innovator-lite {
+            bottom: 2%;
+            right: -13%;
+            left: auto;
+        }
+
+        .mode-node--innovator-lite {
+            bottom: -8%;
+            left: 80%;
+            transform: rotate(0.6deg);
         }
 
         .mode-node__plan-badge {
@@ -365,8 +386,8 @@
 
         .guest-cta {
             position: absolute;
-            left: 50%;
-            bottom: 1.5%;
+            left: 47%;
+            bottom: -23%;
             transform: translateX(-50%) rotate(-0.25deg);
             z-index: 2;
             display: none;
@@ -570,11 +591,25 @@
                 transform: translateX(-50%) rotate(-0.6deg);
             }
 
+            .mode-node--innovator-lite {
+                bottom: -18%;
+                left: 50%;
+                right: auto;
+                transform: translateX(-50%) rotate(0.4deg);
+            }
+
+            body.is-guest .mode-node--innovator-lite {
+                bottom: -30%;
+                right: auto;
+                left: 50%;
+                transform: translateX(-50%) rotate(-0.6deg);
+            }
+
             .guest-cta {
                 position: static;
                 transform: none;
                 display: none;
-                margin: 1rem auto 0;
+                margin: calc(1rem + 40vh) auto 0;
             }
 
             body.onboarding-pending .guest-cta {
@@ -672,23 +707,6 @@
                                 fill="context-stroke"
                             />
                         </marker>
-                        <marker
-                            id="ArrowDown"
-                            markerUnits="strokeWidth"
-                            orient="90"
-                            refX="0"
-                            refY="0"
-                            markerWidth="6"
-                            markerHeight="6"
-                            viewBox="0 0 10 10"
-                            preserveAspectRatio="xMidYMid"
-                        >
-                            <path
-                                d="M 1.5 2.5 L 5 7.5 L 8.5 2.5 Z"
-                                fill="context-stroke"
-                                stroke="none"
-                            />
-                        </marker>
                     </defs>
                     <g id="g1" transform="translate(-285.93609,-27.055727)">
                         <path
@@ -725,6 +743,13 @@
                 <div class="mode-node__label">Innovator</div>
                 <p class="mode-node__desc">You lead; SparkAI is your technical assistant.</p>
                 <span class="mode-node__plan-badge mode-node__plan-badge--locked" id="innovatorPlanBadge" hidden></span>
+                <span class="mode-node__cta">Start →</span>
+            </a>
+
+            <a class="mode-node mode-node--innovator-lite" href="innovator-lite.html" data-mode-href="innovator-lite.html">
+                <div class="mode-node__label">Innovator Lite</div>
+                <p class="mode-node__desc">Quick 15–20 minute builds with items you already have.</p>
+                <span class="mode-node__plan-badge mode-node__plan-badge--usage" id="innovatorLitePlanBadge" hidden></span>
                 <span class="mode-node__cta">Start →</span>
             </a>
 
@@ -1264,6 +1289,47 @@ function updateHomePlanUi() {
             innovatorBadge.hidden = true;
         }
     }
+
+    const liteNode = document.querySelector(".mode-node--innovator-lite");
+    const liteBadge = document.getElementById("innovatorLitePlanBadge");
+    if (liteBadge) {
+        if (isGuest) {
+            liteBadge.hidden = true;
+        } else if (typeof window.canUseInnovatorLite === "function") {
+            const check = window.canUseInnovatorLite();
+            const max = check.max;
+            const used = check.used || 0;
+            if (max != null) {
+                const left = Math.max(0, max - used);
+                liteBadge.hidden = false;
+                liteBadge.textContent = left + " of " + max + " builds left";
+                liteBadge.className =
+                    "mode-node__plan-badge " +
+                    (check.allowed
+                        ? "mode-node__plan-badge--usage"
+                        : "mode-node__plan-badge--locked");
+            } else {
+                liteBadge.hidden = true;
+            }
+        } else {
+            liteBadge.hidden = true;
+        }
+    }
+    if (liteNode && !isGuest && typeof window.canUseInnovatorLite === "function") {
+        const liteCheck = window.canUseInnovatorLite();
+        liteNode.classList.toggle("mode-node--locked", !liteCheck.allowed);
+        if (!liteCheck.allowed) {
+            liteNode.setAttribute("aria-disabled", "true");
+            if (!liteNode.dataset.href) {
+                liteNode.dataset.href = liteNode.getAttribute("href") || "innovator-lite.html";
+            }
+            liteNode.removeAttribute("href");
+        } else {
+            const href = liteNode.dataset.href || "innovator-lite.html";
+            liteNode.setAttribute("href", href);
+            liteNode.removeAttribute("aria-disabled");
+        }
+    }
 }
 
 function wireHomePlanUi() {
@@ -1288,12 +1354,24 @@ function wireHomePlanUi() {
         });
     }
 
+    const liteNode = document.querySelector(".mode-node--innovator-lite");
+    if (liteNode) {
+        liteNode.addEventListener("click", function (e) {
+            if (typeof window.canUseInnovatorLite !== "function") return;
+            var liteCheck = window.canUseInnovatorLite();
+            if (!liteCheck.allowed) {
+                e.preventDefault();
+                alert(liteCheck.message || "You've completed the Innovator Lite Beta experience.");
+            }
+        });
+    }
+
     document.addEventListener("enginuity:plan-changed", updateHomePlanUi);
     document.addEventListener("enginuity:usage-changed", updateHomePlanUi);
 }
 
 function signOut() {
-    // Clear local session
+    // Clear session only — keep has_started / tutorial progress so onboarding is not reset.
     localStorage.removeItem("user_email");
     localStorage.removeItem("user_name");
     localStorage.removeItem("current_project");

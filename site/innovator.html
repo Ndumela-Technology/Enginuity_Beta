@@ -733,6 +733,12 @@
                 if (typeof window.recordInnovatorUse === "function") {
                     window.recordInnovatorUse();
                 }
+                if (!window.__enginuityInnovatorSessionCounted) {
+                    window.__enginuityInnovatorSessionCounted = true;
+                    if (typeof window.recordBetaSessionCompleted === "function") {
+                        window.recordBetaSessionCompleted("Innovator");
+                    }
+                }
                 refreshInnovatorUsageUi();
             } catch (e) {
                 appendChatMessage("assistant", `Request failed: ${e && e.message ? e.message : String(e)}`);

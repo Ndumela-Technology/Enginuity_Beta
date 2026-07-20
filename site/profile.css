@@ -113,3 +113,29 @@
   font-size: 0.9rem;
   color: rgba(30, 30, 30, 0.8);
 }
+
+.profile-tutorial-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.profile-action-btn {
+  border: 2px solid var(--eng-red, #d81f26);
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  background: #fff;
+  color: var(--eng-red-deep, #8a0000);
+  font-family: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.profile-action-btn:hover {
+  background: rgba(255, 255, 255, 1);
+}
+
+.profile-action-btn--secondary {
+  border-color: rgba(216, 31, 38, 0.4);
+  font-weight: 700;
+}

@@ -103,6 +103,87 @@ def _extract_first_json_object(text: str):
     return parsed if isinstance(parsed, dict) else None
 
 
+def _normalize_step_string(text) -> str:
+    """Clean a single step string for UI display (no markdown bullets or em-dashes)."""
+    s = str(text or "").strip()
+    if not s:
+        return ""
+    s = re.sub(r"^\s*[-*•]\s+", "", s)
+    s = re.sub(r"^(Step\s+\d+)\s*[—–-]\s*", r"\1: ", s, flags=re.IGNORECASE)
+    s = re.sub(r"\s*\n+\s*", " ", s)
+    s = re.sub(r"\s+[-*•]\s+", ". ", s)
+    s = re.sub(r"\.\s*\.", ".", s)
+    s = re.sub(r"\s{2,}", " ", s).strip()
+    return s
+
+
+def normalize_steps(steps) -> List[str]:
+    """Coerce model step output into a flat list of display-ready strings."""
+    if steps is None:
+        return []
+    raw_items: List = []
+    if isinstance(steps, str):
+        trimmed = steps.strip()
+        if trimmed:
+            if trimmed.startswith("[") and trimmed.endswith("]"):
+                try:
+                    parsed = json.loads(trimmed)
+                    if isinstance(parsed, list):
+                        raw_items = parsed
+                    else:
+                        raw_items = [trimmed]
+                except json.JSONDecodeError:
+                    raw_items = re.split(
+                        r"(?=Step\s+\d+\s*[:.)—-])", trimmed, flags=re.IGNORECASE
+                    )
+            else:
+                raw_items = re.split(
+                    r"(?=Step\s+\d+\s*[:.)—-])", trimmed, flags=re.IGNORECASE
+                )
+    elif isinstance(steps, list):
+        raw_items = steps
+    elif isinstance(steps, dict):
+        raw_items = list(steps.values())
+    else:
+        raw_items = [steps]
+
+    out: List[str] = []
+    for item in raw_items:
+        if item is None or item == "":
+            continue
+        if isinstance(item, dict):
+            text = (
+                item.get("text")
+                or item.get("step")
+                or item.get("instruction")
+                or item.get("title")
+                or ""
+            )
+            sub = item.get("substeps") or item.get("bullets")
+            if isinstance(sub, list):
+                text = (str(text) + " " + " ".join(str(x) for x in sub)).strip()
+            if not text:
+                text = json.dumps(item, ensure_ascii=False)
+            item = text
+        normalized = _normalize_step_string(item)
+        if normalized:
+            out.append(normalized)
+    return out
+
+
+def _normalize_project_steps_in_payload(data: dict) -> dict:
+    if not isinstance(data, dict):
+        return data
+    projects = data.get("projects")
+    if isinstance(projects, list):
+        for proj in projects:
+            if isinstance(proj, dict) and "steps" in proj:
+                proj["steps"] = normalize_steps(proj.get("steps"))
+    if "steps" in data:
+        data["steps"] = normalize_steps(data.get("steps"))
+    return data
+
+
 def chat_completion(
     messages: List[dict],
     *,
@@ -245,7 +326,7 @@ def generate_projects(full_input: str, mode: str = "Apprentice"):
     if parsed is None:
         return {"error": "AI returned invalid JSON", "raw": content}
 
-    return parsed
+    return _normalize_project_steps_in_payload(parsed)
 
 
 def generate_innovator_lite_project(materials: list):
@@ -272,7 +353,7 @@ def generate_innovator_lite_project(materials: list):
     if parsed is None:
         return {"error": "AI returned invalid JSON", "raw": content}
 
-    return parsed
+    return _normalize_project_steps_in_payload(parsed)
 
 
 def _compact_projects_for_safety(project_data):

@@ -174,6 +174,68 @@
     return nlToBr(normalizedMarkdown);
   }
 
+  function normalizeStepString(text) {
+    var s = String(text == null ? "" : text).trim();
+    if (!s) return "";
+    s = s.replace(/^\s*[-*•]\s+/, "");
+    s = s.replace(/^(Step\s+\d+)\s*[—–-]\s*/i, "$1: ");
+    s = s.replace(/\s*\n+\s*/g, " ");
+    s = s.replace(/\s+[-*•]\s+/g, ". ");
+    s = s.replace(/\.\s*\./g, ".");
+    s = s.replace(/\s{2,}/g, " ").trim();
+    return s;
+  }
+
+  function normalizeSteps(value) {
+    if (value == null || value === "") return [];
+    var rawItems = [];
+    if (Array.isArray(value)) {
+      rawItems = value;
+    } else if (typeof value === "string") {
+      var trimmed = value.trim();
+      if (!trimmed) return [];
+      if (trimmed.charAt(0) === "[" && trimmed.charAt(trimmed.length - 1) === "]") {
+        try {
+          var parsedArr = JSON.parse(trimmed);
+          if (Array.isArray(parsedArr)) rawItems = parsedArr;
+          else rawItems = [trimmed];
+        } catch (_) {
+          rawItems = trimmed.split(/(?=Step\s+\d+\s*[:.)—-])/i);
+        }
+      } else {
+        rawItems = trimmed.split(/(?=Step\s+\d+\s*[:.)—-])/i);
+      }
+    } else if (typeof value === "object") {
+      rawItems = Object.values(value);
+    } else {
+      rawItems = [value];
+    }
+
+    var out = [];
+    rawItems.forEach(function (item) {
+      if (item == null || item === "") return;
+      if (typeof item === "object") {
+        var text =
+          item.text || item.step || item.instruction || item.title || "";
+        var sub = item.substeps || item.bullets;
+        if (Array.isArray(sub)) {
+          text = (String(text) + " " + sub.join(" ")).trim();
+        }
+        if (!text) {
+          try {
+            text = JSON.stringify(item);
+          } catch (_) {
+            text = String(item);
+          }
+        }
+        item = text;
+      }
+      var normalized = normalizeStepString(item);
+      if (normalized) out.push(normalized);
+    });
+    return out;
+  }
+
   function toStringList(value) {
     if (!value && value !== 0) return [];
     if (Array.isArray(value)) {
@@ -223,9 +285,10 @@
   }
 
   function formatStepItemHtml(stepValue, escape) {
-    var escaped = escape(stepValue == null ? "" : String(stepValue));
+    var normalized = normalizeStepString(stepValue);
+    var escaped = escape(normalized);
     var boldPrefix = escaped.replace(
-      /^(\s*Step\s*\d+\s*[:.)-]?)/i,
+      /^(\s*Step\s+\d+\s*:)/i,
       "<strong>$1</strong>"
     );
     return nlToBr(boldPrefix);
@@ -392,7 +455,7 @@
     var materialsSuggested = toStringList(
       projData.materialsSuggested || projData.materials_suggested
     );
-    var steps = toStringList(projData.steps);
+    var steps = normalizeSteps(projData.steps);
     var projectId = ensureProjectId(projData);
     var progress = getProjectProgress(projectId, steps.length);
     var completedCount = getCompletedCount(progress);
@@ -496,6 +559,8 @@
 
   window.ProjectOutput = {
     toStringList: toStringList,
+    normalizeStepString: normalizeStepString,
+    normalizeSteps: normalizeSteps,
     renderStructuredProject: renderStructuredProject,
     renderProjectChoices: renderProjectChoices,
     formatStepItemHtml: formatStepItemHtml,

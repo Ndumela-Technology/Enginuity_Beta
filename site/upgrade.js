@@ -8,9 +8,9 @@
   var PLAN_FEATURES = {
     free: [
       "Unlimited Apprentice during Beta",
-      "5 Associate Beta projects",
-      "3 Innovator Lite Beta projects",
-      "Up to 2 saved projects",
+      "3 Associate Beta projects",
+      "2 Innovator Lite Beta projects",
+      "Up to 1 saved project",
       "Unlimited SparkHelper",
       "Unlimited visual diagrams"
     ],

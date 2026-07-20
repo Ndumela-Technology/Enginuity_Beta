@@ -30,6 +30,18 @@
       <p class="profile-card__value" id="profilePlanName">Free</p>
     </section>
 
+    <section class="profile-card" aria-labelledby="profileTutorialLabel">
+      <p class="profile-card__label" id="profileTutorialLabel">Tutorial</p>
+      <p class="profile-page__hint" style="margin-bottom:0.65rem;">
+        The tutorial still opens automatically only on first launch. Use these options for testing or to revisit it.
+      </p>
+      <div class="profile-tutorial-actions">
+        <button type="button" id="replayTutorialBtn" class="profile-action-btn">Replay Tutorial</button>
+        <button type="button" id="resetTutorialBtn" class="profile-action-btn profile-action-btn--secondary">Reset Tutorial Progress</button>
+      </div>
+      <p id="tutorialResetStatus" class="profile-page__hint" style="margin-top:0.55rem;" hidden></p>
+    </section>
+
     <section class="profile-card">
       <div class="profile-saved__head">
         <h2>Recent saved projects</h2>
@@ -123,8 +135,34 @@
         renderSavedPreview();
       }
 
+      function wireTutorialControls() {
+        var replayBtn = document.getElementById("replayTutorialBtn");
+        var resetBtn = document.getElementById("resetTutorialBtn");
+        var statusEl = document.getElementById("tutorialResetStatus");
+
+        if (replayBtn) {
+          replayBtn.addEventListener("click", function () {
+            window.location.href = "tutorial.html";
+          });
+        }
+
+        if (resetBtn) {
+          resetBtn.addEventListener("click", function () {
+            localStorage.removeItem("has_started");
+            localStorage.removeItem("innovator_lite_completed");
+            localStorage.removeItem("innovator_lite_progress");
+            if (statusEl) {
+              statusEl.hidden = false;
+              statusEl.textContent =
+                "Tutorial progress reset. Sign out (or open home as a guest) to see first-launch onboarding again.";
+            }
+          });
+        }
+      }
+
       document.addEventListener("enginuity:plan-changed", renderProfile);
       renderProfile();
+      wireTutorialControls();
     })();
   </script>
   <script src="enginuity-loading-screen.js" defer></script>
