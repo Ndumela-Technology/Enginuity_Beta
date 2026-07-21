@@ -98,8 +98,15 @@
     <section class="lite-panel">
       <h1 class="lite-title">Enginuity Beta · Innovator Lite</h1>
       <p class="lite-sub">
-        Your first Enginuity Beta build. Quick, fun, and visual. Share the materials you already have and SparkAI will craft a 15-20 minute project.
+        Quick 15–20 minute builds. Pick your education/age so SparkAI matches the challenge — still fast, but more advanced if you’re 18+.
       </p>
+      <label for="liteEducation"><strong>Education / age</strong></label>
+      <select id="liteEducation" class="lite-education" style="display:block;width:100%;max-width:420px;margin:0.35rem 0 0.85rem;padding:0.45rem 0.55rem;border:2px solid rgba(216,31,38,0.28);border-radius:8px;font:inherit;background:#fff;">
+        <option value="middle">Middle-Schooler (10–14)</option>
+        <option value="high" selected>High-Schooler (15–18)</option>
+        <option value="student">Student (18–25)</option>
+        <option value="adult">Adult (25+)</option>
+      </select>
       <label for="liteMaterials"><strong>Available materials (comma or new line)</strong></label>
       <textarea id="liteMaterials" class="lite-materials" placeholder="Example: paper cups, tape, string, coins"></textarea>
       <div class="lite-actions">
@@ -175,6 +182,11 @@
           return window.ProjectOutput.formatExplanationHtml(value, { escapeHtml: escapeHtml });
         }
         return escapeHtml(String(value || ""));
+      }
+
+      function getEducationValue() {
+        var el = document.getElementById("liteEducation");
+        return el && el.value ? el.value : "high";
       }
 
       function getMaterialsList() {
@@ -308,7 +320,10 @@
             return fetch(base + "/generate-innovator-lite", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ materials: materials })
+            body: JSON.stringify({
+                materials: materials,
+                education: getEducationValue()
+              })
             });
           }
 

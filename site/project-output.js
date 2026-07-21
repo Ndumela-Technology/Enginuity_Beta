@@ -587,6 +587,10 @@
           "</label>" +
           '<button type="button" class="project-output__diagram-btn" data-step="' +
           encoded +
+          '" data-step-index="' +
+          index +
+          '" data-total-steps="' +
+          steps.length +
           '">Show Diagram</button>' +
           '<div class="project-output__diagram-slot" hidden aria-live="polite"></div>' +
           "</li>"

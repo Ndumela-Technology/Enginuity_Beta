@@ -141,6 +141,34 @@ class ChatRequest(BaseModel):
 
 class InnovatorLiteRequest(BaseModel):
     materials: List[str] = []
+    education: Optional[str] = None
+
+
+def _normalize_innovator_lite_education(value: Optional[str]) -> str:
+    raw = (value or "").strip().lower()
+    mapping = {
+        "middle": "Middle-Schooler (10–14)",
+        "middle-schooler": "Middle-Schooler (10–14)",
+        "middle school": "Middle-Schooler (10–14)",
+        "high": "High-Schooler (15–18)",
+        "high-schooler": "High-Schooler (15–18)",
+        "high school": "High-Schooler (15–18)",
+        "student": "Student (18–25)",
+        "adult": "Adult (25+)",
+    }
+    if raw in mapping:
+        return mapping[raw]
+    if "middle" in raw or "10" in raw:
+        return "Middle-Schooler (10–14)"
+    if "high" in raw or "15" in raw:
+        return "High-Schooler (15–18)"
+    if "student" in raw or "18" in raw:
+        return "Student (18–25)"
+    if "adult" in raw or "25" in raw:
+        return "Adult (25+)"
+    if (value or "").strip():
+        return (value or "").strip()
+    return "High-Schooler (15–18)"
 
 
 @app.get("/")
@@ -219,7 +247,9 @@ async def generate_innovator_lite(request: InnovatorLiteRequest):
         return {"error": "Please provide at least one material."}
 
     generated = await asyncio.to_thread(
-        generate_innovator_lite_project, normalized_materials
+        generate_innovator_lite_project,
+        normalized_materials,
+        _normalize_innovator_lite_education(request.education),
     )
     if generated.get("error"):
         return generated
@@ -304,12 +334,87 @@ async def spark_helper(data: ChatRequest):
 
 @app.post("/generate-diagram")
 async def generate_diagram(data: dict):
-    step = data["step"]
+    step = str((data or {}).get("step") or "").strip()
+    if not step:
+        raise HTTPException(status_code=400, detail="Step text is required.")
 
-    prompt = (
-        f"Clean educational diagram for this build step:\n{step}\n"
-        "Style: white background, minimal, labeled parts, LEGO-manual clarity."
-    )
+    title = str((data or {}).get("title") or "").strip()
+    description = str((data or {}).get("description") or "").strip()
+    materials = (data or {}).get("materials") or []
+    if not isinstance(materials, list):
+        materials = [str(materials)]
+    materials = [str(m).strip() for m in materials if str(m).strip()]
+    all_steps = (data or {}).get("all_steps") or []
+    if not isinstance(all_steps, list):
+        all_steps = []
+    all_steps = [str(s).strip() for s in all_steps if str(s).strip()]
+
+    try:
+        step_index = int((data or {}).get("step_index", 0))
+    except (TypeError, ValueError):
+        step_index = 0
+    try:
+        total_steps = int((data or {}).get("total_steps") or len(all_steps) or 1)
+    except (TypeError, ValueError):
+        total_steps = max(1, len(all_steps) or 1)
+
+    step_number = max(1, step_index + 1)
+    is_final = step_number >= total_steps
+    is_late = total_steps > 1 and step_number >= max(1, total_steps - 1)
+    step_lower = step.lower()
+    is_optional = "optional" in step_lower or step_lower.startswith("optionally")
+
+    materials_line = ", ".join(materials) if materials else "household craft materials from the project"
+    prior_steps = all_steps[:step_index]
+    prior_block = "\n".join(f"- {s}" for s in prior_steps) if prior_steps else "- (first step; show only the parts introduced here)"
+
+    stage_rules = []
+    if is_optional:
+        stage_rules.append(
+            "This is an OPTIONAL enhancement. Show the SAME finished project with this optional addition clearly labeled. Do not invent a different object."
+        )
+    if is_final or is_late:
+        stage_rules.append(
+            "This is a late/final step. Show the complete finished product of THIS project (overall assembly), like the last pages of a LEGO manual."
+        )
+    else:
+        stage_rules.append(
+            "Show the build progress after THIS step only: prior parts already assembled + the new parts added now. Do not jump to an unrelated finished object."
+        )
+
+    stage_text = "\n".join(f"- {rule}" for rule in stage_rules)
+
+    prompt = f"""Create ONE clean LEGO-instruction-manual style educational diagram for a DIY engineering build.
+
+PROJECT (must match exactly — never invent a different project):
+- Title: {title or "DIY build"}
+- Description: {description or "Follow the step carefully."}
+- Materials ONLY (draw these materials; do not substitute LEGO bricks, plastic people, or unrelated objects): {materials_line}
+
+CURRENT STEP {step_number} of {total_steps}:
+{step}
+
+STEPS ALREADY COMPLETED BEFORE THIS ONE:
+{prior_block}
+
+STAGE RULES:
+{stage_text}
+
+VISUAL STYLE (LEGO / IKEA manual clarity):
+- White background, simple isometric or 3/4 view, soft shadows, crisp outlines
+- Large readable labels with thin callout lines pointing to exact parts
+- Show WHERE each new piece attaches (left/right, between posts, under deck, etc.)
+- Keep the SAME subject and material look across the whole project
+- No people, no faces, no characters, no humanoid figures
+- No LEGO brick studs unless the project materials are literally LEGO
+- No text paragraphs except short labels and a small Step {step_number} heading
+- Easy enough for a beginner to follow at a glance
+
+FORBIDDEN:
+- Drawing a different project (figurines, unrelated toys, random machines)
+- Changing materials mid-build
+- Vague “floating” parts with no attachment location
+"""
 
     result = await asyncio.to_thread(
         lambda: client.images.generate(

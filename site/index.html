@@ -358,6 +358,11 @@
             color: #555;
         }
 
+        /* Guests: clean mode tabs only — no remaining-build counts */
+        body.is-guest .mode-node__plan-badge {
+            display: none !important;
+        }
+
         .mode-node--locked {
             opacity: 0.88;
             cursor: not-allowed;
@@ -780,6 +785,13 @@
             <p style="margin:0 0 0.7rem; color:#444;">
                 You’ll also experience: AI visual diagrams, smart engineering guidance, interactive build tracking, and SparkHelper AI assistance.
             </p>
+            <label for="liteEducation" style="display:block;margin:0 0 0.35rem;font-weight:800;">Education / age</label>
+            <select id="liteEducation" style="width:100%;margin:0 0 0.75rem;padding:0.45rem 0.55rem;border:2px solid rgba(216,31,38,0.28);border-radius:8px;font:inherit;background:#fff;">
+                <option value="middle">Middle-Schooler (10–14)</option>
+                <option value="high" selected>High-Schooler (15–18)</option>
+                <option value="student">Student (18–25)</option>
+                <option value="adult">Adult (25+)</option>
+            </select>
             <div class="onboarding-grid">
                 <input id="liteMaterial1" type="text" placeholder="Material 1 (e.g., cardboard)" />
                 <input id="liteMaterial2" type="text" placeholder="Material 2 (e.g., tape)" />
@@ -1027,7 +1039,10 @@ async function generateFirstBuild() {
         const response = await fetch(apiBase + "/generate-innovator-lite", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ materials: materials })
+            body: JSON.stringify({
+                materials: materials,
+                education: (document.getElementById("liteEducation") || {}).value || "high"
+            })
         });
         if (!response.ok) throw new Error("Server returned " + response.status);
         const data = await response.json();
@@ -1165,12 +1180,32 @@ function updateHomePlanUi() {
     const associateBadge = document.getElementById("associatePlanBadge");
     const innovatorBadge = document.getElementById("innovatorPlanBadge");
     const innovatorNode = document.querySelector(".mode-node--innovator");
+    const liteBadge = document.getElementById("innovatorLitePlanBadge");
 
     const isFreePlan = typeof window.isFree === "function" && window.isFree();
     const innovatorLocked = !canAccessInnovatorMode();
 
+    // Guests only see mode tabs — never remaining-build badges.
+    if (isGuest) {
+        [apprenticeBadge, associateBadge, innovatorBadge, liteBadge].forEach(function (badge) {
+            if (!badge) return;
+            badge.hidden = true;
+            badge.textContent = "";
+        });
+        if (innovatorNode) {
+            innovatorNode.classList.remove("mode-node--locked");
+            innovatorNode.removeAttribute("aria-disabled");
+        }
+        const liteNodeGuest = document.querySelector(".mode-node--innovator-lite");
+        if (liteNodeGuest) {
+            liteNodeGuest.classList.remove("mode-node--locked");
+            liteNodeGuest.removeAttribute("aria-disabled");
+        }
+        return;
+    }
+
     if (apprenticeBadge) {
-        if (isGuest || !isFreePlan) {
+        if (!isFreePlan) {
             apprenticeBadge.hidden = true;
         } else if (typeof window.canUseApprenticeGeneration === "function") {
             const check = window.canUseApprenticeGeneration();
@@ -1187,7 +1222,7 @@ function updateHomePlanUi() {
     }
 
     if (associateBadge) {
-        if (isGuest || !isFreePlan) {
+        if (!isFreePlan) {
             associateBadge.hidden = true;
         } else if (typeof window.canUseAssociate === "function") {
             const check = window.canUseAssociate();
@@ -1222,9 +1257,7 @@ function updateHomePlanUi() {
         innovatorBadge.className =
             "mode-node__plan-badge " +
             (innovatorLocked ? "mode-node__plan-badge--locked" : "mode-node__plan-badge--usage");
-        if (isGuest) {
-            innovatorBadge.hidden = true;
-        } else if (innovatorLocked) {
+        if (innovatorLocked) {
             innovatorBadge.hidden = false;
             if (isFreePlan) {
                 innovatorBadge.textContent =
@@ -1255,11 +1288,8 @@ function updateHomePlanUi() {
     }
 
     const liteNode = document.querySelector(".mode-node--innovator-lite");
-    const liteBadge = document.getElementById("innovatorLitePlanBadge");
     if (liteBadge) {
-        if (isGuest) {
-            liteBadge.hidden = true;
-        } else if (typeof window.canUseInnovatorLite === "function") {
+        if (typeof window.canUseInnovatorLite === "function") {
             const check = window.canUseInnovatorLite();
             const max = check.max;
             const used = check.used || 0;
@@ -1279,7 +1309,7 @@ function updateHomePlanUi() {
             liteBadge.hidden = true;
         }
     }
-    if (liteNode && !isGuest && typeof window.canUseInnovatorLite === "function") {
+    if (liteNode && typeof window.canUseInnovatorLite === "function") {
         const liteCheck = window.canUseInnovatorLite();
         liteNode.classList.toggle("mode-node--locked", !liteCheck.allowed);
         if (!liteCheck.allowed) {

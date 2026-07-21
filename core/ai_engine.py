@@ -329,11 +329,15 @@ def generate_projects(full_input: str, mode: str = "Apprentice"):
     return _normalize_project_steps_in_payload(parsed)
 
 
-def generate_innovator_lite_project(materials: list):
+def generate_innovator_lite_project(materials: list, education: str = None):
     materials_text = ", ".join(materials)
+    education_text = (education or "").strip() or "High-Schooler (15–18)"
     user_prompt = (
         f"Materials available: {materials_text}\n"
-        "Create one beginner-friendly project using mostly these items."
+        f"Education / age: {education_text}\n"
+        "Create one Innovator Lite project using mostly these items.\n"
+        "Stay within about 15–20 minutes. Match complexity to the education/age above — "
+        "if they are 18+ (Student or Adult), make the design meaningfully more advanced."
     )
 
     response = chat_completion(
