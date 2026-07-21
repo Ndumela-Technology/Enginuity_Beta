@@ -4,6 +4,13 @@
   padding: 1rem 1rem 2.5rem;
 }
 
+.profile-page__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin-bottom: 0.45rem;
+}
+
 .profile-page__back {
   display: inline-block;
   margin-bottom: 0.75rem;

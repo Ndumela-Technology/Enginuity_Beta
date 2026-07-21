@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spark · About Us</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="enginuity.css" />
+  <link rel="stylesheet" href="about.css" />
+  <link rel="stylesheet" href="site-footer.css" />
+  <link rel="stylesheet" href="upgrade.css" />
+  <link rel="stylesheet" href="contact.css" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="alternate icon" href="assets/logo.svg" />
+</head>
+<body class="enginuity-paper">
+  <div class="about-page">
+    <a class="about-page__back" href="index.html">← Back to Home</a>
+
+    <header class="about-hero">
+      <h1 class="about-hero__title">About Spark</h1>
+      <p class="about-hero__subtitle">
+        Building intelligent AI tools that help people think, create, and innovate.
+      </p>
+    </header>
+
+    <section class="about-section" aria-labelledby="aboutMission">
+      <h2 class="about-section__title" id="aboutMission">Our Mission</h2>
+      <p class="about-section__text">
+        Spark was created to make advanced artificial intelligence more practical, approachable, and useful for everyone. Our goal is to build AI that does not simply answer questions, but helps people think, create, solve problems, and bring ideas to life.
+      </p>
+      <p class="about-section__text">
+        Whether someone is developing a business, learning a new skill, researching a topic, or exploring their next idea, Spark is designed to become a trusted AI partner.
+      </p>
+    </section>
+
+    <section class="about-section" aria-labelledby="aboutOffer">
+      <h2 class="about-section__title" id="aboutOffer">What We Offer</h2>
+      <div class="about-features">
+        <article class="about-feature-card">
+          <h3 class="about-feature-card__title">Innovator</h3>
+          <p class="about-feature-card__text">
+            AI-powered idea generation, brainstorming, planning, and strategy tools designed to help transform ideas into action.
+          </p>
+        </article>
+        <article class="about-feature-card">
+          <h3 class="about-feature-card__title">Associate</h3>
+          <p class="about-feature-card__text">
+            Everyday AI assistance for productivity, research, writing, organisation, and problem solving.
+          </p>
+        </article>
+        <article class="about-feature-card">
+          <h3 class="about-feature-card__title">Apprentice</h3>
+          <p class="about-feature-card__text">
+            Fully guided, step-by-step project support that helps users build confidence while learning practical engineering and problem-solving skills.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="about-section" aria-labelledby="aboutVision">
+      <h2 class="about-section__title" id="aboutVision">Our Vision</h2>
+      <p class="about-section__text">
+        We believe artificial intelligence should empower people, not replace them. Spark is being built to create intelligent tools that work alongside individuals, creators, students, entrepreneurs, and professionals.
+      </p>
+    </section>
+
+    <section class="about-section" aria-labelledby="aboutFuture">
+      <h2 class="about-section__title" id="aboutFuture">Built for the Future</h2>
+      <p class="about-section__text">
+        Spark continues to evolve through user feedback and innovation. Every improvement is designed to make the platform smarter, faster, and more useful while maintaining a simple experience.
+      </p>
+    </section>
+
+    <section class="about-section about-cta" aria-labelledby="aboutCta">
+      <h2 class="about-section__title about-cta__title" id="aboutCta">Ready to experience Spark?</h2>
+      <div class="about-cta__actions">
+        <a id="aboutGetStartedBtn" class="about-cta__btn about-cta__btn--primary" href="tutorial.html">Get Started</a>
+        <button type="button" id="aboutUpgradeBtn" class="about-cta__btn eng-upgrade-btn">Upgrade</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="api-config.js"></script>
+  <script src="user-plan.js"></script>
+  <script src="upgrade.js"></script>
+  <script src="contact.js"></script>
+  <script src="site-footer.js"></script>
+  <script>
+    (function () {
+      var getStarted = document.getElementById("aboutGetStartedBtn");
+      var upgradeBtn = document.getElementById("aboutUpgradeBtn");
+      var signedIn = !!localStorage.getItem("user_email");
+
+      if (getStarted) {
+        getStarted.href = signedIn ? "index.html" : "tutorial.html";
+        getStarted.textContent = signedIn ? "Go to Dashboard" : "Get Started";
+      }
+
+      if (upgradeBtn) {
+        upgradeBtn.addEventListener("click", function () {
+          if (typeof window.openUpgradeModal === "function") {
+            window.openUpgradeModal();
+          }
+        });
+      }
+    })();
+  </script>
+  <script src="enginuity-loading-screen.js" defer></script>
+</body>
+</html>

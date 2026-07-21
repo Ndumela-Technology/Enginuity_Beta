@@ -113,13 +113,6 @@
     <div id="liteComplete" class="lite-complete">
       Nice work — you completed your Innovator Lite project.
     </div>
-
-    <div id="liteDoneWrap" class="lite-done-wrap">
-      <button type="button" id="liteDoneBtn" class="lite-done-btn" disabled>Done — continue to sign in</button>
-      <p id="liteDoneHint" class="lite-done-hint">
-        Complete all steps (and try a diagram or SparkHelper if you like), then tap Done.
-      </p>
-    </div>
   </div>
 
   <script src="api-config.js"></script>
@@ -132,12 +125,12 @@
     (function () {
       var API_BASE = window.ENGINUITY_API_BASE || "https://enginuity-cpl1.onrender.com";
       var COMPLETED_KEY = "innovator_lite_completed";
-      var PROGRESS_KEY = "innovator_lite_progress";
       var HAS_STARTED_KEY = "has_started";
       var MODE = "Innovator Lite";
       var currentProject = null;
       var guestUsedDiagram = false;
       var guestUsedSparkHelper = false;
+      var liteCompletionRecorded = false;
 
       function isGuest() {
         return !localStorage.getItem("user_email");
@@ -145,17 +138,27 @@
 
       window.MODE = MODE;
       localStorage.setItem("enginuity_mode", MODE);
+      window.ENGINUITY_DONE_REDIRECT = isGuest() ? "sign-in.html" : "index.html";
 
-      // Temporary onboarding access without plan restrictions.
       window.canUseDiagram = function () { return { allowed: true }; };
       window.recordDiagramUse = function () {
         guestUsedDiagram = true;
-        updateDoneButtonState();
+        if (window.ProjectOutput) window.ProjectOutput.updateDoneBarState();
       };
       window.canUseSparkHelper = function () { return { allowed: true }; };
       window.recordSparkHelperUse = function () {
         guestUsedSparkHelper = true;
-        updateDoneButtonState();
+        if (window.ProjectOutput) window.ProjectOutput.updateDoneBarState();
+      };
+
+      window.enginuityDoneGate = function () {
+        if (!currentProject || !window.ProjectOutput) return false;
+        var steps = Array.isArray(currentProject.steps) ? currentProject.steps.length : 0;
+        if (!steps) return false;
+        var id = currentProject.id || "";
+        if (!window.ProjectOutput.allStepsComplete(id, steps)) return false;
+        if (!isGuest()) return true;
+        return guestUsedDiagram || guestUsedSparkHelper;
       };
 
       function escapeHtml(str) {
@@ -167,6 +170,13 @@
           .replaceAll("'", "&#39;");
       }
 
+      function formatScienceHtml(value) {
+        if (window.ProjectOutput && typeof window.ProjectOutput.formatExplanationHtml === "function") {
+          return window.ProjectOutput.formatExplanationHtml(value, { escapeHtml: escapeHtml });
+        }
+        return escapeHtml(String(value || ""));
+      }
+
       function getMaterialsList() {
         var raw = document.getElementById("liteMaterials").value || "";
         return raw
@@ -175,142 +185,17 @@
           .filter(Boolean);
       }
 
-      function readProgressMap() {
-        try {
-          return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || {};
-        } catch (_) {
-          return {};
-        }
-      }
-
-      function writeProgressMap(map) {
-        localStorage.setItem(PROGRESS_KEY, JSON.stringify(map || {}));
-      }
-
-      function progressKeyFor(project) {
-        return String(project && project.id ? project.id : "default");
-      }
-
-      function getStepChecks(project, len) {
-        var map = readProgressMap();
-        var arr = map[progressKeyFor(project)];
-        if (!Array.isArray(arr)) return new Array(len).fill(false);
-        var checks = arr.slice(0, len);
-        while (checks.length < len) checks.push(false);
-        return checks;
-      }
-
-      function setStepChecks(project, checks) {
-        var map = readProgressMap();
-        map[progressKeyFor(project)] = checks;
-        writeProgressMap(map);
-      }
-
-      function updateProgressUi() {
-        var bar = document.getElementById("liteProgressBar");
-        var label = document.getElementById("liteProgressLabel");
+      function onStepsComplete() {
         var complete = document.getElementById("liteComplete");
-        if (!currentProject || !bar || !label) return;
-
-        var steps = Array.isArray(currentProject.steps) ? currentProject.steps : [];
-        var checks = getStepChecks(currentProject, steps.length);
-        var done = checks.filter(Boolean).length;
-        var pct = steps.length ? Math.round((done / steps.length) * 100) : 0;
-        bar.style.width = pct + "%";
-        label.textContent = done + " / " + steps.length + " steps complete";
-
-        if (steps.length && done === steps.length) {
-          localStorage.setItem(COMPLETED_KEY, "true");
-          if (typeof window.recordInnovatorLiteCompletion === "function") {
-            window.recordInnovatorLiteCompletion(
-              currentProject && currentProject.id ? currentProject.id : "lite-default"
-            );
-          }
-          complete.style.display = "block";
-        } else {
-          complete.style.display = "none";
-        }
-        updateDoneButtonState();
-      }
-
-      function allStepsComplete() {
-        if (!currentProject) return false;
-        var steps = Array.isArray(currentProject.steps) ? currentProject.steps : [];
-        if (!steps.length) return false;
-        var checks = getStepChecks(currentProject, steps.length);
-        return checks.every(Boolean);
-      }
-
-      function guestReadyToFinish() {
-        if (!isGuest()) return allStepsComplete();
-        return allStepsComplete() && (guestUsedDiagram || guestUsedSparkHelper);
-      }
-
-      function updateDoneButtonState() {
-        var wrap = document.getElementById("liteDoneWrap");
-        var btn = document.getElementById("liteDoneBtn");
-        var hint = document.getElementById("liteDoneHint");
-        if (!wrap || !btn) return;
-
-        if (!currentProject) {
-          wrap.classList.remove("is-visible");
-          btn.disabled = true;
-          return;
-        }
-
-        wrap.classList.add("is-visible");
-        var ready = guestReadyToFinish();
-        btn.disabled = !ready;
-
-        if (hint) {
-          if (isGuest()) {
-            hint.textContent = ready
-              ? "Tap Done to sign in and unlock the full Enginuity Beta home."
-              : "Check off every step, then try at least one diagram or SparkHelper question.";
-          } else {
-            hint.textContent = ready
-              ? "Tap Done to return home."
-              : "Complete all steps to continue.";
-          }
-        }
-
-        if (!isGuest()) {
-          btn.textContent = "Done — back to home";
-        }
-      }
-
-      function finishLiteFlow() {
-        localStorage.setItem(HAS_STARTED_KEY, "true");
+        if (complete) complete.style.display = "block";
+        if (liteCompletionRecorded) return;
+        liteCompletionRecorded = true;
         localStorage.setItem(COMPLETED_KEY, "true");
-        if (isGuest()) {
-          window.location.href = "sign-in.html";
-          return;
+        if (typeof window.recordInnovatorLiteCompletion === "function" && currentProject) {
+          window.recordInnovatorLiteCompletion(
+            currentProject.id ? currentProject.id : "lite-default"
+          );
         }
-        window.location.href = "index.html";
-      }
-
-      function hydrateChecklist() {
-        if (!currentProject) return;
-        var steps = Array.isArray(currentProject.steps) ? currentProject.steps : [];
-        var checks = getStepChecks(currentProject, steps.length);
-        var nodes = document.querySelectorAll("#liteOutput .project-output__step");
-        nodes.forEach(function (li, idx) {
-          var textDiv = li.querySelector(".project-output__step-text");
-          if (!textDiv) return;
-          if (textDiv.querySelector(".lite-step-check")) return;
-
-          var box = document.createElement("input");
-          box.type = "checkbox";
-          box.className = "lite-step-check";
-          box.checked = !!checks[idx];
-          box.addEventListener("change", function () {
-            var current = getStepChecks(currentProject, steps.length);
-            current[idx] = box.checked;
-            setStepChecks(currentProject, current);
-            updateProgressUi();
-          });
-          textDiv.prepend(box);
-        });
       }
 
       function saveLiteProject() {
@@ -326,6 +211,10 @@
 
       function renderProject(project) {
         currentProject = project;
+        liteCompletionRecorded = false;
+        var complete = document.getElementById("liteComplete");
+        if (complete) complete.style.display = "none";
+
         if (typeof window.setCurrentProject === "function") {
           window.setCurrentProject(project);
         }
@@ -337,8 +226,7 @@
         var extra =
           '<section class="project-output__section"><h3 class="project-output__label">Estimated time</h3><p class="project-output__text">' + escapeHtml(project.estimatedTime || "15-20 minutes") + "</p></section>" +
           '<section class="project-output__section"><h3 class="project-output__label">Difficulty</h3><p class="project-output__text">' + escapeHtml(project.difficulty || "Beginner") + "</p></section>" +
-          '<section class="project-output__section"><h3 class="project-output__label">Science behind it</h3><div class="project-output__prose">' + escapeHtml(project.scienceExplanation || "Explore why each step works as you build.") + "</div></section>" +
-          '<section class="project-output__section"><h3 class="project-output__label">Progress</h3><div class="lite-progress"><div id="liteProgressBar" class="lite-progress__bar"></div></div><p id="liteProgressLabel" class="lite-progress__label">0 / 0 steps complete</p></section>';
+          '<section class="project-output__section"><h3 class="project-output__label">Science behind it</h3><div class="project-output__prose">' + formatScienceHtml(project.scienceExplanation || "Explore why each step works as you build.") + "</div></section>";
 
         output.innerHTML = window.ProjectOutput.renderStructuredProject(project, {
           escapeHtml: escapeHtml,
@@ -349,10 +237,24 @@
         var saveBtn = document.getElementById("liteSaveBtn");
         if (saveBtn) saveBtn.addEventListener("click", saveLiteProject);
 
-        hydrateChecklist();
-        updateProgressUi();
-        updateDoneButtonState();
+        window.ProjectOutput.afterStructuredRender(project);
+
+        var btn = document.getElementById("enginuityDoneBtn");
+        if (btn) {
+          btn.textContent = isGuest() ? "Done — continue to sign in" : "Done — back to home";
+        }
+        var hint = document.getElementById("enginuityDoneHint");
+        if (hint && isGuest() && !window.ProjectOutput.hasCompletedCategory(MODE)) {
+          hint.hidden = false;
+          hint.textContent =
+            "Check off every step, then try at least one diagram or SparkHelper question.";
+        }
       }
+
+      document.addEventListener("enginuity:project-steps-complete", function () {
+        onStepsComplete();
+        if (window.ProjectOutput) window.ProjectOutput.updateDoneBarState();
+      });
 
       function normalizeLiteProject(data, materials) {
         return {
@@ -419,7 +321,6 @@
               API_BASE.indexOf("127.0.0.1") !== -1 ||
               API_BASE.indexOf("localhost") !== -1;
             if (!isLocalBase) throw fetchErr;
-            // Fallback to production API if local backend is unreachable.
             res = await requestLite("https://enginuity-cpl1.onrender.com");
             usedFallbackBase = true;
           }
@@ -430,7 +331,6 @@
             !usedFallbackBase &&
             (API_BASE.indexOf("127.0.0.1") !== -1 || API_BASE.indexOf("localhost") !== -1)
           ) {
-            // Local backend is up but missing this route; retry hosted API.
             res = await requestLite("https://enginuity-cpl1.onrender.com");
             usedFallbackBase = true;
           }
@@ -467,11 +367,13 @@
       }
 
       document.getElementById("liteGenerateBtn").addEventListener("click", generateLiteProject);
-      document.getElementById("liteDoneBtn").addEventListener("click", function () {
-        if (!guestReadyToFinish() && isGuest()) return;
-        if (!allStepsComplete() && !isGuest()) return;
-        finishLiteFlow();
-      });
+
+      document.addEventListener("click", function (e) {
+        if (e.target && e.target.id === "enginuityDoneBtn" && !e.target.disabled) {
+          localStorage.setItem(HAS_STARTED_KEY, "true");
+          localStorage.setItem(COMPLETED_KEY, "true");
+        }
+      }, true);
     })();
   </script>
   <script src="contact.js" defer></script>

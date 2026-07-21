@@ -8,7 +8,13 @@
       return String(meta.content).trim().replace(/\/$/, "");
     }
     var host = window.location.hostname;
-    if (host === "localhost" || host === "127.0.0.1") {
+    var protocol = window.location.protocol || "";
+    if (
+      !host ||
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      protocol === "file:"
+    ) {
       return "http://127.0.0.1:8000";
     }
     return "https://enginuity-cpl1.onrender.com";

@@ -115,6 +115,7 @@
           escapeHtml: escapeHtml,
           extraSectionsHtml: extraSections
         });
+        window.ProjectOutput.afterStructuredRender(project);
         if (actions) actions.hidden = false;
         document.title = "Enginuity Beta · " + (project.title || "Project");
       }

@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="upgrade.css" />
     <link rel="stylesheet" href="contact.css" />
     <link rel="stylesheet" href="beta-feedback.css" />
+    <link rel="stylesheet" href="site-footer.css" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
@@ -662,6 +663,7 @@
         </div>
 
         <div class="header-account-stack">
+            <a href="about.html" class="site-header__about">About</a>
             <div class="auth-area">
                 <div class="g_id_signin"></div>
                 <h2 id="welcome"></h2>
@@ -759,6 +761,13 @@
         <p class="footer-note">
             MVP: the project generator is shared across modes for now. More SparkAI-powered features are planned.
         </p>
+        <footer class="site-footer">
+            <nav class="site-footer__nav" aria-label="Site footer">
+                <a class="site-footer__link" href="about.html">About</a>
+                <a class="site-footer__link" href="index.html">Home</a>
+                <a class="site-footer__link" href="profile.html" id="footerAccountLink">Account</a>
+            </nav>
+        </footer>
     </div>
 
     <div class="onboarding-modal" id="innovatorLiteModal" aria-hidden="true">
@@ -797,6 +806,7 @@
 
     <script src="api-config.js"></script>
     <script src="user-plan.js"></script>
+    <script src="auth-sync.js"></script>
     <script src="upgrade.js"></script>
     <script src="contact.js"></script>
     <script src="beta-feedback.js"></script>
@@ -837,6 +847,10 @@ function handleCredentialResponse(response) {
         loadSavedProjects();
     }
 
+    if (typeof window.syncSparkUser === "function") {
+        window.syncSparkUser();
+    }
+
     // Switch UI to signed-in mode
     updateAuthUi();
 }
@@ -861,7 +875,6 @@ function parseJwt(token) {
 
 var HAS_STARTED_KEY = "has_started";
 var LITE_COMPLETED_KEY = "innovator_lite_completed";
-var LITE_PROGRESS_KEY = "innovator_lite_progress";
 var liteProject = null;
 
 function hasUserStarted() {
@@ -893,6 +906,9 @@ function closeInnovatorLiteModal() {
     if (!modal) return;
     modal.classList.remove("is-open");
     modal.setAttribute("aria-hidden", "true");
+    if (window.ProjectOutput && typeof window.ProjectOutput.hideDoneBar === "function") {
+        window.ProjectOutput.hideDoneBar();
+    }
 }
 
 function escapeHtml(str) {
@@ -904,84 +920,25 @@ function escapeHtml(str) {
         .replaceAll("'", "&#39;");
 }
 
-function liteProgressId(project) {
-    return String(project && project.id ? project.id : "default");
-}
-
-function readLiteProgress() {
-    try {
-        return JSON.parse(localStorage.getItem(LITE_PROGRESS_KEY)) || {};
-    } catch (e) {
-        return {};
+function formatLiteScienceHtml(value) {
+    if (window.ProjectOutput && typeof window.ProjectOutput.formatExplanationHtml === "function") {
+        return window.ProjectOutput.formatExplanationHtml(value, { escapeHtml: escapeHtml });
     }
+    return escapeHtml(String(value || ""));
 }
 
-function writeLiteProgress(progress) {
-    localStorage.setItem(LITE_PROGRESS_KEY, JSON.stringify(progress || {}));
-}
-
-function getLiteChecks(project, stepCount) {
-    const progress = readLiteProgress();
-    const key = liteProgressId(project);
-    const existing = Array.isArray(progress[key]) ? progress[key] : [];
-    const checks = existing.slice(0, stepCount);
-    while (checks.length < stepCount) checks.push(false);
-    return checks;
-}
-
-function setLiteChecks(project, checks) {
-    const progress = readLiteProgress();
-    progress[liteProgressId(project)] = checks;
-    writeLiteProgress(progress);
-}
-
-function updateLiteProgressUi() {
-    const bar = document.getElementById("liteProgressBar");
-    const label = document.getElementById("liteProgressLabel");
+function onLiteStepsComplete() {
     const completion = document.getElementById("liteCompletion");
-    if (!bar || !label || !liteProject) return;
-
-    const steps = Array.isArray(liteProject.steps) ? liteProject.steps : [];
-    const checks = getLiteChecks(liteProject, steps.length);
-    const done = checks.filter(Boolean).length;
-    const pct = steps.length ? Math.round((done / steps.length) * 100) : 0;
-    bar.style.width = pct + "%";
-    label.textContent = done + " / " + steps.length + " steps complete";
-
-    if (steps.length && done === steps.length) {
-        localStorage.setItem(LITE_COMPLETED_KEY, "true");
-        localStorage.setItem(HAS_STARTED_KEY, "true");
-        if (typeof window.recordInnovatorLiteCompletion === "function") {
-            window.recordInnovatorLiteCompletion(
-                liteProject && liteProject.id ? liteProject.id : "home-lite-default"
-            );
-        }
-        if (completion) completion.style.display = "block";
-        updateAuthUi();
-    } else if (completion) {
-        completion.style.display = "none";
-    }
-}
-
-function hydrateLiteChecklist() {
     if (!liteProject) return;
-    const steps = Array.isArray(liteProject.steps) ? liteProject.steps : [];
-    const checks = getLiteChecks(liteProject, steps.length);
-    document.querySelectorAll("#liteOutput .project-output__step").forEach(function (li, index) {
-        const textNode = li.querySelector(".project-output__step-text");
-        if (!textNode || textNode.querySelector(".lite-step-check")) return;
-        const box = document.createElement("input");
-        box.type = "checkbox";
-        box.className = "lite-step-check";
-        box.checked = !!checks[index];
-        box.addEventListener("change", function () {
-            const current = getLiteChecks(liteProject, steps.length);
-            current[index] = box.checked;
-            setLiteChecks(liteProject, current);
-            updateLiteProgressUi();
-        });
-        textNode.prepend(box);
-    });
+    localStorage.setItem(LITE_COMPLETED_KEY, "true");
+    localStorage.setItem(HAS_STARTED_KEY, "true");
+    if (typeof window.recordInnovatorLiteCompletion === "function") {
+        window.recordInnovatorLiteCompletion(
+            liteProject && liteProject.id ? liteProject.id : "home-lite-default"
+        );
+    }
+    if (completion) completion.style.display = "block";
+    updateAuthUi();
 }
 
 function setLiteError(message) {
@@ -1026,16 +983,17 @@ function renderLiteProject(project) {
     const extraSections =
         '<section class="project-output__section"><h3 class="project-output__label">Estimated time</h3><p class="project-output__text">' + escapeHtml(project.estimatedTime || "15-20 minutes") + '</p></section>' +
         '<section class="project-output__section"><h3 class="project-output__label">Difficulty</h3><p class="project-output__text">' + escapeHtml(project.difficulty || "Beginner") + '</p></section>' +
-        '<section class="project-output__section"><h3 class="project-output__label">Science explanation</h3><div class="project-output__prose">' + escapeHtml(project.scienceExplanation || "") + '</div></section>' +
-        '<section class="project-output__section"><h3 class="project-output__label">Progress tracking</h3><div class="onboarding-progress"><div id="liteProgressBar" class="onboarding-progress__bar"></div></div><p id="liteProgressLabel" class="lite-progress__label">0 / 0 steps complete</p></section>';
+        '<section class="project-output__section"><h3 class="project-output__label">Science behind it</h3><div class="project-output__prose">' + formatLiteScienceHtml(project.scienceExplanation || "Explore why each step works as you build.") + '</div></section>';
 
     output.innerHTML = window.ProjectOutput.renderStructuredProject(project, {
         escapeHtml: escapeHtml,
         extraSectionsHtml: extraSections
     });
 
-    hydrateLiteChecklist();
-    updateLiteProgressUi();
+    window.ProjectOutput.afterStructuredRender(project);
+
+    const completion = document.getElementById("liteCompletion");
+    if (completion) completion.style.display = "none";
 }
 
 async function generateFirstBuild() {
@@ -1128,6 +1086,9 @@ function initOnboarding() {
     if (generateBtn) {
         generateBtn.addEventListener("click", generateFirstBuild);
     }
+    document.addEventListener("enginuity:project-steps-complete", function () {
+        onLiteStepsComplete();
+    });
     initLiteUpgradeButton();
 }
 
@@ -1178,6 +1139,9 @@ function updateAuthUi() {
 
     const profileLink = document.getElementById("profileLink");
     if (profileLink) profileLink.style.display = isGuest ? "none" : "inline-block";
+
+    const footerAccountLink = document.getElementById("footerAccountLink");
+    if (footerAccountLink) footerAccountLink.style.display = isGuest ? "none" : "inline";
 
     // Toggle mode navigation (only lock on first-visit onboarding)
     setModeLinksEnabled(!isFirstVisitOnboarding);
@@ -1388,6 +1352,9 @@ function signOut() {
     }
     const liteOutput = document.getElementById("liteOutput");
     if (liteOutput) liteOutput.innerHTML = "";
+    if (window.ProjectOutput && typeof window.ProjectOutput.hideDoneBar === "function") {
+        window.ProjectOutput.hideDoneBar();
+    }
     const liteCompletion = document.getElementById("liteCompletion");
     if (liteCompletion) liteCompletion.style.display = "none";
     if (typeof window.syncSparkHelperContext === "function") {

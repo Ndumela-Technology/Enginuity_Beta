@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="enginuity.css" />
   <link rel="stylesheet" href="profile.css" />
+  <link rel="stylesheet" href="site-footer.css" />
   <link rel="stylesheet" href="upgrade.css" />
   <link rel="stylesheet" href="contact.css" />
   <link rel="stylesheet" href="beta-feedback.css" />
@@ -18,6 +19,10 @@
 <body class="enginuity-paper">
   <div class="profile-page">
     <a class="profile-page__back" href="index.html">← Back to Home</a>
+    <div class="profile-page__links">
+      <a class="profile-saved__link" href="about.html">About Spark</a>
+      <a id="profileAdminLink" class="profile-saved__link" href="admin.html" hidden>Admin Dashboard</a>
+    </div>
     <h1 class="profile-page__title">Account</h1>
 
     <section class="profile-card" aria-labelledby="profileNameLabel">
@@ -53,6 +58,7 @@
 
   <script src="api-config.js"></script>
   <script src="user-plan.js"></script>
+  <script src="auth-sync.js"></script>
   <script src="saved-projects.js"></script>
   <script src="upgrade.js"></script>
   <script src="contact.js"></script>
@@ -133,6 +139,28 @@
         }
         updatePlanLabel();
         renderSavedPreview();
+        maybeShowAdminLink();
+      }
+
+      function maybeShowAdminLink() {
+        var link = document.getElementById("profileAdminLink");
+        if (!link) return;
+        var email = localStorage.getItem("user_email");
+        if (!email) {
+          link.hidden = true;
+          return;
+        }
+        var checker =
+          typeof window.checkSparkAdminAccess === "function"
+            ? window.checkSparkAdminAccess
+            : window.fetchSparkUserRole;
+        if (typeof checker !== "function") {
+          link.hidden = true;
+          return;
+        }
+        checker(email).then(function (info) {
+          link.hidden = !(info && info.is_admin);
+        });
       }
 
       function wireTutorialControls() {
@@ -151,6 +179,7 @@
             localStorage.removeItem("has_started");
             localStorage.removeItem("innovator_lite_completed");
             localStorage.removeItem("innovator_lite_progress");
+            localStorage.removeItem("enginuity_category_build_done");
             if (statusEl) {
               statusEl.hidden = false;
               statusEl.textContent =
@@ -165,6 +194,7 @@
       wireTutorialControls();
     })();
   </script>
+  <script src="site-footer.js"></script>
   <script src="enginuity-loading-screen.js" defer></script>
 </body>
 </html>

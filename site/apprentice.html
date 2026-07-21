@@ -535,6 +535,9 @@
     function displayProjects(data) {
         const output = document.getElementById("output");
         output.innerHTML = "";
+        if (window.ProjectOutput && typeof window.ProjectOutput.hideDoneBar === "function") {
+            window.ProjectOutput.hideDoneBar();
+        }
 
         if (data && data.error) {
             output.innerHTML = `<div class="error">${escapeHtml(data.error)}</div>`;
@@ -622,6 +625,7 @@
                     actionsHtml: `<button type="button" onclick="saveProject(${index})">💾 Save Project</button>`
                 }) +
                 `<button type="button" onclick="displayProjects(window.lastProjectData)">← Back to project choices</button>`;
+            window.ProjectOutput.afterStructuredRender(proj);
         }
     }
 

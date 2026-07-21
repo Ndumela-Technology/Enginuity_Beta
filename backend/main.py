@@ -1,14 +1,23 @@
 import asyncio
 import json
 import os
+import sys
+from pathlib import Path
 from typing import List, Optional
+
+_BACKEND_DIR = Path(__file__).resolve().parent
+_PROJECT_ROOT = _BACKEND_DIR.parent
+for _path in (_PROJECT_ROOT, _BACKEND_DIR):
+    _path_str = str(_path)
+    if _path_str not in sys.path:
+        sys.path.insert(0, _path_str)
 
 from dotenv import find_dotenv, load_dotenv
 
 load_dotenv(find_dotenv())
 
 import httpx
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from openai import OpenAI
@@ -360,4 +369,158 @@ async def submit_beta_feedback(payload: BetaFeedbackRequest):
             fh.write(json.dumps(record, ensure_ascii=False) + "\n")
 
     await asyncio.to_thread(_append)
+
+    user_id = record["user_id"]
+    if user_id and "@" in user_id:
+        from user_store import sync_user, touch_activity
+
+        await asyncio.to_thread(
+            sync_user,
+            user_id,
+            "",
+            "free",
+            increment_sessions=1,
+        )
+        await asyncio.to_thread(
+            touch_activity,
+            user_id,
+            "session_complete",
+            {"mode": session_type},
+        )
+
     return {"ok": True, "record": record}
+
+
+class UserSyncRequest(BaseModel):
+    email: str
+    name: Optional[str] = ""
+    plan: Optional[str] = "free"
+
+
+class UserActivityRequest(BaseModel):
+    email: str
+    event_type: Optional[str] = "activity"
+    mode: Optional[str] = None
+
+
+def _require_admin_email(x_user_email: Optional[str] = Header(None, alias="X-User-Email")) -> str:
+    email = (x_user_email or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    from user_store import is_admin
+
+    if not is_admin(email):
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    return email
+
+
+@app.post("/users/sync")
+async def sync_user_account(payload: UserSyncRequest):
+    """Register or refresh a user profile (called after Google sign-in)."""
+    from user_store import sync_user
+
+    email = (payload.email or "").strip()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required.")
+
+    user = await asyncio.to_thread(
+        sync_user,
+        email,
+        payload.name or "",
+        payload.plan or "free",
+    )
+    return {"ok": True, "user": user}
+
+
+@app.post("/users/activity")
+async def record_user_activity(payload: UserActivityRequest):
+    """Track user activity for admin analytics."""
+    from user_store import touch_activity
+
+    email = (payload.email or "").strip()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required.")
+
+    metadata = {}
+    if payload.mode:
+        metadata["mode"] = payload.mode.strip()
+
+    user = await asyncio.to_thread(
+        touch_activity,
+        email,
+        payload.event_type or "activity",
+        metadata,
+    )
+    return {"ok": True, "user": user}
+
+
+@app.get("/auth/role")
+async def get_user_role(email: str):
+    """Return role for a signed-in user (used by admin gate)."""
+    from user_store import get_user, is_admin, sync_user
+
+    key = (email or "").strip().lower()
+    if not key:
+        raise HTTPException(status_code=400, detail="Email is required.")
+
+    if await asyncio.to_thread(is_admin, key):
+        user = await asyncio.to_thread(get_user, key)
+        if not user:
+            user = await asyncio.to_thread(sync_user, key, "", "free")
+        return {
+            "ok": True,
+            "email": key,
+            "role": "admin",
+            "is_admin": True,
+        }
+
+    user = await asyncio.to_thread(get_user, key)
+    role = user.get("role", "user") if user else "user"
+    return {
+        "ok": True,
+        "email": key,
+        "role": role,
+        "is_admin": False,
+    }
+
+
+@app.get("/admin/overview")
+async def admin_overview(_admin: str = Depends(_require_admin_email)):
+    from user_store import get_overview_stats
+
+    return {"ok": True, "overview": await asyncio.to_thread(get_overview_stats)}
+
+
+@app.get("/admin/users")
+async def admin_users(_admin: str = Depends(_require_admin_email)):
+    from user_store import list_users
+
+    return {"ok": True, "users": await asyncio.to_thread(list_users)}
+
+
+@app.get("/admin/feedback")
+async def admin_feedback(_admin: str = Depends(_require_admin_email)):
+    from user_store import read_feedback_records
+
+    return {"ok": True, "feedback": await asyncio.to_thread(read_feedback_records)}
+
+
+@app.get("/admin/analytics")
+async def admin_analytics(_admin: str = Depends(_require_admin_email)):
+    from user_store import get_analytics_snapshot
+
+    return {"ok": True, "analytics": await asyncio.to_thread(get_analytics_snapshot)}
+
+
+@app.get("/admin/payments")
+async def admin_payments(_admin: str = Depends(_require_admin_email)):
+    from user_store import get_payments_snapshot
+
+    return {"ok": True, "payments": await asyncio.to_thread(get_payments_snapshot)}
+
+
+@app.get("/admin/settings")
+async def admin_settings(_admin: str = Depends(_require_admin_email)):
+    from user_store import get_settings_snapshot
+
+    return {"ok": True, "settings": await asyncio.to_thread(get_settings_snapshot)}

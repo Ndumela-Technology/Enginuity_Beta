@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Spark · Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="enginuity.css" />
+  <link rel="stylesheet" href="admin.css" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="alternate icon" href="assets/logo.svg" />
+</head>
+<body class="enginuity-paper">
+  <div class="admin-shell">
+    <aside class="admin-sidebar" aria-label="Admin navigation">
+      <h1 class="admin-sidebar__title">Admin Dashboard</h1>
+      <p class="admin-sidebar__subtitle">Spark platform management</p>
+      <nav class="admin-nav">
+        <a class="admin-nav__btn is-active" data-panel="adminPanelOverview" href="#adminPanelOverview">Overview</a>
+        <a class="admin-nav__btn" data-panel="adminPanelUsers" href="#adminPanelUsers">Users</a>
+        <a class="admin-nav__btn" data-panel="adminPanelFeedback" href="#adminPanelFeedback">Feedback</a>
+        <a class="admin-nav__btn" data-panel="adminPanelAnalytics" href="#adminPanelAnalytics">Analytics</a>
+        <a class="admin-nav__btn" data-panel="adminPanelPayments" href="#adminPanelPayments">Payments</a>
+        <a class="admin-nav__btn" data-panel="adminPanelSettings" href="#adminPanelSettings">Settings</a>
+      </nav>
+      <p style="margin-top:1rem;"><a href="index.html">← Back to Home</a></p>
+    </aside>
+
+    <main class="admin-main">
+      <div class="admin-main__head">
+        <h2 class="admin-main__title">Platform Overview</h2>
+        <p class="admin-main__meta" id="adminMeta">Loading…</p>
+      </div>
+
+      <section id="adminPanelOverview" class="admin-panel is-active" aria-labelledby="adminOverviewHeading">
+        <h3 id="adminOverviewHeading" class="admin-main__title" style="font-size:1.1rem;">Overview</h3>
+        <div id="adminOverviewStats" class="admin-grid"></div>
+      </section>
+
+      <section id="adminPanelUsers" class="admin-panel" aria-labelledby="adminUsersHeading">
+        <h3 id="adminUsersHeading" class="admin-main__title" style="font-size:1.1rem;">Users</h3>
+        <div class="admin-toolbar">
+          <input id="adminUserSearch" class="admin-input" type="search" placeholder="Search users…" aria-label="Search users" />
+          <select id="adminUserPlanFilter" class="admin-select" aria-label="Filter by plan">
+            <option value="all">All plans</option>
+            <option value="free">Free</option>
+            <option value="builder_monthly">Builder monthly</option>
+            <option value="builder_yearly">Builder yearly</option>
+            <option value="pro_monthly">Pro monthly</option>
+            <option value="pro_yearly">Pro yearly</option>
+          </select>
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Account type</th>
+                <th>Join date</th>
+                <th>Last activity</th>
+                <th>Remaining usage</th>
+                <th>Subscription</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="adminUsersBody"></tbody>
+          </table>
+        </div>
+        <div id="adminUserDetail" class="admin-detail" hidden></div>
+      </section>
+
+      <section id="adminPanelFeedback" class="admin-panel" aria-labelledby="adminFeedbackHeading">
+        <h3 id="adminFeedbackHeading" class="admin-main__title" style="font-size:1.1rem;">Feedback</h3>
+        <div class="admin-toolbar">
+          <input id="adminFeedbackSearch" class="admin-input" type="search" placeholder="Search feedback…" aria-label="Search feedback" />
+          <select id="adminFeedbackRating" class="admin-select" aria-label="Filter by rating">
+            <option value="all">All ratings</option>
+            <option value="5">5 stars</option>
+            <option value="4">4 stars</option>
+            <option value="3">3 stars</option>
+            <option value="2">2 stars</option>
+            <option value="1">1 star</option>
+          </select>
+          <select id="adminFeedbackType" class="admin-select" aria-label="Filter by session type">
+            <option value="all">All session types</option>
+            <option value="Innovator">Innovator</option>
+            <option value="Associate">Associate</option>
+          </select>
+        </div>
+        <div id="adminFeedbackList"></div>
+      </section>
+
+      <section id="adminPanelAnalytics" class="admin-panel" aria-labelledby="adminAnalyticsHeading">
+        <h3 id="adminAnalyticsHeading" class="admin-main__title" style="font-size:1.1rem;">Analytics</h3>
+        <div id="adminAnalyticsContent"></div>
+      </section>
+
+      <section id="adminPanelPayments" class="admin-panel" aria-labelledby="adminPaymentsHeading">
+        <h3 id="adminPaymentsHeading" class="admin-main__title" style="font-size:1.1rem;">Payments</h3>
+        <div id="adminPaymentsContent"></div>
+      </section>
+
+      <section id="adminPanelSettings" class="admin-panel" aria-labelledby="adminSettingsHeading">
+        <h3 id="adminSettingsHeading" class="admin-main__title" style="font-size:1.1rem;">Settings</h3>
+        <div id="adminSettingsContent"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="api-config.js"></script>
+  <script src="user-plan.js"></script>
+  <script src="auth-sync.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      var state = {
+        overview: {},
+        users: [],
+        feedback: [],
+        analytics: {},
+        payments: {},
+        settings: {}
+      };
+
+      function el(id) { return document.getElementById(id); }
+      function apiBase() { return window.ENGINUITY_API_BASE || "http://127.0.0.1:8000"; }
+      function userEmail() { return (localStorage.getItem("user_email") || "").trim(); }
+      function setMeta(text) { var node = el("adminMeta"); if (node) node.textContent = text; }
+      function esc(v) {
+        return String(v == null ? "" : v)
+          .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+          .replaceAll("\"", "&quot;").replaceAll("'", "&#39;");
+      }
+      function fmtDate(v) {
+        if (!v) return "—";
+        var d = new Date(v);
+        if (isNaN(d.getTime())) return esc(v);
+        return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+      }
+      function stars(v) {
+        var n = Math.max(0, Math.min(5, parseInt(v, 10) || 0));
+        return "★★★★★".slice(0, n) + "☆☆☆☆☆".slice(0, 5 - n);
+      }
+      function localFeedback() {
+        try {
+          var parsed = JSON.parse(localStorage.getItem("beta_feedback_responses") || "[]");
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function switchPanel(panelId) {
+        document.querySelectorAll(".admin-panel").forEach(function (panel) {
+          panel.classList.toggle("is-active", panel.id === panelId);
+        });
+        document.querySelectorAll(".admin-nav__btn[data-panel]").forEach(function (btn) {
+          btn.classList.toggle("is-active", btn.getAttribute("data-panel") === panelId);
+        });
+      }
+      window.__adminSwitch = switchPanel;
+
+      function panelFromHash() {
+        var id = (window.location.hash || "").replace(/^#/, "");
+        if (id && document.getElementById(id)) return id;
+        return "adminPanelOverview";
+      }
+
+      function applyHashPanel() {
+        switchPanel(panelFromHash());
+      }
+
+      function bindNav() {
+        document.querySelectorAll(".admin-nav__btn[data-panel]").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var panelId = btn.getAttribute("data-panel");
+            if (panelId) {
+              window.location.hash = panelId;
+              applyHashPanel();
+            }
+          });
+        });
+        window.addEventListener("hashchange", applyHashPanel);
+        applyHashPanel();
+      }
+
+      function fetchJson(path) {
+        return fetch(apiBase() + path, { headers: { "X-User-Email": userEmail() } })
+          .then(function (res) {
+            if (!res.ok) throw new Error(path + " -> " + res.status);
+            return res.json();
+          });
+      }
+
+      function renderOverview() {
+        var root = el("adminOverviewStats");
+        if (!root) return;
+        var o = state.overview || {};
+        var cards = [
+          ["Total users", o.total_users || 0],
+          ["Active beta users", o.active_beta_users || 0],
+          ["Feedback submissions", o.total_feedback || 0],
+          ["Average feedback rating", o.average_feedback_rating || 0],
+          ["Total sessions completed", o.total_sessions_completed || 0],
+          ["Upgrade conversions", o.upgrade_conversions || 0]
+        ];
+        root.innerHTML = cards.map(function (item) {
+          return '<article class="admin-stat"><p class="admin-stat__label">' + esc(item[0]) + "</p><p class=\"admin-stat__value\">" + esc(item[1]) + "</p></article>";
+        }).join("");
+      }
+
+      function renderUsers() {
+        var tbody = el("adminUsersBody");
+        if (!tbody) return;
+        var q = ((el("adminUserSearch") && el("adminUserSearch").value) || "").trim().toLowerCase();
+        var p = ((el("adminUserPlanFilter") && el("adminUserPlanFilter").value) || "all").toLowerCase();
+        var rows = (state.users || []).filter(function (u) {
+          var n = String(u.name || "").toLowerCase();
+          var e = String(u.email || "").toLowerCase();
+          var plan = String(u.plan || "free").toLowerCase();
+          return (!q || n.indexOf(q) !== -1 || e.indexOf(q) !== -1) && (p === "all" || p === plan);
+        });
+        if (!rows.length) {
+          tbody.innerHTML = '<tr><td colspan="8"><p class="admin-empty">No users found.</p></td></tr>';
+          return;
+        }
+        tbody.innerHTML = rows.map(function (u) {
+          return "<tr><td>" + esc(u.name || "—") + "</td><td>" + esc(u.email || "—") + "</td><td>" + esc(u.plan || "free") + "</td><td>" +
+            fmtDate(u.created_at) + "</td><td>" + fmtDate(u.last_activity) + "</td><td>Synced on sign-in</td><td>" +
+            esc((u.plan || "free") === "free" ? "Free" : "Active") + "</td><td>" + esc(u.role || "user") + "</td></tr>";
+        }).join("");
+      }
+
+      function renderFeedback() {
+        var root = el("adminFeedbackList");
+        if (!root) return;
+        var q = ((el("adminFeedbackSearch") && el("adminFeedbackSearch").value) || "").trim().toLowerCase();
+        var r = ((el("adminFeedbackRating") && el("adminFeedbackRating").value) || "all");
+        var t = ((el("adminFeedbackType") && el("adminFeedbackType").value) || "all").toLowerCase();
+        var list = (state.feedback || []).filter(function (item) {
+          var msg = String(item.feedback || "").toLowerCase();
+          var user = String(item.user_id || "").toLowerCase();
+          var type = String(item.session_type || "").toLowerCase();
+          return (!q || msg.indexOf(q) !== -1 || user.indexOf(q) !== -1) &&
+            (r === "all" || String(item.rating || 0) === r) &&
+            (t === "all" || t === type);
+        });
+        if (!list.length) {
+          root.innerHTML = '<p class="admin-empty">No feedback submissions yet.</p>';
+          return;
+        }
+        root.innerHTML = list.map(function (item) {
+          return '<article class="admin-feedback-card"><p class="admin-feedback-card__stars">' + stars(item.rating) +
+            "</p><p class=\"admin-feedback-card__meta\"><strong>" + esc(item.user_id || "Anonymous") + "</strong> · " +
+            esc(item.session_type || "Associate") + " · " + fmtDate(item.timestamp) + "</p><p class=\"admin-feedback-card__text\">\"" +
+            esc(item.feedback || "") + "\"</p></article>";
+        }).join("");
+      }
+
+      function renderAnalytics() {
+        var root = el("adminAnalyticsContent");
+        if (!root) return;
+        var a = state.analytics || {};
+        var features = Array.isArray(a.most_used_features) ? a.most_used_features : [];
+        root.innerHTML =
+          '<div class="admin-grid">' +
+          '<article class="admin-stat"><p class="admin-stat__label">Daily active users</p><p class="admin-stat__value">' + esc(a.daily_active_users || 0) + "</p></article>" +
+          '<article class="admin-stat"><p class="admin-stat__label">Session completion rate</p><p class="admin-stat__value">' + esc(a.session_completion_rate || 0) + "%</p></article>" +
+          '<article class="admin-stat"><p class="admin-stat__label">User retention</p><p class="admin-stat__value">' + esc(a.user_retention || 0) + "%</p></article>" +
+          "</div>" +
+          '<div class="admin-detail"><strong>Most used features</strong><ul>' +
+          (features.length ? features.map(function (f) { return "<li>" + esc(f.feature) + ": " + esc(f.count) + "</li>"; }).join("") : "<li>No usage data yet</li>") +
+          "</ul></div>";
+      }
+
+      function renderPayments() {
+        var root = el("adminPaymentsContent");
+        if (!root) return;
+        var p = state.payments || {};
+        var count = Array.isArray(p.active_subscriptions) ? p.active_subscriptions.length : 0;
+        root.innerHTML =
+          '<div class="admin-grid">' +
+          '<article class="admin-stat"><p class="admin-stat__label">Active subscriptions</p><p class="admin-stat__value">' + esc(count) + "</p></article>" +
+          '<article class="admin-stat"><p class="admin-stat__label">Upgrade conversions</p><p class="admin-stat__value">' + esc(p.upgrade_conversions || 0) + "</p></article>" +
+          "</div>" +
+          '<div class="admin-detail"><strong>Revenue tracking</strong><p style="margin:0;">' + esc((p.revenue_tracking && p.revenue_tracking.message) || "Pending integration.") + "</p></div>";
+      }
+
+      function renderSettings() {
+        var root = el("adminSettingsContent");
+        if (!root) return;
+        var s = state.settings || {};
+        root.innerHTML =
+          '<div class="admin-detail">' +
+          "<p><strong>Platform:</strong> " + esc(s.platform_name || "Spark") + "</p>" +
+          "<p><strong>Beta mode:</strong> " + esc(s.beta_mode ? "Enabled" : "Disabled") + "</p>" +
+          "<p><strong>Admin accounts configured:</strong> " + esc(s.admin_accounts_configured || 0) + "</p>" +
+          "</div>";
+      }
+
+      function bindFilters() {
+        ["adminUserSearch", "adminUserPlanFilter"].forEach(function (id) {
+          var node = el(id);
+          if (!node) return;
+          node.addEventListener("input", renderUsers);
+          node.addEventListener("change", renderUsers);
+        });
+        ["adminFeedbackSearch", "adminFeedbackRating", "adminFeedbackType"].forEach(function (id) {
+          var node = el(id);
+          if (!node) return;
+          node.addEventListener("input", renderFeedback);
+          node.addEventListener("change", renderFeedback);
+        });
+      }
+
+      function verifyAdmin() {
+        var email = userEmail();
+        if (!email) return Promise.resolve(false);
+        if (typeof window.checkSparkAdminAccess === "function") {
+          return window.checkSparkAdminAccess(email).then(function (info) {
+            return Boolean(info && info.is_admin);
+          });
+        }
+        return fetchJson("/auth/role?email=" + encodeURIComponent(email)).then(function (data) {
+          return Boolean(data && data.is_admin);
+        });
+      }
+
+      function loadData() {
+        return Promise.allSettled([
+          fetchJson("/admin/overview"),
+          fetchJson("/admin/users"),
+          fetchJson("/admin/feedback"),
+          fetchJson("/admin/analytics"),
+          fetchJson("/admin/payments"),
+          fetchJson("/admin/settings")
+        ]).then(function (results) {
+          state.overview = results[0].status === "fulfilled" ? (results[0].value.overview || {}) : {};
+          state.users = results[1].status === "fulfilled" ? (results[1].value.users || []) : [];
+          state.feedback = results[2].status === "fulfilled" ? (results[2].value.feedback || []) : localFeedback();
+          state.analytics = results[3].status === "fulfilled" ? (results[3].value.analytics || {}) : {};
+          state.payments = results[4].status === "fulfilled" ? (results[4].value.payments || {}) : {};
+          state.settings = results[5].status === "fulfilled" ? (results[5].value.settings || {}) : {};
+
+          renderOverview();
+          renderUsers();
+          renderFeedback();
+          renderAnalytics();
+          renderPayments();
+          renderSettings();
+
+          var failed = results.filter(function (r) { return r.status === "rejected"; }).length;
+          setMeta(failed > 0 ? ("Signed in as " + userEmail() + " · partial data loaded") : ("Signed in as " + userEmail()));
+        });
+      }
+
+      function showDenied(message) {
+        document.body.innerHTML =
+          '<div class="admin-denied"><h1>Access denied</h1><p>' + esc(message) + '</p><p><a href="index.html">← Back to Home</a></p></div>';
+      }
+
+      function boot() {
+        bindNav();
+        bindFilters();
+        setMeta("Checking admin access…");
+        verifyAdmin().then(function (ok) {
+          if (!ok) {
+            showDenied("Sign in with an admin account to access this dashboard.");
+            return;
+          }
+          setMeta("Loading dashboard data…");
+          return loadData();
+        }).catch(function (err) {
+          console.error("[Spark Admin] boot error:", err);
+          setMeta("Unable to load dashboard");
+        });
+      }
+
+      boot();
+    })();
+  </script>
+</body>
+</html>

@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="enginuity.css" />
+  <link rel="stylesheet" href="site-footer.css" />
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
   <link rel="alternate icon" href="assets/logo.svg" />
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -72,6 +73,9 @@
     </section>
   </div>
 
+  <script src="api-config.js"></script>
+  <script src="user-plan.js"></script>
+  <script src="auth-sync.js"></script>
   <script>
     function parseJwt(token) {
       const base64Url = token.split(".")[1];
@@ -89,6 +93,9 @@
       localStorage.setItem("user_email", data.email);
       localStorage.setItem("user_name", data.name);
       localStorage.setItem("has_started", "true");
+      if (typeof window.syncSparkUser === "function") {
+        window.syncSparkUser();
+      }
       const welcome = document.getElementById("welcomeSignIn");
       if (welcome) welcome.textContent = "Welcome, " + data.name + " — taking you home…";
       window.setTimeout(function () {
@@ -102,6 +109,7 @@
       }
     };
   </script>
+  <script src="site-footer.js"></script>
   <script src="enginuity-loading-screen.js" defer></script>
 </body>
 </html>

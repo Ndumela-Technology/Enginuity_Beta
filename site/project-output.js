@@ -2,6 +2,10 @@
 (function () {
   "use strict";
   var PROJECT_PROGRESS_KEY = "project_progress";
+  var CATEGORY_DONE_KEY = "enginuity_category_build_done";
+  var DONE_BAR_ID = "enginuityDoneBar";
+  var activeDoneProjectId = "";
+  var activeDoneTotalSteps = 0;
 
   function defaultEscapeHtml(str) {
     return String(str)
@@ -317,6 +321,163 @@
     return generated;
   }
 
+  function getModeCategory() {
+    return String(
+      window.MODE || localStorage.getItem("enginuity_mode") || localStorage.getItem("forge_mode") || ""
+    ).trim();
+  }
+
+  function readCategoryDoneMap() {
+    try {
+      return JSON.parse(localStorage.getItem(CATEGORY_DONE_KEY)) || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function hasCompletedCategory(category) {
+    var key = String(category || "").trim();
+    if (!key) return false;
+    return readCategoryDoneMap()[key] === true;
+  }
+
+  function markCategoryComplete(category) {
+    var key = String(category || "").trim();
+    if (!key) return;
+    var map = readCategoryDoneMap();
+    map[key] = true;
+    localStorage.setItem(CATEGORY_DONE_KEY, JSON.stringify(map));
+  }
+
+  function allStepsComplete(projectId, totalSteps) {
+    if (!totalSteps) return false;
+    var progress = getProjectProgress(projectId, totalSteps);
+    return getCompletedCount(progress) >= totalSteps;
+  }
+
+  function ensureDoneBar() {
+    var bar = document.getElementById(DONE_BAR_ID);
+    if (bar) return bar;
+
+    bar = document.createElement("div");
+    bar.id = DONE_BAR_ID;
+    bar.className = "enginuity-done-bar";
+    bar.innerHTML =
+      '<div class="enginuity-done-bar__inner">' +
+      '<button type="button" class="enginuity-done-bar__btn" id="enginuityDoneBtn" disabled>Done — back to home</button>' +
+      '<p class="enginuity-done-bar__hint" id="enginuityDoneHint" hidden></p>' +
+      "</div>";
+    document.body.appendChild(bar);
+
+    bar.querySelector("#enginuityDoneBtn").onclick = function () {
+      if (this.disabled) return;
+      var category = getModeCategory();
+      if (category) markCategoryComplete(category);
+      var target = window.ENGINUITY_DONE_REDIRECT || "index.html";
+      window.location.href = target;
+    };
+
+    return bar;
+  }
+
+  function updateDoneBarState() {
+    var bar = ensureDoneBar();
+    var btn = document.getElementById("enginuityDoneBtn");
+    var hint = document.getElementById("enginuityDoneHint");
+    var hasOutput = document.querySelector(".project-output[data-project-id]");
+    var category = getModeCategory();
+
+    if (!activeDoneProjectId || !activeDoneTotalSteps) {
+      bar.classList.remove("is-visible");
+      document.body.classList.remove("has-enginuity-done-bar");
+      return;
+    }
+
+    if (activeDoneProjectId !== "__always__" && !hasOutput) {
+      bar.classList.remove("is-visible");
+      document.body.classList.remove("has-enginuity-done-bar");
+      return;
+    }
+
+    bar.classList.add("is-visible");
+    document.body.classList.add("has-enginuity-done-bar");
+
+    if (activeDoneProjectId === "__always__") {
+      if (btn) btn.disabled = false;
+      if (hint) {
+        if (hasCompletedCategory(category)) {
+          hint.hidden = true;
+          hint.textContent = "";
+        } else {
+          hint.hidden = true;
+        }
+      }
+      return;
+    }
+
+    var complete = allStepsComplete(activeDoneProjectId, activeDoneTotalSteps);
+    var gateOk =
+      typeof window.enginuityDoneGate === "function"
+        ? window.enginuityDoneGate()
+        : complete;
+    if (btn) btn.disabled = !gateOk;
+
+    if (hint) {
+      if (hasCompletedCategory(category)) {
+        hint.hidden = true;
+        hint.textContent = "";
+      } else if (complete) {
+        hint.hidden = false;
+        hint.textContent = "Tap Done to return home.";
+      } else {
+        hint.hidden = false;
+        hint.textContent = "Complete all steps to unlock Done.";
+      }
+    }
+  }
+
+  function bindDoneBarForProject(projectId, totalSteps) {
+    activeDoneProjectId = projectId || "";
+    activeDoneTotalSteps = totalSteps || 0;
+    updateDoneBarState();
+  }
+
+  function showDoneBarAlways(options) {
+    options = options || {};
+    activeDoneProjectId = "__always__";
+    activeDoneTotalSteps = 1;
+    var bar = ensureDoneBar();
+    bar.classList.add("is-visible");
+    document.body.classList.add("has-enginuity-done-bar");
+    var btn = document.getElementById("enginuityDoneBtn");
+    if (btn) {
+      btn.disabled = false;
+      if (options.label) btn.textContent = options.label;
+    }
+    var hint = document.getElementById("enginuityDoneHint");
+    if (hint) {
+      if (options.hint) {
+        hint.hidden = false;
+        hint.textContent = options.hint;
+      } else {
+        hint.hidden = true;
+      }
+    }
+    if (typeof options.onDone === "function") {
+      btn.onclick = function () {
+        options.onDone();
+      };
+    }
+  }
+
+  function hideDoneBar() {
+    activeDoneProjectId = "";
+    activeDoneTotalSteps = 0;
+    var bar = document.getElementById(DONE_BAR_ID);
+    if (bar) bar.classList.remove("is-visible");
+    document.body.classList.remove("has-enginuity-done-bar");
+  }
+
   function readProgressMap() {
     try {
       return JSON.parse(localStorage.getItem(PROJECT_PROGRESS_KEY)) || {};
@@ -516,6 +677,13 @@
     return html;
   }
 
+  function afterStructuredRender(proj) {
+    var projData = proj || {};
+    var steps = normalizeSteps(projData.steps);
+    var projectId = ensureProjectId(projData);
+    bindDoneBarForProject(projectId, steps.length);
+  }
+
   function renderProjectChoices(projects, options) {
     options = options || {};
     var escape = options.escapeHtml || defaultEscapeHtml;
@@ -564,7 +732,14 @@
     renderStructuredProject: renderStructuredProject,
     renderProjectChoices: renderProjectChoices,
     formatStepItemHtml: formatStepItemHtml,
-    formatExplanationHtml: formatExplanationHtml
+    formatExplanationHtml: formatExplanationHtml,
+    afterStructuredRender: afterStructuredRender,
+    hideDoneBar: hideDoneBar,
+    showDoneBarAlways: showDoneBarAlways,
+    hasCompletedCategory: hasCompletedCategory,
+    markCategoryComplete: markCategoryComplete,
+    allStepsComplete: allStepsComplete,
+    updateDoneBarState: updateDoneBarState
   };
 
   function refreshProgressUi(projectId) {
@@ -592,6 +767,16 @@
       var fill = container.querySelector(".project-output__progress-fill");
       if (fill) fill.style.width = percent + "%";
     });
+    updateDoneBarState();
+  }
+
+  function maybeDispatchStepsComplete(projectId, totalSteps) {
+    if (!allStepsComplete(projectId, totalSteps)) return;
+    document.dispatchEvent(
+      new CustomEvent("enginuity:project-steps-complete", {
+        detail: { projectId: projectId, totalSteps: totalSteps }
+      })
+    );
   }
 
   document.addEventListener("change", function (e) {
@@ -605,5 +790,6 @@
     if (!projectId || stepIndex < 0) return;
     setProjectStepProgress(projectId, stepIndex, input.checked, totalSteps);
     refreshProgressUi(projectId);
+    maybeDispatchStepsComplete(projectId, totalSteps);
   });
 })();
