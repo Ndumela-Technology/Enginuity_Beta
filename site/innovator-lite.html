@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Enginuity Beta · Innovator Lite</title>
+  <title>Enginuity Beta · Innovator Beta</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <script src="enginuity-theme.js"></script>
   <link rel="stylesheet" href="enginuity.css" />
   <link rel="stylesheet" href="project-output.css" />
   <link rel="stylesheet" href="spark-helper.css" />
@@ -14,103 +15,32 @@
   <link rel="stylesheet" href="beta-feedback.css" />
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
   <link rel="alternate icon" href="assets/logo.svg" />
-  <style>
-    .lite-wrap { max-width: 980px; margin: 0 auto; padding: 0 0.4rem 2rem; }
-    .lite-panel {
-      border: 3px solid rgba(216, 31, 38, 0.25);
-      border-radius: 10px 18px 12px 22px / 14px 10px 18px 12px;
-      background: rgba(255, 255, 255, 0.9);
-      box-shadow: 3px 4px 0 rgba(120, 10, 10, 0.1);
-      padding: 1rem 1.1rem 1.1rem;
-      margin-bottom: 1rem;
-    }
-    .lite-title { margin: 0 0 0.4rem; font-size: 2rem; color: var(--eng-red-deep); }
-    .lite-sub { margin: 0; color: #333; line-height: 1.45; }
-    .lite-materials { min-height: 88px; width: 100%; box-sizing: border-box; }
-    .lite-actions { margin-top: 0.75rem; display: flex; gap: 0.6rem; flex-wrap: wrap; }
-    .lite-status { margin-top: 0.6rem; color: #555; font-size: 0.9rem; }
-    .lite-error {
-      border: 1px solid #ffb7b7;
-      background: #fff3f3;
-      color: #8a0000;
-      border-radius: 10px;
-      padding: 0.65rem 0.8rem;
-      margin-top: 0.7rem;
-    }
-    .lite-progress {
-      margin: 0.8rem 0;
-      border: 1px solid #e6e6e6;
-      background: #fafafa;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .lite-progress__bar {
-      height: 12px;
-      width: 0%;
-      background: linear-gradient(90deg, #d81f26, #ff7c31);
-      transition: width 200ms ease;
-    }
-    .lite-progress__label { margin: 0.4rem 0 0; font-size: 0.85rem; color: #555; }
-    .lite-step-check { margin-right: 0.5rem; transform: translateY(1px); }
-    .lite-complete {
-      margin-top: 0.8rem;
-      border: 1px solid #c7f1cf;
-      background: #edfdf1;
-      color: #155724;
-      border-radius: 10px;
-      padding: 0.65rem 0.8rem;
-      display: none;
-    }
-    .lite-done-wrap {
-      margin-top: 1rem;
-      padding-top: 0.5rem;
-      display: none;
-    }
-    .lite-done-wrap.is-visible { display: block; }
-    .lite-done-btn {
-      width: 100%;
-      max-width: 420px;
-      padding: 0.7rem 1rem;
-      border: 3px solid var(--eng-red, #d81f26);
-      border-radius: 10px;
-      background: var(--eng-red-deep, #8b1a1a);
-      color: #fff;
-      font-family: "Special Elite", "Courier New", Courier, monospace;
-      font-size: 1rem;
-      font-weight: 800;
-      cursor: pointer;
-    }
-    .lite-done-btn:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
-    .lite-done-hint {
-      margin: 0.45rem 0 0;
-      font-size: 0.85rem;
-      color: #555;
-      line-height: 1.4;
-    }
-  </style>
+    <link rel="stylesheet" href="mode-pages.css" />
 </head>
 <body class="enginuity-paper">
   <div class="lite-wrap">
     <a class="back" href="index.html">← Back</a>
     <section class="lite-panel">
-      <h1 class="lite-title">Enginuity Beta · Innovator Lite</h1>
-      <p class="lite-sub">
-        Quick 15–20 minute builds. Pick your education/age so SparkAI matches the challenge — still fast, but more advanced if you’re 18+.
+      <h1 class="lite-title" id="litePageTitle">Enginuity Beta · Innovator Beta</h1>
+      <p class="lite-sub" id="litePageSub">
+        Substantial engineering projects with multi-part builds, Concept Render, and SparkHelper — up to 2 days for signed-in Beta testers. Full Innovator mode is coming later.
       </p>
       <label for="liteEducation"><strong>Education / age</strong></label>
-      <select id="liteEducation" class="lite-education" style="display:block;width:100%;max-width:420px;margin:0.35rem 0 0.85rem;padding:0.45rem 0.55rem;border:2px solid rgba(216,31,38,0.28);border-radius:8px;font:inherit;background:#fff;">
-        <option value="middle">Middle-Schooler (10–14)</option>
-        <option value="high" selected>High-Schooler (15–18)</option>
-        <option value="student">Student (18–25)</option>
-        <option value="adult">Adult (25+)</option>
-      </select>
+      <select id="liteEducation" class="lite-education" style="display:block;width:100%;max-width:420px;margin:0.35rem 0 0.85rem;"></select>
+      <div id="liteDifficultyWrap" style="display:none;">
+        <label for="liteDifficulty"><strong>Difficulty (estimated time)</strong></label>
+        <select id="liteDifficulty" class="lite-education" style="display:block;width:100%;max-width:420px;margin:0.35rem 0 0.85rem;">
+          <option>Easy: 45–90 min</option>
+          <option selected>Medium: 4–12 hours</option>
+          <option>Hard: 1–2 days</option>
+        </select>
+      </div>
+      <label for="liteGoal"><strong>Project goal or idea</strong></label>
+      <textarea id="liteGoal" class="lite-materials" style="min-height:4.5rem;margin-bottom:0.85rem;" placeholder="Example: I want to build something that flies using my materials."></textarea>
       <label for="liteMaterials"><strong>Available materials (comma or new line)</strong></label>
       <textarea id="liteMaterials" class="lite-materials" placeholder="Example: paper cups, tape, string, coins"></textarea>
       <div class="lite-actions">
-        <button type="button" id="liteGenerateBtn">Generate Innovator Lite Project</button>
+        <button type="button" id="liteGenerateBtn">Generate Innovator Beta Project</button>
       </div>
       <div id="liteStatus" class="lite-status"></div>
       <div id="liteError" class="lite-error" hidden></div>
@@ -118,24 +48,27 @@
 
     <div id="liteOutput"></div>
     <div id="liteComplete" class="lite-complete">
-      Nice work — you completed your Innovator Lite project.
+      Nice work — you completed your Innovator Beta project.
     </div>
   </div>
 
+  <script src="engineering-fields.js"></script>
   <script src="api-config.js"></script>
   <script src="user-plan.js"></script>
   <script src="project-output.js"></script>
   <script src="saved-projects.js"></script>
-  <script src="diagram-generator.js"></script>
+  <script src="concept-render.js"></script>
+  <script src="spark-ai-brand.js"></script>
   <script src="spark-helper.js" defer></script>
   <script>
     (function () {
       var API_BASE = window.ENGINUITY_API_BASE || "https://enginuity-cpl1.onrender.com";
       var COMPLETED_KEY = "innovator_lite_completed";
       var HAS_STARTED_KEY = "has_started";
-      var MODE = "Innovator Lite";
+      var MODE = "Innovator Beta";
+      var LEGACY_MODE = "Innovator Lite";
       var currentProject = null;
-      var guestUsedDiagram = false;
+      var guestUsedConceptRender = false;
       var guestUsedSparkHelper = false;
       var liteCompletionRecorded = false;
 
@@ -145,13 +78,51 @@
 
       window.MODE = MODE;
       localStorage.setItem("enginuity_mode", MODE);
+      function getDifficultyValue() {
+        var el = document.getElementById("liteDifficulty");
+        return el && el.value ? el.value : "Medium: 4–12 hours";
+      }
+
+      function configureLitePageForUser() {
+        var guest = isGuest();
+        var title = document.getElementById("litePageTitle");
+        var sub = document.getElementById("litePageSub");
+        var diffWrap = document.getElementById("liteDifficultyWrap");
+        var btn = document.getElementById("liteGenerateBtn");
+        if (guest) {
+          if (title) title.textContent = "Enginuity Beta · Quick Intro";
+          if (sub) {
+            sub.textContent =
+              "15–20 minute welcome build using items around you. Sign in after to unlock Innovator Beta projects up to 2 days.";
+          }
+          if (diffWrap) diffWrap.style.display = "none";
+          if (btn) btn.textContent = "Generate Intro Project";
+        } else {
+          if (title) title.textContent = "Enginuity Beta · Innovator Beta";
+          if (sub) {
+            sub.textContent =
+              "One substantial project per Beta tester — multi-part builds, Concept Render, and SparkHelper. Projects can run up to 2 days. Full Innovator mode launches later.";
+          }
+          if (diffWrap) diffWrap.style.display = "block";
+          if (btn) btn.textContent = "Generate Innovator Beta Project";
+        }
+      }
+
       window.ENGINUITY_DONE_REDIRECT = isGuest() ? "sign-in.html" : "index.html";
 
-      window.canUseDiagram = function () { return { allowed: true }; };
-      window.recordDiagramUse = function () {
-        guestUsedDiagram = true;
+      configureLitePageForUser();
+
+      if (typeof window.populateEducationSelect === "function") {
+        window.populateEducationSelect(document.getElementById("liteEducation"), "high");
+      }
+
+      window.canUseConceptRender = function () { return { allowed: true }; };
+      window.recordConceptRenderUse = function () {
+        guestUsedConceptRender = true;
         if (window.ProjectOutput) window.ProjectOutput.updateDoneBarState();
       };
+      window.canUseDiagram = window.canUseConceptRender;
+      window.recordDiagramUse = window.recordConceptRenderUse;
       window.canUseSparkHelper = function () { return { allowed: true }; };
       window.recordSparkHelperUse = function () {
         guestUsedSparkHelper = true;
@@ -165,7 +136,7 @@
         var id = currentProject.id || "";
         if (!window.ProjectOutput.allStepsComplete(id, steps)) return false;
         if (!isGuest()) return true;
-        return guestUsedDiagram || guestUsedSparkHelper;
+        return guestUsedConceptRender || guestUsedSparkHelper;
       };
 
       function escapeHtml(str) {
@@ -187,6 +158,11 @@
       function getEducationValue() {
         var el = document.getElementById("liteEducation");
         return el && el.value ? el.value : "high";
+      }
+
+      function getProjectGoal() {
+        var el = document.getElementById("liteGoal");
+        return el && el.value ? el.value.trim() : "";
       }
 
       function getMaterialsList() {
@@ -259,7 +235,7 @@
         if (hint && isGuest() && !window.ProjectOutput.hasCompletedCategory(MODE)) {
           hint.hidden = false;
           hint.textContent =
-            "Check off every step, then try at least one diagram or SparkHelper question.";
+            "Check off every step, then try at least one Concept Render or SparkHelper question.";
         }
       }
 
@@ -269,14 +245,20 @@
       });
 
       function normalizeLiteProject(data, materials) {
+        var guest = isGuest();
+        var steps = Array.isArray(data.steps) ? data.steps.map(String).filter(Boolean) : [];
+        if (guest && steps.length > 7) steps = steps.slice(0, 7);
+        var difficulty = data.difficulty || (guest ? "Beginner" : "Intermediate");
+        var estimated = data.estimated_time || data.estimatedTime || (guest ? "15-20 minutes" : getDifficultyValue());
         return {
-          id: "innovator-lite-" + Date.now(),
-          title: data.title || "Innovator Lite Project",
+          id: "innovator-beta-" + Date.now(),
+          title: data.title || "Innovator Beta Project",
           description: data.description || "",
-          estimatedTime: data.estimated_time || "15-20 minutes",
-          difficulty: data.difficulty || "Beginner",
+          estimatedTime: estimated,
+          difficulty: difficulty,
           materials: Array.isArray(data.materials) && data.materials.length ? data.materials : materials,
-          steps: Array.isArray(data.steps) ? data.steps.map(String).filter(Boolean).slice(0, 7) : [],
+          steps: steps,
+          buildPhases: data.build_phases || data.buildPhases || null,
           scienceExplanation: data.science_explanation || "",
           mode: MODE,
           page: "innovator-lite.html"
@@ -296,10 +278,10 @@
 
       async function generateLiteProject() {
         setError("");
-        if (typeof window.canUseInnovatorLite === "function") {
+        if (typeof window.canUseInnovatorLite === "function" && !isGuest()) {
           var liteCheck = window.canUseInnovatorLite();
           if (!liteCheck.allowed) {
-            setError(liteCheck.message || "Innovator Lite Beta limit reached.");
+            setError(liteCheck.message || "Innovator Beta limit reached.");
             return;
           }
         }
@@ -311,57 +293,25 @@
           return;
         }
 
-        status.textContent = "SparkAI is designing your project...";
+        status.innerHTML =
+          '<img class="thinking-box__bolt" src="assets/spark-ai-bolt.svg" width="28" height="28" alt="" aria-hidden="true" style="vertical-align:-0.35em;margin-right:0.35rem;" />' +
+          'SparkAI is designing your project...';
         btn.disabled = true;
         btn.textContent = "Generating...";
 
         try {
-          async function requestLite(base) {
-            return fetch(base + "/generate-innovator-lite", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                materials: materials,
-                education: getEducationValue()
-              })
-            });
+          var payload = {
+            materials: materials,
+            education: getEducationValue(),
+            tutorial: isGuest(),
+            description: getProjectGoal()
+          };
+          if (!isGuest()) {
+            payload.difficulty = getDifficultyValue();
           }
-
-          var res;
-          var usedFallbackBase = false;
-          try {
-            res = await requestLite(API_BASE);
-          } catch (fetchErr) {
-            var isLocalBase =
-              API_BASE.indexOf("127.0.0.1") !== -1 ||
-              API_BASE.indexOf("localhost") !== -1;
-            if (!isLocalBase) throw fetchErr;
-            res = await requestLite("https://enginuity-cpl1.onrender.com");
-            usedFallbackBase = true;
-          }
-
-          if (
-            res &&
-            res.status === 404 &&
-            !usedFallbackBase &&
-            (API_BASE.indexOf("127.0.0.1") !== -1 || API_BASE.indexOf("localhost") !== -1)
-          ) {
-            res = await requestLite("https://enginuity-cpl1.onrender.com");
-            usedFallbackBase = true;
-          }
-          if (!res.ok) {
-            if (res.status === 404) {
-              throw new Error(
-                "Innovator Lite API not found (404). Redeploy the backend with /generate-innovator-lite, " +
-                "or run it locally at " + API_BASE + "."
-              );
-            }
-            throw new Error("Server returned " + res.status);
-          }
-
-          var data = await res.json();
+          var data = await window.enginuityPostJson("/generate-innovator-lite", payload);
           if (data && data.error) {
-            setError(data.error);
+            setError(data.error + (data.suggestion ? " " + data.suggestion : ""));
             return;
           }
 
@@ -371,13 +321,21 @@
             return;
           }
 
-          status.textContent = "Project ready. Build, track progress, and ask SparkHelper anytime.";
+          var signedIn = !isGuest();
+
+          if (signedIn && typeof window.recordInnovatorBetaGeneration === "function") {
+            window.recordInnovatorBetaGeneration(project.id);
+          }
+
+          status.textContent = signedIn
+            ? "Innovator Beta project ready. Multi-part build with Concept Render and SparkHelper."
+            : "Intro project ready. Follow your steps and try Concept Render or SparkHelper.";
           renderProject(project);
         } catch (err) {
           setError("Request failed: " + (err && err.message ? err.message : String(err)));
         } finally {
           btn.disabled = false;
-          btn.textContent = "Generate Innovator Lite Project";
+          btn.textContent = isGuest() ? "Generate Intro Project" : "Generate Innovator Beta Project";
         }
       }
 

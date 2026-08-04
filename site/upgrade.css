@@ -13,16 +13,18 @@
   border: 2px solid var(--eng-red, #d81f26);
   border-radius: 999px;
   padding: 0.42rem 0.85rem;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--mode-tab-bg, rgba(255, 255, 255, 0.95));
   color: var(--eng-red-deep, #8a0000);
   font-family: "Special Elite", "Courier New", Courier, monospace;
   font-size: 0.82rem;
   font-weight: 800;
   cursor: pointer;
+  box-shadow: 2px 3px 0 rgba(120, 10, 10, 0.08);
+  transition: background 160ms ease, box-shadow 160ms ease;
 }
 
 .eng-upgrade-btn:hover {
-  background: rgba(216, 31, 38, 0.08);
+  background: rgba(216, 31, 38, 0.1);
 }
 
 .eng-upgrade-modal {
@@ -33,7 +35,7 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(16, 10, 10, 0.72);
+  background: rgba(8, 8, 10, 0.82);
   backdrop-filter: blur(3px);
 }
 
@@ -45,11 +47,11 @@
   margin: 0 0 0.75rem;
   padding: 0.55rem 0.7rem;
   border-radius: 8px;
-  border: 1px solid rgba(216, 31, 38, 0.2);
-  background: rgba(216, 31, 38, 0.06);
+  border: 2px solid rgba(216, 31, 38, 0.35);
+  background: rgba(216, 31, 38, 0.08);
   font-size: 0.88rem;
   line-height: 1.4;
-  color: #444;
+  color: var(--eng-red-deep, #8a0000);
 }
 
 .eng-upgrade-modal__card {
@@ -57,10 +59,10 @@
   max-height: 92vh;
   overflow: auto;
   border-radius: 14px;
-  border: 1px solid rgba(216, 31, 38, 0.28);
-  background: #fff;
+  border: 2px solid rgba(216, 31, 38, 0.4);
+  background: var(--mode-tab-bg, var(--surface-card, #fff));
   padding: 1rem;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
 }
 
 .eng-upgrade-modal__head {
@@ -74,37 +76,45 @@
 .eng-upgrade-modal__head h2 {
   margin: 0;
   font-size: 1.35rem;
-  color: var(--eng-red-deep, #8a0000);
+  color: var(--eng-red, #d81f26);
 }
 
 .eng-upgrade-modal__sub {
   margin: 0.2rem 0 0;
   font-size: 0.85rem;
-  color: rgba(30, 30, 30, 0.65);
+  color: var(--eng-red-deep, #8a0000);
 }
 
 .eng-upgrade-modal__close {
-  border: none;
-  background: transparent;
-  font-size: 1.5rem;
+  border: 2px solid rgba(216, 31, 38, 0.35);
+  border-radius: 8px;
+  background: var(--surface-muted, transparent);
+  font-size: 1.35rem;
   line-height: 1;
+  width: 2rem;
+  height: 2rem;
   cursor: pointer;
-  color: #444;
+  color: var(--eng-red-deep, #8a0000);
+}
+
+.eng-upgrade-modal__close:hover {
+  background: rgba(216, 31, 38, 0.1);
+  color: var(--eng-red, #d81f26);
 }
 
 .eng-upgrade-billing-toggle {
   display: inline-flex;
-  border: 1px solid #ddd;
+  border: 2px solid rgba(216, 31, 38, 0.35);
   border-radius: 999px;
   overflow: hidden;
   margin-bottom: 0.85rem;
-  background: #f4f4f4;
+  background: var(--surface-muted, #f4f4f4);
 }
 
 .eng-upgrade-billing-toggle button {
   border: none;
   background: transparent;
-  color: #333;
+  color: var(--eng-red-deep, #8a0000);
   padding: 0.42rem 0.8rem;
   font-size: 0.82rem;
   font-weight: 700;
@@ -113,7 +123,7 @@
 }
 
 .eng-upgrade-billing-toggle button.is-active {
-  background: #111;
+  background: var(--eng-red-deep, #8a0000);
   color: #fff;
 }
 
@@ -125,20 +135,20 @@
 
 .eng-upgrade-plan {
   position: relative;
-  border: 1px solid #e4e4e4;
+  border: 2px solid rgba(216, 31, 38, 0.35);
   border-radius: 12px;
   padding: 0.8rem;
-  background: #fafafa;
+  background: var(--surface-muted, #fafafa);
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .eng-upgrade-plan.is-current {
-  border-color: rgba(216, 31, 38, 0.55);
-  box-shadow: 0 0 0 2px rgba(216, 31, 38, 0.12);
+  border-color: rgba(216, 31, 38, 0.65);
+  box-shadow: 0 0 0 2px rgba(216, 31, 38, 0.15);
 }
 
 .eng-upgrade-plan.is-recommended {
-  border-color: rgba(216, 31, 38, 0.75);
+  border-color: var(--eng-red, #d81f26);
 }
 
 .eng-upgrade-plan__badge {
@@ -151,7 +161,7 @@
   font-weight: 800;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  background: #111;
+  background: var(--eng-red-deep, #8a0000);
   color: #fff;
 }
 
@@ -162,13 +172,14 @@
 .eng-upgrade-plan h3 {
   margin: 0 0 0.2rem;
   font-size: 1.05rem;
-  color: var(--eng-red-deep, #8a0000);
+  color: var(--eng-red, #d81f26);
 }
 
 .eng-upgrade-plan__price {
   margin: 0 0 0.45rem;
   font-size: 1.25rem;
   font-weight: 800;
+  color: var(--eng-red-deep, #8a0000);
 }
 
 .eng-upgrade-plan ul {
@@ -176,6 +187,7 @@
   padding-left: 1rem;
   font-size: 0.84rem;
   line-height: 1.4;
+  color: var(--eng-red-deep, #8a0000);
 }
 
 .eng-upgrade-plan__select {
@@ -183,11 +195,15 @@
   border: 2px solid var(--eng-red, #d81f26);
   border-radius: 8px;
   padding: 0.45rem 0.55rem;
-  background: #fff;
+  background: var(--mode-tab-bg, var(--surface-card, #fff));
   color: var(--eng-red-deep, #8a0000);
   font-family: inherit;
   font-weight: 800;
   cursor: pointer;
+}
+
+.eng-upgrade-plan__select:hover:not(:disabled) {
+  background: rgba(216, 31, 38, 0.1);
 }
 
 .eng-upgrade-plan__select:disabled {
@@ -199,4 +215,74 @@
   .eng-upgrade-plans {
     grid-template-columns: 1fr;
   }
+}
+
+[data-theme="dark"] .eng-upgrade-btn {
+  background: var(--mode-tab-bg);
+  border-color: var(--eng-red);
+  color: var(--eng-red);
+  box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .eng-upgrade-btn:hover {
+  background: rgba(216, 31, 38, 0.14);
+}
+
+[data-theme="dark"] .eng-upgrade-modal__card {
+  background: var(--mode-tab-bg);
+  border-color: rgba(216, 31, 38, 0.5);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+}
+
+[data-theme="dark"] .eng-upgrade-modal__beta-note {
+  background: rgba(216, 31, 38, 0.12);
+  border-color: rgba(216, 31, 38, 0.45);
+  color: var(--eng-red);
+}
+
+[data-theme="dark"] .eng-upgrade-modal__sub,
+[data-theme="dark"] .eng-upgrade-plan ul,
+[data-theme="dark"] .eng-upgrade-plan__price {
+  color: var(--eng-red-deep);
+}
+
+[data-theme="dark"] .eng-upgrade-billing-toggle {
+  background: var(--surface-muted);
+  border-color: rgba(216, 31, 38, 0.45);
+}
+
+[data-theme="dark"] .eng-upgrade-billing-toggle button {
+  color: var(--eng-red-deep);
+}
+
+[data-theme="dark"] .eng-upgrade-billing-toggle button.is-active {
+  background: var(--eng-red-deep);
+  color: #fff;
+}
+
+[data-theme="dark"] .eng-upgrade-plan {
+  background: var(--surface-muted);
+  border-color: rgba(216, 31, 38, 0.4);
+}
+
+[data-theme="dark"] .eng-upgrade-plan.is-current,
+[data-theme="dark"] .eng-upgrade-plan.is-recommended {
+  border-color: var(--eng-red);
+  box-shadow: 0 0 0 2px rgba(216, 31, 38, 0.18);
+}
+
+[data-theme="dark"] .eng-upgrade-plan__select {
+  background: var(--mode-tab-bg);
+  border-color: var(--eng-red);
+  color: var(--eng-red);
+}
+
+[data-theme="dark"] .eng-upgrade-plan__select:hover:not(:disabled) {
+  background: rgba(216, 31, 38, 0.14);
+}
+
+[data-theme="dark"] .eng-upgrade-modal__close {
+  background: var(--surface-muted);
+  border-color: rgba(216, 31, 38, 0.4);
+  color: var(--eng-red);
 }

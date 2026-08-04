@@ -63,6 +63,7 @@ def sync_user(
     plan: str = "free",
     *,
     increment_sessions: int = 0,
+    preferences: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     key = normalize_email(email)
     if not key:
@@ -76,6 +77,12 @@ def sync_user(
     sessions = int(existing.get("sessions_completed", 0) or 0)
     sessions += max(0, increment_sessions)
 
+    merged_preferences = dict(existing.get("preferences") or {})
+    if isinstance(preferences, dict):
+        for pref_key, pref_value in preferences.items():
+            if pref_value is not None:
+                merged_preferences[pref_key] = pref_value
+
     user = {
         "id": existing.get("id") or str(uuid.uuid4()),
         "name": (name or existing.get("name") or "").strip(),
@@ -85,10 +92,30 @@ def sync_user(
         "created_at": existing.get("created_at") or now,
         "last_activity": now,
         "sessions_completed": sessions,
+        "preferences": merged_preferences,
     }
     users[key] = user
     _write_users_doc(doc)
     return user
+
+
+def update_user_preferences(email: str, preferences: Dict[str, Any]) -> Dict[str, Any]:
+    key = normalize_email(email)
+    if not key:
+        raise ValueError("email is required")
+    if not isinstance(preferences, dict):
+        raise ValueError("preferences must be an object")
+
+    doc = _read_users_doc()
+    users = doc.setdefault("users", {})
+    existing = users.get(key) or sync_user(key, plan="free")
+    merged = dict(existing.get("preferences") or {})
+    merged.update(preferences)
+    existing["preferences"] = merged
+    existing["last_activity"] = utc_now()
+    users[key] = existing
+    _write_users_doc(doc)
+    return existing
 
 
 def touch_activity(email: str, event_type: str = "activity", metadata: Optional[dict] = None) -> Optional[Dict[str, Any]]:

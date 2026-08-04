@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <script src="enginuity-theme.js"></script>
   <link rel="stylesheet" href="enginuity.css" />
   <link rel="stylesheet" href="profile.css" />
   <link rel="stylesheet" href="site-footer.css" />
@@ -35,6 +36,19 @@
       <p class="profile-card__value" id="profilePlanName">Free</p>
     </section>
 
+    <section class="profile-card" aria-labelledby="profileAppearanceLabel">
+      <p class="profile-card__label" id="profileAppearanceLabel">Appearance</p>
+      <p class="profile-page__hint" style="margin-bottom:0.65rem;">
+        Dark mode uses a charcoal blueprint background while keeping Spark red accents. Saved to your account when signed in.
+      </p>
+      <label class="profile-theme-toggle" for="darkModeToggle">
+        <span class="profile-theme-toggle__label">Dark mode</span>
+        <input type="checkbox" id="darkModeToggle" class="profile-theme-toggle__input" />
+        <span class="profile-theme-toggle__track" aria-hidden="true"></span>
+      </label>
+      <p id="themeSaveStatus" class="profile-page__hint" style="margin-top:0.55rem;" hidden></p>
+    </section>
+
     <section class="profile-card" aria-labelledby="profileTutorialLabel">
       <p class="profile-card__label" id="profileTutorialLabel">Tutorial</p>
       <p class="profile-page__hint" style="margin-bottom:0.65rem;">
@@ -45,6 +59,17 @@
         <button type="button" id="resetTutorialBtn" class="profile-action-btn profile-action-btn--secondary">Reset Tutorial Progress</button>
       </div>
       <p id="tutorialResetStatus" class="profile-page__hint" style="margin-top:0.55rem;" hidden></p>
+    </section>
+
+    <section class="profile-card" aria-labelledby="profileBetaTrialsLabel">
+      <p class="profile-card__label" id="profileBetaTrialsLabel">Beta trials</p>
+      <p class="profile-page__hint" style="margin-bottom:0.65rem;">
+        Restore your Associate and Innovator Beta trial builds (3 and 1 during Beta).
+      </p>
+      <div class="profile-tutorial-actions">
+        <button type="button" id="resetBetaTrialsBtn" class="profile-action-btn profile-action-btn--secondary">Reset Beta Trial Progress</button>
+      </div>
+      <p id="betaTrialsResetStatus" class="profile-page__hint" style="margin-top:0.55rem;" hidden></p>
     </section>
 
     <section class="profile-card">
@@ -163,6 +188,62 @@
         });
       }
 
+      function wireThemeControls() {
+        var toggle = document.getElementById("darkModeToggle");
+        var statusEl = document.getElementById("themeSaveStatus");
+        if (!toggle) return;
+
+        toggle.checked =
+          typeof window.getEnginuityTheme === "function" &&
+          window.getEnginuityTheme() === "dark";
+
+        toggle.addEventListener("change", function () {
+          var next = toggle.checked ? "dark" : "light";
+          if (typeof window.setEnginuityTheme === "function") {
+            window.setEnginuityTheme(next);
+          }
+          if (statusEl) {
+            statusEl.hidden = false;
+            statusEl.textContent = localStorage.getItem("user_email")
+              ? "Theme saved to your account."
+              : "Theme saved on this device. Sign in to sync across devices.";
+          }
+        });
+
+        document.addEventListener("enginuity:theme-changed", function (e) {
+          var theme =
+            e && e.detail && e.detail.theme ? e.detail.theme : "light";
+          toggle.checked = theme === "dark";
+        });
+      }
+
+      function wireBetaTrialControls() {
+        var resetBtn = document.getElementById("resetBetaTrialsBtn");
+        var statusEl = document.getElementById("betaTrialsResetStatus");
+        if (!resetBtn) return;
+
+        resetBtn.addEventListener("click", function () {
+          if (
+            typeof window.resetBetaTrialProgress !== "function" ||
+            !window.confirm(
+              "Reset Associate and Innovator Beta trial progress on this browser?"
+            )
+          ) {
+            return;
+          }
+          var result = window.resetBetaTrialProgress();
+          if (statusEl) {
+            statusEl.hidden = false;
+            statusEl.textContent =
+              "Beta trials reset. You have " +
+              result.associateRemaining +
+              " Associate and " +
+              result.innovatorLiteRemaining +
+              " Innovator Beta builds available. Refresh the home page to see updated badges.";
+          }
+        });
+      }
+
       function wireTutorialControls() {
         var replayBtn = document.getElementById("replayTutorialBtn");
         var resetBtn = document.getElementById("resetTutorialBtn");
@@ -191,9 +272,12 @@
 
       document.addEventListener("enginuity:plan-changed", renderProfile);
       renderProfile();
+      wireThemeControls();
       wireTutorialControls();
+      wireBetaTrialControls();
     })();
   </script>
+  <script src="spark-ai-brand.js"></script>
   <script src="site-footer.js"></script>
   <script src="enginuity-loading-screen.js" defer></script>
 </body>

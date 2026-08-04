@@ -4,6 +4,8 @@
   var PROJECT_PROGRESS_KEY = "project_progress";
   var CATEGORY_DONE_KEY = "enginuity_category_build_done";
   var DONE_BAR_ID = "enginuityDoneBar";
+  var DONE_BAR_EXTRA_CLEARANCE = 24;
+  var doneBarResizeObserver = null;
   var activeDoneProjectId = "";
   var activeDoneTotalSteps = 0;
 
@@ -298,6 +300,217 @@
     return nlToBr(boldPrefix);
   }
 
+  var PHASE_NAME_POOL = [
+    "Foundation",
+    "Structure",
+    "Electronics",
+    "Programming",
+    "Testing & Final Assembly"
+  ];
+
+  function parseEstimatedMinutes(project) {
+    var raw = String(
+      (project && (project.estimatedTime || project.estimated_time)) || ""
+    ).toLowerCase();
+    if (!raw && project && project.difficulty) {
+      raw = String(project.difficulty).toLowerCase();
+    }
+    var rangeDays = raw.match(/(\d+)\s*(?:-|–|to)\s*(\d+)\s*days?/);
+    if (rangeDays) {
+      return ((parseInt(rangeDays[1], 10) + parseInt(rangeDays[2], 10)) / 2) * 24 * 60;
+    }
+    var singleDay = raw.match(/(\d+(?:\.\d+)?)\s*days?/);
+    if (singleDay) return parseFloat(singleDay[1]) * 24 * 60;
+    var hourMatch = raw.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b/);
+    if (hourMatch) return parseFloat(hourMatch[1]) * 60;
+    var rangeHour = raw.match(/(\d+)\s*(?:-|–|to)\s*(\d+)\s*(?:hours?|hrs?)\b/);
+    if (rangeHour) {
+      return ((parseInt(rangeHour[1], 10) + parseInt(rangeHour[2], 10)) / 2) * 60;
+    }
+    var rangeMin = raw.match(/(\d+)\s*(?:-|–|to)\s*(\d+)\s*min/);
+    if (rangeMin) {
+      return (parseInt(rangeMin[1], 10) + parseInt(rangeMin[2], 10)) / 2;
+    }
+    var singleMin = raw.match(/(\d+)\s*min/);
+    if (singleMin) return parseInt(singleMin[1], 10);
+    return null;
+  }
+
+  function phasesFromExplicit(project, list) {
+    var explicit = project.buildPhases || project.build_phases;
+    if (!Array.isArray(explicit) || !explicit.length) return null;
+    var phases = [];
+    var offset = 0;
+    var p;
+    for (p = 0; p < explicit.length; p++) {
+      var phase = explicit[p] || {};
+      var phaseSteps = normalizeSteps(phase.steps || []);
+      if (!phaseSteps.length) continue;
+      var name = String(phase.name || phase.title || PHASE_NAME_POOL[p] || "Phase " + (p + 1)).trim();
+      phases.push({
+        index: phases.length,
+        name: name,
+        title: "Part " + (phases.length + 1) + " — " + name,
+        steps: phaseSteps,
+        stepStartIndex: offset
+      });
+      offset += phaseSteps.length;
+    }
+    if (!phases.length) return null;
+    if (list.length && offset !== list.length) {
+      return null;
+    }
+    return phases;
+  }
+
+  function computeBuildPhases(steps, project) {
+    project = project || {};
+    var list = Array.isArray(steps) ? steps : normalizeSteps(steps);
+    var explicitPhases = phasesFromExplicit(project, list);
+    if (explicitPhases && explicitPhases.length > 0) {
+      return explicitPhases;
+    }
+
+    var minutes = parseEstimatedMinutes(project);
+    var count = list.length;
+    var isMultiDay = minutes != null && minutes >= 20 * 60;
+    var isLongSession = minutes != null && minutes > 90;
+    var needsPhases = isMultiDay || isLongSession || count > 14;
+
+    if (!needsPhases) {
+      return [
+        {
+          index: 0,
+          name: "Build",
+          title: "Part 1 — Build",
+          steps: list.slice(),
+          stepStartIndex: 0
+        }
+      ];
+    }
+
+    var maxStepsPerPhase = isMultiDay ? 10 : 7;
+    var phaseCount = Math.ceil(count / maxStepsPerPhase);
+    if (isMultiDay) {
+      phaseCount = Math.max(phaseCount, Math.min(5, Math.ceil(minutes / (8 * 60))));
+      phaseCount = Math.max(phaseCount, 3);
+    } else if (minutes != null && minutes > 60) {
+      phaseCount = Math.max(phaseCount, Math.min(5, Math.ceil(minutes / 45)));
+    }
+    phaseCount = Math.min(Math.max(phaseCount, 2), 5);
+    var perPhase = Math.ceil(count / phaseCount);
+    var phases = [];
+    var p;
+    for (p = 0; p < phaseCount; p++) {
+      var start = p * perPhase;
+      if (start >= count) break;
+      var end = Math.min(start + perPhase, count);
+      var name = PHASE_NAME_POOL[p] || "Phase " + (p + 1);
+      phases.push({
+        index: p,
+        name: name,
+        title: "Part " + (p + 1) + " — " + name,
+        steps: list.slice(start, end),
+        stepStartIndex: start
+      });
+    }
+    return phases;
+  }
+
+  function renderConceptRenderSection(phases, escape) {
+    var firstTitle = phases[0] ? phases[0].title : "Part 1 — Build";
+    var showNav = phases.length > 1;
+    return (
+      '<section class="project-output__section project-output__section--concept-render">' +
+      '<h3 class="project-output__label">Concept Render</h3>' +
+      '<p class="concept-render__hint">Guided assembly visualization — understand how parts fit together. Your final design stays yours to create.</p>' +
+      (showNav
+        ? '<div class="concept-render__nav">' +
+          '<button type="button" class="concept-render__nav-btn" data-action="prev" disabled aria-label="Previous build phase">Previous</button>' +
+          '<span class="concept-render__phase-label">' +
+          escape(firstTitle) +
+          "</span>" +
+          '<button type="button" class="concept-render__nav-btn" data-action="next"' +
+          (phases.length <= 1 ? " disabled" : "") +
+          ' aria-label="Next build phase">Next</button>' +
+          "</div>"
+        : '<p class="concept-render__phase-label concept-render__phase-label--solo">' +
+          escape(firstTitle) +
+          "</p>") +
+      '<div class="concept-render__panel">' +
+      '<button type="button" class="concept-render__generate-btn" title="Generate an exploded assembly view for this build phase">Generate Concept Render</button>' +
+      '<div class="concept-render__slot" hidden aria-live="polite"></div>' +
+      "</div>" +
+      "</section>"
+    );
+  }
+
+  function renderPhasedStepsSection(phases, escape, projectId, progress) {
+    if (!phases.length) {
+      return (
+        '<section class="project-output__section">' +
+        '<h3 class="project-output__label">Build instructions</h3>' +
+        '<p class="project-output__muted">Not provided.</p>' +
+        "</section>"
+      );
+    }
+
+    var phaseBlocks = phases
+      .map(function (phase) {
+        var inner = phase.steps
+          .map(function (item, localIndex) {
+            var globalIndex = phase.stepStartIndex + localIndex;
+            var stepRaw = item == null ? "" : String(item);
+            var content = formatStepItemHtml(stepRaw, escape);
+            var checked = Boolean(progress[globalIndex]);
+            return (
+              '<li class="project-output__step' +
+              (checked ? " is-complete" : "") +
+              '">' +
+              '<label class="project-output__step-main">' +
+              '<input type="checkbox" class="project-output__step-check" data-project-id="' +
+              escape(projectId) +
+              '" data-step-index="' +
+              globalIndex +
+              '" data-total-steps="' +
+              progress.length +
+              '"' +
+              (checked ? " checked" : "") +
+              ">" +
+              '<span class="project-output__step-text">' +
+              content +
+              "</span>" +
+              "</label>" +
+              "</li>"
+            );
+          })
+          .join("");
+
+        return (
+          '<div class="build-phase" data-phase-index="' +
+          phase.index +
+          '"' +
+          (phase.index === 0 ? "" : " hidden") +
+          ">" +
+          '<h4 class="build-phase__title">' +
+          escape(phase.title) +
+          "</h4>" +
+          '<ol class="project-output__steps">' +
+          inner +
+          "</ol>" +
+          "</div>"
+        );
+      })
+      .join("");
+
+    return (
+      '<section class="project-output__section project-output__section--phases">' +
+      '<h3 class="project-output__label">Build instructions</h3>' +
+      phaseBlocks +
+      "</section>"
+    );
+  }
+
   function stableProjectIdFromContent(projData) {
     var raw = [
       projData.title || "",
@@ -355,6 +568,30 @@
     return getCompletedCount(progress) >= totalSteps;
   }
 
+  function syncDoneBarInset() {
+    var bar = document.getElementById(DONE_BAR_ID);
+    var root = document.documentElement;
+    var hint = document.getElementById("enginuityDoneHint");
+    var visible = bar && bar.classList.contains("is-visible");
+
+    if (!visible) {
+      root.style.removeProperty("--enginuity-done-bar-offset");
+      document.documentElement.classList.remove("has-enginuity-done-bar-scroll");
+      document.body.classList.remove("has-enginuity-done-bar-hint");
+      return;
+    }
+
+    if (hint && !hint.hidden && String(hint.textContent || "").trim()) {
+      document.body.classList.add("has-enginuity-done-bar-hint");
+    } else {
+      document.body.classList.remove("has-enginuity-done-bar-hint");
+    }
+
+    var offset = bar.offsetHeight + DONE_BAR_EXTRA_CLEARANCE;
+    root.style.setProperty("--enginuity-done-bar-offset", offset + "px");
+    document.documentElement.classList.add("has-enginuity-done-bar-scroll");
+  }
+
   function ensureDoneBar() {
     var bar = document.getElementById(DONE_BAR_ID);
     if (bar) return bar;
@@ -368,6 +605,14 @@
       '<p class="enginuity-done-bar__hint" id="enginuityDoneHint" hidden></p>' +
       "</div>";
     document.body.appendChild(bar);
+
+    if (typeof window.ResizeObserver === "function") {
+      doneBarResizeObserver = new ResizeObserver(function () {
+        syncDoneBarInset();
+      });
+      doneBarResizeObserver.observe(bar);
+    }
+    window.addEventListener("resize", syncDoneBarInset);
 
     bar.querySelector("#enginuityDoneBtn").onclick = function () {
       if (this.disabled) return;
@@ -390,12 +635,14 @@
     if (!activeDoneProjectId || !activeDoneTotalSteps) {
       bar.classList.remove("is-visible");
       document.body.classList.remove("has-enginuity-done-bar");
+      syncDoneBarInset();
       return;
     }
 
     if (activeDoneProjectId !== "__always__" && !hasOutput) {
       bar.classList.remove("is-visible");
       document.body.classList.remove("has-enginuity-done-bar");
+      syncDoneBarInset();
       return;
     }
 
@@ -412,6 +659,7 @@
           hint.hidden = true;
         }
       }
+      requestAnimationFrame(syncDoneBarInset);
       return;
     }
 
@@ -434,6 +682,7 @@
         hint.textContent = "Complete all steps to unlock Done.";
       }
     }
+    requestAnimationFrame(syncDoneBarInset);
   }
 
   function bindDoneBarForProject(projectId, totalSteps) {
@@ -468,6 +717,7 @@
         options.onDone();
       };
     }
+    requestAnimationFrame(syncDoneBarInset);
   }
 
   function hideDoneBar() {
@@ -476,6 +726,8 @@
     var bar = document.getElementById(DONE_BAR_ID);
     if (bar) bar.classList.remove("is-visible");
     document.body.classList.remove("has-enginuity-done-bar");
+    document.body.classList.remove("has-enginuity-done-bar-hint");
+    syncDoneBarInset();
   }
 
   function readProgressMap() {
@@ -554,59 +806,6 @@
     );
   }
 
-  function renderStepsSection(steps, escape, projectId, progress) {
-    if (!steps.length) {
-      return (
-        '<section class="project-output__section">' +
-        '<h3 class="project-output__label">Steps</h3>' +
-        '<p class="project-output__muted">Not provided.</p>' +
-        "</section>"
-      );
-    }
-    var inner = steps
-      .map(function (item, index) {
-        var stepRaw = item == null ? "" : String(item);
-        var content = formatStepItemHtml(stepRaw, escape);
-        var encoded = encodeURIComponent(stepRaw);
-        var checked = Boolean(progress[index]);
-        return (
-          '<li class="project-output__step' + (checked ? " is-complete" : "") + '">' +
-          '<label class="project-output__step-main">' +
-          '<input type="checkbox" class="project-output__step-check" data-project-id="' +
-          escape(projectId) +
-          '" data-step-index="' +
-          index +
-          '" data-total-steps="' +
-          steps.length +
-          '"' +
-          (checked ? " checked" : "") +
-          ">" +
-          '<span class="project-output__step-text">' +
-          content +
-          "</span>" +
-          "</label>" +
-          '<button type="button" class="project-output__diagram-btn" data-step="' +
-          encoded +
-          '" data-step-index="' +
-          index +
-          '" data-total-steps="' +
-          steps.length +
-          '">Show Diagram</button>' +
-          '<div class="project-output__diagram-slot" hidden aria-live="polite"></div>' +
-          "</li>"
-        );
-      })
-      .join("");
-    return (
-      '<section class="project-output__section">' +
-      '<h3 class="project-output__label">Steps</h3>' +
-      '<ol class="project-output__steps">' +
-      inner +
-      "</ol>" +
-      "</section>"
-    );
-  }
-
   function renderStructuredProject(proj, options) {
     options = options || {};
     var escape = options.escapeHtml || defaultEscapeHtml;
@@ -621,13 +820,23 @@
       projData.materialsSuggested || projData.materials_suggested
     );
     var steps = normalizeSteps(projData.steps);
+    var phases = computeBuildPhases(steps, projData);
     var projectId = ensureProjectId(projData);
     var progress = getProjectProgress(projectId, steps.length);
     var completedCount = getCompletedCount(progress);
     var percent = steps.length ? Math.round((completedCount / steps.length) * 100) : 0;
+    var projectJson = encodeURIComponent(JSON.stringify(projData));
 
     var html =
-      '<article class="project-output" data-project-id="' + escape(projectId) + '" data-total-steps="' + steps.length + '">' +
+      '<article class="project-output" data-project-id="' +
+      escape(projectId) +
+      '" data-total-steps="' +
+      steps.length +
+      '" data-phases-count="' +
+      phases.length +
+      '" data-active-phase="0" data-project-json="' +
+      projectJson +
+      '">' +
       '<header class="project-output__header">' +
       '<h2 class="project-output__title">' +
       title +
@@ -657,7 +866,8 @@
       "</p>" +
       "</section>" +
       renderListSection("Materials", materials, escape, "ul") +
-      renderStepsSection(steps, escape, projectId, progress);
+      renderConceptRenderSection(phases, escape) +
+      renderPhasedStepsSection(phases, escape, projectId, progress);
 
     if (materialsSuggested.length) {
       html += renderListSection(
@@ -733,6 +943,8 @@
     toStringList: toStringList,
     normalizeStepString: normalizeStepString,
     normalizeSteps: normalizeSteps,
+    computeBuildPhases: computeBuildPhases,
+    parseEstimatedMinutes: parseEstimatedMinutes,
     renderStructuredProject: renderStructuredProject,
     renderProjectChoices: renderProjectChoices,
     formatStepItemHtml: formatStepItemHtml,

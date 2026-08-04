@@ -13,7 +13,7 @@
   /** Public Beta period — paid purchases disabled in upgrade UI. */
   var BETA_MODE = true;
   var BETA_ASSOCIATE_MAX = 3;
-  var BETA_INNOVATOR_LITE_MAX = 2;
+  var BETA_INNOVATOR_LITE_MAX = 1;
   var BETA_SAVED_MAX = 1;
 
   var VALID_PLAN_IDS = [
@@ -44,6 +44,7 @@
     free: {
       associateUses: BETA_ASSOCIATE_MAX,
       maxSavedProjects: BETA_SAVED_MAX,
+      maxConceptRenderUses: null,
       maxDiagramUses: null,
       sparkHelperUses: null,
       apprenticeGenerations: null
@@ -51,6 +52,7 @@
     builder: {
       associateUses: null,
       maxSavedProjects: 5,
+      maxConceptRenderUses: 10,
       maxDiagramUses: 10,
       sparkHelperUses: null,
       apprenticeGenerations: null,
@@ -59,6 +61,7 @@
     pro: {
       associateUses: null,
       maxSavedProjects: 15,
+      maxConceptRenderUses: null,
       maxDiagramUses: null,
       sparkHelperUses: null,
       apprenticeGenerations: null
@@ -315,20 +318,28 @@
     recordUsage(USAGE_KEYS.apprenticeGen);
   }
 
-  function canUseDiagram() {
+  function canUseConceptRender() {
     var limits = getCurrentLimits();
     return checkUsageLimit(
       USAGE_KEYS.diagram,
-      limits.maxDiagramUses,
-      "Diagram generation"
+      limits.maxConceptRenderUses != null ? limits.maxConceptRenderUses : limits.maxDiagramUses,
+      "Concept Render"
     );
   }
 
-  function recordDiagramUse() {
+  function recordConceptRenderUse() {
     recordUsage(USAGE_KEYS.diagram);
     if (!bypassAllLimits()) {
       localStorage.setItem("diagram_uses", String(readUsageCount(USAGE_KEYS.diagram)));
     }
+  }
+
+  function canUseDiagram() {
+    return canUseConceptRender();
+  }
+
+  function recordDiagramUse() {
+    recordConceptRenderUse();
   }
 
   function canUseSparkHelper() {
@@ -368,12 +379,16 @@
     if (bypassAllLimits()) {
       return { allowed: true };
     }
+    if (!localStorage.getItem("user_email")) {
+      return { allowed: true };
+    }
     var used = readInnovatorBetaUses();
     var max = BETA_INNOVATOR_LITE_MAX;
     if (used >= max) {
       return {
         allowed: false,
-        message: "You've completed the Innovator Lite Beta experience.",
+        message:
+          "You've used your Innovator Beta project for this testing period. Full Innovator mode is coming soon.",
         used: used,
         max: max
       };
@@ -381,11 +396,12 @@
     return { allowed: true, used: used, max: max };
   }
 
-  function recordInnovatorLiteCompletion(projectId) {
+  function recordInnovatorBetaGeneration(projectId) {
     if (!BETA_MODE) return false;
     if (bypassAllLimits()) return false;
+    if (!localStorage.getItem("user_email")) return false;
     var id = String(projectId || "").trim();
-    if (!id) id = "anon-" + Date.now();
+    if (!id) id = "beta-" + Date.now();
     var counted = readInnovatorBetaCountedIds();
     if (counted.indexOf(id) !== -1) {
       return false;
@@ -396,11 +412,19 @@
     document.dispatchEvent(new CustomEvent("enginuity:usage-changed"));
     document.dispatchEvent(
       new CustomEvent("enginuity:beta-milestone", {
-        detail: { type: "innovator_lite" }
+        detail: { type: "innovator_beta" }
       })
     );
     if (typeof window.recordBetaSessionCompleted === "function") {
-      window.recordBetaSessionCompleted("Innovator");
+      window.recordBetaSessionCompleted("Innovator Beta");
+    }
+    return true;
+  }
+
+  function recordInnovatorLiteCompletion(projectId) {
+    if (!BETA_MODE) return false;
+    if (localStorage.getItem("user_email")) {
+      return false;
     }
     return true;
   }
@@ -508,7 +532,7 @@
       var message =
         tier === "free"
           ? BETA_MODE
-            ? "Full Innovator mode launches with Builder and Pro after Enginuity Beta. Try Innovator Lite meanwhile."
+            ? "Full Innovator mode launches with Builder and Pro after Enginuity Beta. Try Innovator Beta meanwhile."
             : "Innovator mode requires Builder or Pro. Upgrade to unlock it."
           : "You've used all " +
             status.max +
@@ -575,6 +599,29 @@
     return true;
   }
 
+  function resetBetaTrialProgress() {
+    [
+      ASSOCIATE_BETA_USES_KEY,
+      ASSOCIATE_USES_KEY,
+      USAGE_KEYS.associate,
+      INNOVATOR_BETA_USES_KEY,
+      INNOVATOR_BETA_COUNTED_KEY,
+      "innovator_lite_completed",
+      "innovator_lite_progress",
+      "enginuity_category_build_done",
+      "beta_feedback_associate_sessions",
+      "beta_feedback_innovator_sessions",
+      "beta_feedback_snooze_at_count"
+    ].forEach(function (key) {
+      localStorage.removeItem(key);
+    });
+    document.dispatchEvent(new CustomEvent("enginuity:usage-changed"));
+    return {
+      associateRemaining: BETA_ASSOCIATE_MAX,
+      innovatorLiteRemaining: BETA_INNOVATOR_LITE_MAX
+    };
+  }
+
   function applyFreePlanDefaults() {
     getUserPlan();
   }
@@ -603,12 +650,15 @@
   window.recordAssociateUse = recordAssociateUse;
   window.canUseApprenticeGeneration = canUseApprenticeGeneration;
   window.recordApprenticeGeneration = recordApprenticeGeneration;
+  window.canUseConceptRender = canUseConceptRender;
+  window.recordConceptRenderUse = recordConceptRenderUse;
   window.canUseDiagram = canUseDiagram;
   window.recordDiagramUse = recordDiagramUse;
   window.canUseSparkHelper = canUseSparkHelper;
   window.recordSparkHelperUse = recordSparkHelperUse;
   window.canUseInnovatorLite = canUseInnovatorLite;
   window.recordInnovatorLiteCompletion = recordInnovatorLiteCompletion;
+  window.recordInnovatorBetaGeneration = recordInnovatorBetaGeneration;
   window.getAssociateBetaUses = readAssociateBetaUses;
   window.getInnovatorBetaUses = readInnovatorBetaUses;
   window.shouldOfferBetaFeedback = shouldOfferBetaFeedback;
@@ -616,4 +666,5 @@
   window.canUseInnovator = canUseInnovator;
   window.recordInnovatorUse = recordInnovatorUse;
   window.getInnovatorMonthlyStatus = getInnovatorMonthlyStatus;
+  window.resetBetaTrialProgress = resetBetaTrialProgress;
 })();

@@ -31,11 +31,13 @@
     loader.className = "enginuity-loader";
 
     loader.innerHTML = `
-      <img class="enginuity-loader__logo" src="assets/logo-white.svg" alt="logo" />
+      <img class="enginuity-loader__logo" src="assets/logo-white.svg" alt="Enginuity" />
 
       <p class="enginuity-loader__tagline">
         Turning dreams into a reality...
       </p>
+
+      <span class="spark-ai-powered enginuity-loader__powered" id="loaderPoweredBy"></span>
 
       <div class="enginuity-loader__bottom">
         ${GEAR_SVG}
@@ -44,6 +46,23 @@
     `;
 
     document.body.appendChild(loader);
+
+    var powered = loader.querySelector("#loaderPoweredBy");
+    if (powered) {
+      if (typeof window.sparkAiBoltInline === "function") {
+        powered.outerHTML =
+          '<span class="spark-ai-powered enginuity-loader__powered">' +
+          window.sparkAiBoltInline(52, "enginuity-loader__spark", "white") +
+          "<span>Powered by <strong>SparkAI</strong></span></span>";
+      } else {
+        powered.innerHTML =
+          '<span class="spark-ai-bolt-wrap enginuity-loader__spark" style="display:inline-flex;width:52px;height:52px">' +
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">' +
+          '<path d="M35 5 L21 33 H29 L25 59 L47 27 H39 L53 5 Z" fill="#ffffff" stroke="#ffe0e0" stroke-width="2" stroke-linejoin="round"/></svg></span>' +
+          "<span>Powered by <strong>SparkAI</strong></span>";
+      }
+    }
+
     return loader;
   }
 

@@ -81,9 +81,14 @@
         source.scienceExplanation ||
         source.science_explanation ||
         "",
+      buildPhases: project.buildPhases || source.buildPhases || source.build_phases || null,
+      difficulty: project.difficulty || source.difficulty || "",
+      estimatedTime:
+        project.estimatedTime || source.estimatedTime || source.estimated_time || "",
       timestamp: resolveProjectTimestamp(project, source),
       mode: project.mode || source.mode || "",
-      page: project.page || source.page || ""
+      page: project.page || source.page || "",
+      engineeringField: project.engineeringField || source.engineeringField || ""
     };
   }
 
@@ -284,6 +289,51 @@
     }
   }
 
+  function deleteSavedProjectById(projectId) {
+    var email = getEmail();
+    if (!email) {
+      alert("Please sign in first.");
+      return false;
+    }
+    var id = String(projectId || "").trim();
+    if (!id) return false;
+
+    var allSaved = readAllSaved();
+    if (!Array.isArray(allSaved[email])) return false;
+
+    var before = allSaved[email].length;
+    allSaved[email] = allSaved[email].filter(function (p) {
+      return p && String(p.id || "") !== id;
+    });
+    if (allSaved[email].length === before) return false;
+
+    writeAllSaved(allSaved);
+
+    var current = getCurrentProject();
+    if (current && String(current.id || "") === id) {
+      localStorage.removeItem(CURRENT_PROJECT_KEY);
+    }
+
+    document.dispatchEvent(new CustomEvent("enginuity:project-deleted", { detail: { id: id } }));
+    if (typeof window.loadSavedProjects === "function") {
+      window.loadSavedProjects();
+    }
+    return true;
+  }
+
+  function deleteSavedProject(project) {
+    var normalized = normalizeLegacyProject(project);
+    if (!normalized || !normalized.id) return false;
+    if (
+      !window.confirm(
+        'Delete "' + (normalized.title || "this project") + '"? This cannot be undone.'
+      )
+    ) {
+      return false;
+    }
+    return deleteSavedProjectById(normalized.id);
+  }
+
   function viewSavedProject(index) {
     openSavedProjectByIndex(index);
   }
@@ -336,14 +386,27 @@
           ? '<p class="saved-project-card__desc">' + safeDesc + "</p>"
           : "") +
         "</div>" +
-        '<button type="button" class="saved-project-card__btn">Open Project</button>';
-      row.querySelector("button").addEventListener("click", function () {
+        '<div class="saved-project-card__actions">' +
+        '<button type="button" class="saved-project-card__btn">Open</button>' +
+        '<button type="button" class="saved-project-card__btn saved-project-card__btn--delete">Delete</button>' +
+        "</div>";
+      row.querySelector(".saved-project-card__btn:not(.saved-project-card__btn--delete)").addEventListener("click", function () {
         openSavedProject(proj);
+      });
+      row.querySelector(".saved-project-card__btn--delete").addEventListener("click", function () {
+        deleteSavedProject(proj);
       });
       container.appendChild(row);
     });
 
     window.savedProjects = projects;
+  }
+
+  function clearCurrentProject() {
+    localStorage.removeItem(CURRENT_PROJECT_KEY);
+    document.dispatchEvent(
+      new CustomEvent("enginuity:project-changed", { detail: { project: null } })
+    );
   }
 
   window.createProjectId = createProjectId;
@@ -360,6 +423,9 @@
   window.startSavedProject = startSavedProject;
   window.showSavedToast = showSavedToast;
   window.buildSavedProjectObject = buildSavedProjectObject;
+  window.deleteSavedProject = deleteSavedProject;
+  window.deleteSavedProjectById = deleteSavedProjectById;
+  window.clearCurrentProject = clearCurrentProject;
 
   function initSavedProjectsPreview() {
     if (!document.getElementById("savedProjects")) return;

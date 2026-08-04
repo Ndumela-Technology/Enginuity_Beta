@@ -1,0 +1,116 @@
+/* SparkAI brand mark — bolt logo + powered-by badges */
+
+.spark-ai-bolt-wrap svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.spark-ai-bolt {
+  display: inline-block;
+  width: 1.35em;
+  height: 1.35em;
+  vertical-align: -0.22em;
+  flex-shrink: 0;
+}
+
+.spark-ai-powered {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: "Special Elite", "Courier New", Courier, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(139, 26, 26, 0.78);
+  line-height: 1.2;
+}
+
+.spark-ai-powered strong {
+  font-weight: 900;
+  color: var(--eng-red-deep, #8b1a1a);
+}
+
+.spark-ai-powered--footer {
+  justify-content: center;
+  margin-top: 0.45rem;
+}
+
+.spark-ai-powered--panel {
+  font-size: 0.68rem;
+  margin: 0;
+  opacity: 0.88;
+}
+
+.spark-ai-powered--thinking {
+  margin-top: 0.35rem;
+  font-size: 0.68rem;
+  opacity: 0.85;
+}
+
+.spark-helper-panel__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.spark-helper-panel__logo {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.spark-helper-panel__titles {
+  min-width: 0;
+}
+
+.spark-helper-panel__titles .spark-helper-panel__title {
+  margin: 0;
+  line-height: 1.15;
+}
+
+.spark-helper-fab__icon-img {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.enginuity-loader__spark {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 0.35rem;
+}
+
+.enginuity-loader .spark-ai-powered,
+.enginuity-loader__powered {
+  flex-direction: column;
+  gap: 0.4rem;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.78rem;
+}
+
+.enginuity-loader .spark-ai-powered strong,
+.enginuity-loader__powered strong {
+  color: #fff;
+}
+
+.spark-helper-msg--thinking {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.spark-helper-msg--thinking .spark-ai-powered--thinking {
+  display: flex;
+  margin-top: 0.15rem;
+}
+
+[data-theme="dark"] .spark-ai-powered {
+  color: rgba(255, 220, 220, 0.72);
+}
+
+[data-theme="dark"] .spark-ai-powered strong {
+  color: #ffb4b4;
+}

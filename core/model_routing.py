@@ -10,11 +10,13 @@ MODEL_INNOVATOR_LITE = "gpt-4o-mini"
 
 # Token ceilings (balance speed vs quality)
 MAX_TOKENS_SPARK_HELPER = 520
-MAX_TOKENS_PROJECT = 2600
-MAX_TOKENS_PROJECT_APPRENTICE = 2100
-MAX_TOKENS_PROJECT_ASSOCIATE = 2400
+MAX_TOKENS_PROJECT = 4200
+MAX_TOKENS_PROJECT_APPRENTICE = 2800
+MAX_TOKENS_PROJECT_ASSOCIATE = 4800
+MAX_TOKENS_PROJECT_HARD = 5600
 MAX_TOKENS_SAFETY = 220
 MAX_TOKENS_INNOVATOR_LITE = 1000
+MAX_TOKENS_INNOVATOR_BETA = 4800
 MAX_TOKENS_INNOVATOR_CHAT = 800
 
 MAX_HELPER_HISTORY = 10
@@ -28,7 +30,7 @@ def normalize_mode(mode: str) -> str:
 def model_for_mode(mode: str) -> str:
     """Map Enginuity mode name to the appropriate OpenAI model."""
     m = normalize_mode(mode).lower()
-    if "innovator lite" in m:
+    if "innovator lite" in m or "innovator beta" in m:
         return MODEL_INNOVATOR_LITE
     if m == "innovator" or m.startswith("innovator "):
         return MODEL_INNOVATOR
@@ -48,6 +50,31 @@ def max_tokens_for_mode(mode: str) -> int:
     if "apprentice" in m:
         return MAX_TOKENS_PROJECT_APPRENTICE
     return MAX_TOKENS_PROJECT_APPRENTICE
+
+
+def max_tokens_for_difficulty(mode: str, difficulty: str) -> int:
+    """Raise token ceiling for long / multi-day builds so step lists are not truncated."""
+    base = max_tokens_for_mode(mode)
+    m = normalize_mode(mode).lower()
+    if "apprentice" in m:
+        return base
+    d = (difficulty or "").strip().lower()
+    if "day" in d:
+        return max(base, MAX_TOKENS_PROJECT_HARD)
+    if "hard" in d:
+        return max(base, MAX_TOKENS_PROJECT_ASSOCIATE)
+    if "medium" in d and any(x in d for x in ("hour", "hr", "min")):
+        return max(base, int(base * 1.15))
+    return base
+
+
+def max_tokens_for_innovator_beta(*, tutorial: bool = False, difficulty: str = "") -> int:
+    if tutorial:
+        return MAX_TOKENS_INNOVATOR_LITE
+    d = (difficulty or "").strip().lower()
+    if "day" in d or "hard" in d:
+        return MAX_TOKENS_INNOVATOR_BETA
+    return max(MAX_TOKENS_INNOVATOR_LITE, 3200)
 
 
 def max_tokens_for_chat(mode: str) -> int:

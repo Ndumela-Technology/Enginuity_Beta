@@ -6,7 +6,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="enginuity.css" />
+    <script src="enginuity-theme.js"></script>
+  <link rel="stylesheet" href="enginuity.css" />
     <link rel="stylesheet" href="spark-helper.css" />
     <link rel="stylesheet" href="upgrade.css" />
     <link rel="stylesheet" href="project-output.css" />
@@ -14,217 +15,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="alternate icon" href="assets/logo.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            padding: 24px;
-            margin: 0;
-            color: #111;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        .back {
-            display: inline-block;
-            margin-bottom: 12px;
-            color: #111;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        h1 {
-            margin: 0 0 8px;
-            font-size: 34px;
-        }
-
-        .subtitle {
-            margin: 0 0 22px;
-            color: #333;
-            max-width: 720px;
-            line-height: 1.4;
-        }
-
-        .generator {
-            border: 1px solid #e6e6e6;
-            border-radius: 14px;
-            background: #fafafa;
-            padding: 16px;
-            margin-bottom: 14px;
-        }
-
-        .generator h2 {
-            margin: 0 0 14px;
-            font-size: 18px;
-        }
-
-        label {
-            display: block;
-            margin: 12px 0 6px;
-            font-weight: 700;
-            color: #222;
-        }
-
-        textarea, select {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 10px 12px;
-            border-radius: 12px;
-            border: 1px solid #d9d9d9;
-            font-size: 14px;
-            background: #fff;
-        }
-
-        textarea {
-            min-height: 90px;
-            resize: vertical;
-        }
-
-        .actions {
-            margin-top: 14px;
-        }
-
-        button {
-            border: none;
-            padding: 12px 14px;
-            border-radius: 12px;
-            background: #111;
-            color: #fff;
-            font-weight: 800;
-            cursor: pointer;
-        }
-
-        button:hover {
-            opacity: 0.95;
-        }
-
-        .error {
-            border: 1px solid #ffb3b3;
-            background: #fff0f0;
-            color: #8a0000;
-            padding: 12px 14px;
-            border-radius: 12px;
-            margin-bottom: 16px;
-        }
-
-        .innovator-usage-banner {
-            display: none;
-            margin: 0 0 14px;
-            padding: 0.45rem 0.65rem;
-            border: 1.5px solid rgba(216, 31, 38, 0.22);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.92);
-            font-size: 0.82rem;
-            color: #444;
-        }
-
-        .innovator-usage-banner.is-visible {
-            display: block;
-        }
-
-        .innovator-usage-banner strong {
-            color: var(--eng-red-deep, #8b1a1a);
-        }
-
-        .chat {
-            border: 1px solid #e6e6e6;
-            border-radius: 14px;
-            background: #fafafa;
-            padding: 16px;
-            margin-top: 18px;
-        }
-
-        .chat h2 {
-            margin: 0 0 12px;
-            font-size: 18px;
-        }
-
-        .chat-messages {
-            border: 1px solid #e9e9e9;
-            background: #fff;
-            border-radius: 12px;
-            height: 320px;
-            overflow: auto;
-            overflow-x: hidden;
-            padding: 12px;
-            margin-bottom: 12px;
-            max-width: 100%;
-            word-wrap: break-word;
-            overflow-wrap: anywhere;
-        }
-
-        .chat-row {
-            margin: 10px 0;
-            display: flex;
-        }
-
-        .chat-row.user {
-            justify-content: flex-end;
-        }
-
-        .bubble {
-            max-width: 80%;
-            padding: 10px 12px;
-            border-radius: 14px;
-            border: 1px solid #ededed;
-            line-height: 1.4;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-size: 14px;
-        }
-
-        .chat-row.user .bubble {
-            background: #111;
-            color: #fff;
-            border-color: #111;
-        }
-
-        .chat-row.assistant .bubble {
-            background: #fcfcfc;
-        }
-
-        .chat-compose {
-            display: flex;
-            gap: 10px;
-            align-items: flex-start;
-        }
-
-        .chat-input {
-            flex: 1;
-            min-height: 54px;
-            resize: vertical;
-        }
-
-        .thinking {
-            margin-top: 10px;
-            font-size: 13px;
-            color: #555;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 12px;
-            }
-
-            h1 {
-                font-size: 24px;
-            }
-
-            .chat-compose {
-                flex-direction: column;
-            }
-
-            .chat-compose button {
-                width: 100%;
-            }
-
-            button {
-                width: 100%;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="mode-pages.css" />
 </head>
 <body class="enginuity-paper">
     <div class="container">
@@ -239,23 +30,10 @@
             <h2>Chat Preferences</h2>
 
             <label for="engineeringField">Field of engineering you are most interested in</label>
-            <select id="engineeringField">
-                <option value="">Select a field (optional)</option>
-                <option value="Mechanical Engineering⚙️">Mechanical Engineering</option>
-                <option value="Electrical Engineering⚡">Electrical Engineering</option>
-                <option value="Civil Engineering🏗️">Civil Engineering</option>
-                <option value="Aerospace Engineering✈️">Aerospace Engineering</option>
-                <option value="AI and Software Engineering💻">AI and Software Engineering</option>
-                <option value="Other">Other</option>
-            </select>
+            <select id="engineeringField"></select>
 
             <label for="education">Education / age</label>
-            <select id="education" onchange="updateAgeFromEducation()">
-                <option value="middle">Middle-Schooler (10–14)</option>
-                <option value="high">High-Schooler (15–18)</option>
-                <option value="student">Student (18–25)</option>
-                <option value="adult">Adult (25+)</option>
-            </select>
+            <select id="education" onchange="updateAgeFromEducation()"></select>
             <input type="hidden" id="age" value="" />
         </div>
 
@@ -277,6 +55,7 @@
         </div>
     </div>
 
+    <script src="engineering-fields.js"></script>
     <script src="api-config.js"></script>
     <script src="user-plan.js"></script>
     <script src="project-output.js"></script>
@@ -513,19 +292,29 @@
             const labels = {
                 middle: "Middle-Schooler(10-14 years old)🖍️",
                 high: "High-Schooler(15-18 years old)🏫",
-                student: "Student(18-25 years old)🎓",
-                adult: "Adult"
+                student: "Student(18-25 years old)🎓"
             };
             return labels[education] || null;
         }
 
+        function getSelectedEngineeringField() {
+            const el = document.getElementById("engineeringField");
+            const raw = el ? el.value : "";
+            return typeof window.normalizeEngineeringField === "function"
+                ? window.normalizeEngineeringField(raw)
+                : String(raw || "").trim();
+        }
+
         function buildInnovatorContext() {
             const age = document.getElementById("age").value;
-            const engineeringField = document.getElementById("engineeringField").value;
+            const engineeringField = getSelectedEngineeringField();
+            const fieldLine = typeof window.engineeringFieldFocusLine === "function"
+                ? window.engineeringFieldFocusLine(engineeringField)
+                : (engineeringField ? `Engineering field focus: ${engineeringField}` : "");
             const parts = [
                 `Mode: ${MODE}`,
                 age ? `Age group: ${age}` : null,
-                engineeringField ? `Engineering field focus: ${engineeringField}` : null
+                fieldLine || null
             ].filter(Boolean);
 
             if (typeof window.getCurrentProject === "function") {
@@ -648,13 +437,9 @@
         function updateAgeFromEducation() {
             const education = document.getElementById("education").value;
             const ageHidden = document.getElementById("age");
-            const ageByEducation = {
-                middle: "10-14",
-                high: "15-18",
-                student: "18-25",
-                adult: "25+"
-            };
-            ageHidden.value = ageByEducation[education] || "";
+            ageHidden.value = typeof window.ageForEducation === "function"
+                ? window.ageForEducation(education)
+                : "15-18";
         }
 
         async function sendMessage() {
@@ -762,6 +547,12 @@
             }
         });
 
+        if (typeof window.populateEngineeringFieldSelect === "function") {
+            window.populateEngineeringFieldSelect(document.getElementById("engineeringField"));
+        }
+        if (typeof window.populateEducationSelect === "function") {
+            window.populateEducationSelect(document.getElementById("education"), "high");
+        }
         updateAgeFromEducation();
 
         // Initial assistant nudge (no backend call).
@@ -788,6 +579,7 @@
     <script src="contact.js"></script>
     <script src="beta-feedback.js"></script>
     <script src="saved-projects.js" defer></script>
+    <script src="spark-ai-brand.js"></script>
     <script src="spark-helper.js" defer></script>
     <script src="enginuity-loading-screen.js" defer></script>
 </body>

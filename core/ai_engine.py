@@ -5,7 +5,12 @@ from typing import Generator, List, Optional
 from dotenv import find_dotenv, load_dotenv
 import httpx
 from openai import OpenAI
-from prompt.prompts import SYSTEM_PROMPT, INNOVATOR_LITE_PROMPT
+from prompt.prompts import (
+    INNOVATOR_BETA_PROMPT,
+    INNOVATOR_BETA_TUTORIAL_PROMPT,
+    INNOVATOR_LITE_PROMPT,
+    SYSTEM_PROMPT,
+)
 from core.model_routing import (
     MODEL_SPARK_HELPER,
     MODEL_SAFETY,
@@ -16,6 +21,8 @@ from core.model_routing import (
     MAX_TOKENS_SAFETY,
     MAX_TOKENS_SPARK_HELPER,
     max_tokens_for_chat,
+    max_tokens_for_difficulty,
+    max_tokens_for_innovator_beta,
     max_tokens_for_mode,
     model_for_mode,
 )
@@ -171,16 +178,47 @@ def normalize_steps(steps) -> List[str]:
     return out
 
 
+def _normalize_build_phases_in_project(proj: dict) -> dict:
+    """Flatten build_phases into steps[] while preserving phase structure for the UI."""
+    if not isinstance(proj, dict):
+        return proj
+    phases = proj.get("build_phases") or proj.get("buildPhases")
+    if not isinstance(phases, list) or not phases:
+        return proj
+
+    normalized_phases = []
+    flat_steps: List[str] = []
+    for phase in phases:
+        if not isinstance(phase, dict):
+            continue
+        name = str(phase.get("name") or phase.get("title") or "Build").strip() or "Build"
+        phase_steps = normalize_steps(phase.get("steps"))
+        if not phase_steps:
+            continue
+        normalized_phases.append({"name": name, "steps": phase_steps})
+        flat_steps.extend(phase_steps)
+
+    if normalized_phases:
+        proj["build_phases"] = normalized_phases
+        if flat_steps:
+            proj["steps"] = flat_steps
+    return proj
+
+
 def _normalize_project_steps_in_payload(data: dict) -> dict:
     if not isinstance(data, dict):
         return data
     projects = data.get("projects")
     if isinstance(projects, list):
         for proj in projects:
-            if isinstance(proj, dict) and "steps" in proj:
-                proj["steps"] = normalize_steps(proj.get("steps"))
-    if "steps" in data:
-        data["steps"] = normalize_steps(data.get("steps"))
+            if isinstance(proj, dict):
+                _normalize_build_phases_in_project(proj)
+                if "steps" in proj:
+                    proj["steps"] = normalize_steps(proj.get("steps"))
+    if "steps" in data or "build_phases" in data or "buildPhases" in data:
+        _normalize_build_phases_in_project(data)
+        if "steps" in data:
+            data["steps"] = normalize_steps(data.get("steps"))
     return data
 
 
@@ -305,9 +343,9 @@ def generate_chat_reply(messages: List[dict], mode: Optional[str] = None) -> str
     return response.choices[0].message.content or ""
 
 
-def generate_projects(full_input: str, mode: str = "Apprentice"):
+def generate_projects(full_input: str, mode: str = "Apprentice", difficulty: str = ""):
     model = model_for_mode(mode)
-    max_tokens = max_tokens_for_mode(mode)
+    max_tokens = max_tokens_for_difficulty(mode, difficulty)
 
     response = chat_completion(
         [
@@ -329,24 +367,48 @@ def generate_projects(full_input: str, mode: str = "Apprentice"):
     return _normalize_project_steps_in_payload(parsed)
 
 
-def generate_innovator_lite_project(materials: list, education: str = None):
+def generate_innovator_lite_project(
+    materials: list,
+    education: str = None,
+    *,
+    tutorial: bool = False,
+    difficulty: str = "",
+    description: str = "",
+):
     materials_text = ", ".join(materials)
     education_text = (education or "").strip() or "High-Schooler (15–18)"
-    user_prompt = (
-        f"Materials available: {materials_text}\n"
-        f"Education / age: {education_text}\n"
-        "Create one Innovator Lite project using mostly these items.\n"
-        "Stay within about 15–20 minutes. Match complexity to the education/age above — "
-        "if they are 18+ (Student or Adult), make the design meaningfully more advanced."
-    )
+    goal_text = (description or "").strip()
+    goal_block = f"Project goal: {goal_text}\n" if goal_text else ""
+    if tutorial:
+        system_prompt = INNOVATOR_BETA_TUTORIAL_PROMPT
+        user_prompt = (
+            f"{goal_block}"
+            f"Materials available: {materials_text}\n"
+            f"Education / age: {education_text}\n"
+            "Create one tutorial Innovator Beta project using mostly these items.\n"
+            "Stay within about 15–20 minutes. Match complexity to the education/age above."
+        )
+        max_tokens = max_tokens_for_innovator_beta(tutorial=True)
+    else:
+        system_prompt = INNOVATOR_BETA_PROMPT
+        diff_label = (difficulty or "").strip() or "Medium: 4–12 hours"
+        user_prompt = (
+            f"{goal_block}"
+            f"Materials available: {materials_text}\n"
+            f"Education / age: {education_text}\n"
+            f"Difficulty: {diff_label}\n"
+            "Create one Innovator Beta project using mostly these items.\n"
+            "Maximum build time is 2 days. Use build_phases for medium and hard builds."
+        )
+        max_tokens = max_tokens_for_innovator_beta(tutorial=False, difficulty=diff_label)
 
     response = chat_completion(
         [
-            {"role": "system", "content": INNOVATOR_LITE_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
         model=MODEL_INNOVATOR_LITE,
-        max_tokens=MAX_TOKENS_INNOVATOR_LITE,
+        max_tokens=max_tokens,
         temperature=0.75,
         json_object=True,
     )

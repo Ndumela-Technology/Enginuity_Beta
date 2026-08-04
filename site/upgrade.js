@@ -9,23 +9,23 @@
     free: [
       "Unlimited Apprentice during Beta",
       "3 Associate Beta projects",
-      "2 Innovator Lite Beta projects",
+      "1 Innovator Beta project",
       "Up to 1 saved project",
       "Unlimited SparkHelper",
-      "Unlimited visual diagrams"
+      "Unlimited Concept Renders"
     ],
     builder: [
       "Unlimited Apprentice",
       "Unlimited Associate",
       "5 Innovator uses per month (resets monthly)",
       "5 saved projects",
-      "10 visual diagrams",
+      "10 Concept Renders",
       "Unlimited SparkHelper"
     ],
     pro: [
       "Unlimited everything",
       "Unlimited Innovator access",
-      "Unlimited diagrams",
+      "Unlimited Concept Renders",
       "15 saved projects",
       "Early access to new features",
       "Priority updates"

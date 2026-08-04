@@ -130,9 +130,9 @@
     fab.className = "spark-helper-fab";
     fab.setAttribute("aria-label", "Open SparkHelper");
     fab.innerHTML =
-      '<svg class="spark-helper-fab__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-        '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>' +
-      '</svg>' +
+      (typeof window.sparkAiBoltInline === "function"
+        ? window.sparkAiBoltInline(24, "spark-helper-fab__icon-img", "red")
+        : '<img class="spark-helper-fab__icon-img" src="' + (window.sparkAiBoltDataUri ? window.sparkAiBoltDataUri("red") : "assets/spark-ai-bolt.svg") + '" width="24" height="24" alt="" aria-hidden="true" />') +
       '<span class="spark-helper-fab__label">SparkHelper — Ask questions to deepen your curiosity</span>';
     fab.addEventListener("click", togglePanel);
 
@@ -141,7 +141,15 @@
     panel.className = "spark-helper-panel";
     panel.innerHTML =
       '<div class="spark-helper-panel__header">' +
-        '<h3 class="spark-helper-panel__title">SparkHelper</h3>' +
+        '<div class="spark-helper-panel__brand">' +
+          (typeof window.sparkAiBoltInline === "function"
+            ? window.sparkAiBoltInline(28, "spark-helper-panel__logo", "red")
+            : '<img class="spark-helper-panel__logo" src="assets/spark-ai-bolt.svg" width="28" height="28" alt="" aria-hidden="true" />') +
+          '<div class="spark-helper-panel__titles">' +
+            '<h3 class="spark-helper-panel__title">SparkHelper</h3>' +
+            '<p class="spark-ai-powered spark-ai-powered--panel">Powered by <strong>SparkAI</strong></p>' +
+          '</div>' +
+        '</div>' +
         '<button type="button" class="spark-helper-panel__close" aria-label="Close">&times;</button>' +
       '</div>' +
       '<div class="spark-helper-panel__messages" id="sparkHelperMessages"></div>' +
@@ -300,7 +308,13 @@
     div.innerHTML =
       '<span class="spark-thinking-label">SparkHelper is thinking...</span>' +
       '<span class="spark-thinking-shimmer" aria-hidden="true"></span>' +
-      '<span class="spark-thinking-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>';
+      '<span class="spark-thinking-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>' +
+      '<span class="spark-ai-powered spark-ai-powered--thinking">' +
+        (typeof window.sparkAiBoltInline === "function"
+        ? window.sparkAiBoltInline(14, "spark-ai-bolt", "red")
+        : '<img class="spark-ai-bolt" src="assets/spark-ai-bolt.svg" width="14" height="14" alt="" aria-hidden="true" />') +
+        '<span>Powered by <strong>SparkAI</strong></span>' +
+      '</span>';
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
     return div;

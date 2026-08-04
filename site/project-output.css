@@ -9,16 +9,46 @@
 }
 
 .project-output {
-    border: 1px solid #e6e6e6;
+    border: 1px solid var(--surface-border, #e6e6e6);
     padding: 1rem 1.1rem 1.25rem;
     margin-bottom: 1rem;
     border-radius: 12px;
-    background: #fff;
+    background: var(--surface-card, #fff);
     line-height: 1.5;
+    color: var(--ink, #1a1a1a);
 }
 
 body.has-enginuity-done-bar {
-    padding-bottom: 5.5rem;
+    --enginuity-done-bar-offset: 7.5rem;
+    padding-bottom: calc(var(--enginuity-done-bar-offset) + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(var(--enginuity-done-bar-offset) + env(safe-area-inset-bottom, 0px));
+}
+
+html.has-enginuity-done-bar-scroll {
+    scroll-padding-bottom: calc(var(--enginuity-done-bar-offset, 7.5rem) + env(safe-area-inset-bottom, 0px));
+}
+
+body.has-enginuity-done-bar #output,
+body.has-enginuity-done-bar #liteOutput,
+body.has-enginuity-done-bar .container,
+body.has-enginuity-done-bar .lite-wrap {
+    padding-bottom: 0.25rem;
+}
+
+body.has-enginuity-done-bar .project-output {
+    margin-bottom: 1rem;
+}
+
+body.has-enginuity-done-bar .project-output__actions,
+body.has-enginuity-done-bar .concept-render__nav,
+body.has-enginuity-done-bar .concept-render__panel,
+body.has-enginuity-done-bar .contribution-box,
+body.has-enginuity-done-bar .project-output__section--progress {
+    scroll-margin-bottom: calc(var(--enginuity-done-bar-offset, 7.5rem) + 0.5rem);
+}
+
+body.has-enginuity-done-bar-hint {
+    --enginuity-done-bar-offset: 9rem;
 }
 
 .enginuity-done-bar {
@@ -30,7 +60,7 @@ body.has-enginuity-done-bar {
     display: none;
     padding: 0.65rem 1rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid rgba(216, 31, 38, 0.28);
-    background: rgba(255, 255, 255, 0.98);
+    background: var(--surface-bar, rgba(255, 255, 255, 0.98));
     box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.1);
 }
 
@@ -68,7 +98,7 @@ body.has-enginuity-done-bar {
     margin: 0.45rem 0 0;
     text-align: center;
     font-size: 0.85rem;
-    color: #555;
+    color: var(--eng-red-deep);
     line-height: 1.4;
 }
 
@@ -82,7 +112,7 @@ body.has-enginuity-done-bar {
 .project-output__section {
     margin-top: 1rem;
     padding-top: 0.85rem;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--surface-border, #eee);
 }
 
 .project-output__section:first-of-type {
@@ -99,21 +129,21 @@ body.has-enginuity-done-bar {
     padding: 0.75rem 0.85rem;
     border: 1px solid rgba(216, 31, 38, 0.25);
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.98);
+    background: var(--surface-sticky, rgba(255, 255, 255, 0.98));
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
 }
 
 .project-output__progress-text {
     margin: 0 0 0.4rem;
     font-size: 0.82rem;
-    color: #333;
+    color: var(--eng-red-deep);
 }
 
 .project-output__progress {
     width: 100%;
     height: 10px;
     border-radius: 999px;
-    background: #ececec;
+    background: var(--surface-muted, #ececec);
     overflow: hidden;
 }
 
@@ -130,12 +160,12 @@ body.has-enginuity-done-bar {
     font-weight: 800;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: #444;
+    color: var(--eng-red);
 }
 
 .project-output__text {
     margin: 0;
-    color: #222;
+    color: var(--eng-red-deep);
     line-height: 1.55;
 }
 
@@ -182,13 +212,15 @@ body.has-enginuity-done-bar {
     text-decoration: line-through;
 }
 
-.project-output__diagram-btn {
+.project-output__diagram-btn,
+.concept-render__generate-btn,
+.concept-render__nav-btn {
     display: inline-block;
     margin: 0.15rem 0 0.35rem;
     padding: 0.35rem 0.65rem;
     border: 1px solid rgba(216, 31, 38, 0.45);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--surface-card, rgba(255, 255, 255, 0.95));
     color: var(--eng-red-deep, #8a0000);
     font-family: inherit;
     font-size: 0.78rem;
@@ -196,55 +228,118 @@ body.has-enginuity-done-bar {
     cursor: pointer;
 }
 
-.project-output__diagram-btn:hover:not(:disabled) {
-    background: rgba(216, 31, 38, 0.08);
+.concept-render__generate-btn {
+    margin: 0.35rem 0;
+    font-size: 0.85rem;
+    padding: 0.45rem 0.85rem;
 }
 
-.project-output__diagram-btn:disabled {
-    opacity: 0.65;
-    cursor: wait;
+.concept-render__nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 0.5rem 0 0.65rem;
 }
 
+.concept-render__nav-btn {
+    margin: 0;
+    min-width: 5.5rem;
+}
+
+.concept-render__nav-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.concept-render__phase-label {
+    flex: 1 1 auto;
+    text-align: center;
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: var(--eng-red-deep, #8a0000);
+}
+
+.concept-render__phase-label--solo {
+    margin: 0.35rem 0 0.5rem;
+}
+
+.concept-render__hint {
+    margin: 0 0 0.35rem;
+    font-size: 0.85rem;
+    color: var(--text-muted, #555);
+    line-height: 1.45;
+}
+
+.concept-render__panel {
+    margin-top: 0.25rem;
+}
+
+.concept-render__slot,
 .project-output__diagram-slot {
     margin: 0.35rem 0 0.5rem;
     padding: 0.5rem;
-    border: 1px solid #eee;
+    border: 1px solid var(--surface-border, #eee);
     border-radius: 10px;
-    background: #fafafa;
+    background: var(--surface-muted, #fafafa);
 }
 
+.concept-render__slot--loading,
 .project-output__diagram-slot--loading {
-    color: #555;
+    color: var(--text-muted, #555);
     font-style: italic;
     font-size: 0.85rem;
 }
 
+.concept-render__slot--error,
 .project-output__diagram-slot--error {
     color: #8a0000;
     font-size: 0.85rem;
 }
 
+.concept-render__img,
 .project-output__diagram-img {
     display: block;
-    max-width: 70%;
+    max-width: 100%;
     height: auto;
     border-radius: 8px;
     margin: 0 auto;
 }
 
+.build-phase__title {
+    margin: 0 0 0.55rem;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--eng-red-deep, #8a0000);
+}
+
+.project-output__diagram-btn:hover:not(:disabled),
+.concept-render__generate-btn:hover:not(:disabled),
+.concept-render__nav-btn:hover:not(:disabled) {
+    background: rgba(216, 31, 38, 0.08);
+}
+
+.project-output__diagram-btn:disabled,
+.concept-render__generate-btn:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
 .project-output__muted {
     margin: 0;
-    color: #666;
+    color: var(--eng-red-deep);
     font-style: italic;
 }
 
 .project-output__prose {
     margin: 0;
     padding: 0.65rem 0.75rem;
-    border: 1px solid #eee;
+    border: 1px solid rgba(216, 31, 38, 0.25);
     border-radius: 10px;
-    background: #fcfcfc;
+    background: var(--surface-muted, #fcfcfc);
     line-height: 1.45;
+    color: var(--eng-red-deep);
 }
 
 .project-output__actions {
@@ -272,17 +367,17 @@ body.has-enginuity-done-bar {
     width: 100%;
     text-align: left;
     padding: 0.85rem 1rem;
-    border: 1px solid #e0e0e0;
+    border: 2px solid rgba(216, 31, 38, 0.35);
     border-radius: 12px;
-    background: #fff;
-    color: #222;
+    background: var(--mode-tab-bg, var(--surface-card));
+    color: var(--eng-red-deep);
     cursor: pointer;
     box-sizing: border-box;
 }
 
 .project-choice-card:hover {
-    border-color: #bbb;
-    background: #fafafa;
+    border-color: var(--eng-red);
+    background: rgba(216, 31, 38, 0.08);
 }
 
 .project-choice-card__name {
@@ -290,25 +385,30 @@ body.has-enginuity-done-bar {
     font-weight: 800;
     font-size: 1rem;
     margin-bottom: 0.25rem;
+    color: var(--eng-red);
 }
 
 .project-choice-card__desc {
     display: block;
     font-size: 0.875rem;
     font-weight: 400;
-    color: #555;
+    color: var(--eng-red-deep);
     line-height: 1.4;
 }
 
 .project-output-choices__hint {
     margin-top: 0.65rem;
     font-size: 0.875rem;
-    color: #555;
+    color: var(--eng-red-deep);
 }
 
 @media (max-width: 768px) {
     body.has-enginuity-done-bar {
-        padding-bottom: 6.25rem;
+        --enginuity-done-bar-offset: 8.5rem;
+    }
+
+    body.has-enginuity-done-bar-hint {
+        --enginuity-done-bar-offset: 10.5rem;
     }
 
     .project-output__section--progress {
@@ -326,6 +426,8 @@ body.has-enginuity-done-bar {
     .contribution-actions button,
     .project-choice-card,
     .project-output__diagram-btn,
+    .concept-render__generate-btn,
+    .concept-render__nav-btn,
     #output > button {
         width: 100%;
         box-sizing: border-box;

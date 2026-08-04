@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <script src="enginuity-theme.js"></script>
   <link rel="stylesheet" href="enginuity.css" />
   <link rel="stylesheet" href="saved-pages.css" />
   <link rel="stylesheet" href="upgrade.css" />
@@ -75,11 +76,20 @@
             '<p class="saved-list__card-desc">' +
             escapeHtml(proj.description || "No description.") +
             "</p>" +
-            '<button type="button" class="saved-list__open-btn">Open Project</button>';
+            '<div class="saved-list__card-actions">' +
+            '<button type="button" class="saved-list__open-btn">Open Project</button>' +
+            '<button type="button" class="saved-list__delete-btn">Delete</button>' +
+            "</div>";
 
-          card.querySelector("button").addEventListener("click", function () {
+          card.querySelector(".saved-list__open-btn").addEventListener("click", function () {
             if (typeof window.openSavedProject === "function") {
               window.openSavedProject(proj);
+            }
+          });
+          card.querySelector(".saved-list__delete-btn").addEventListener("click", function () {
+            if (typeof window.deleteSavedProject === "function") {
+              window.deleteSavedProject(proj);
+              render();
             }
           });
 
@@ -88,8 +98,11 @@
       }
 
       render();
+      document.addEventListener("enginuity:project-deleted", render);
+      document.addEventListener("enginuity:project-saved", render);
     })();
   </script>
+  <script src="spark-ai-brand.js"></script>
   <script src="enginuity-loading-screen.js" defer></script>
 </body>
 </html>

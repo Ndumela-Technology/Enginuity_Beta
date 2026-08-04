@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SparkAI Logo · Download</title>
+  <link rel="icon" type="image/svg+xml" href="assets/spark-ai-bolt.svg" />
+  <link rel="stylesheet" href="enginuity.css" />
+  <link rel="stylesheet" href="spark-ai-brand.css" />
+  <style>
+    .logo-page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 2.5rem;
+      text-align: center;
+    }
+    .logo-page h1 {
+      color: var(--eng-red, #d81f26);
+      margin-bottom: 0.35rem;
+    }
+    .logo-card {
+      margin: 1rem 0;
+      padding: 1.25rem;
+      border: 2px solid rgba(216, 31, 38, 0.35);
+      border-radius: 14px;
+      background: var(--surface-card, #fff);
+    }
+    .logo-card--dark {
+      background: var(--eng-loader-red, #d81f26);
+    }
+    .logo-preview {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 140px;
+      margin-bottom: 0.75rem;
+    }
+    .logo-preview img,
+    .logo-preview svg {
+      width: 96px;
+      height: 96px;
+    }
+    .logo-downloads {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      justify-content: center;
+    }
+    .logo-downloads a {
+      font-family: "Special Elite", "Courier New", Courier, monospace;
+      font-weight: 800;
+      color: var(--eng-red-deep, #8b1a1a);
+      text-decoration: none;
+      border: 2px solid rgba(216, 31, 38, 0.35);
+      border-radius: 999px;
+      padding: 0.45rem 0.85rem;
+      background: #fff;
+    }
+    .logo-downloads a:hover {
+      text-decoration: underline;
+    }
+    .logo-path {
+      margin-top: 0.85rem;
+      font-size: 0.78rem;
+      word-break: break-all;
+      color: rgba(30, 30, 30, 0.65);
+    }
+  </style>
+</head>
+<body class="enginuity-paper">
+  <div class="logo-page">
+    <a class="back" href="index.html">← Back to Home</a>
+    <h1>SparkAI Logo</h1>
+    <p>Blueprint-style lightning bolt — red on light backgrounds, white on red loader.</p>
+
+    <section class="logo-card" aria-labelledby="logoRed">
+      <h2 id="logoRed">Red (default)</h2>
+      <div class="logo-preview" id="previewRed"></div>
+      <div class="logo-downloads">
+        <a href="assets/spark-ai-bolt.svg" download="spark-ai-bolt.svg">Download SVG</a>
+        <a href="#" id="downloadRedPng">Download PNG preview</a>
+      </div>
+      <p class="logo-path">File: <code>site/assets/spark-ai-bolt.svg</code></p>
+    </section>
+
+    <section class="logo-card logo-card--dark" aria-labelledby="logoWhite">
+      <h2 id="logoWhite" style="color:#fff;">White (loader / dark red)</h2>
+      <div class="logo-preview" id="previewWhite"></div>
+      <div class="logo-downloads">
+        <a href="assets/spark-ai-bolt-white.svg" download="spark-ai-bolt-white.svg" style="color:#8b1a1a;">Download SVG</a>
+        <a href="#" id="downloadWhitePng" style="color:#8b1a1a;">Download PNG preview</a>
+      </div>
+      <p class="logo-path" style="color:rgba(255,255,255,0.85);">File: <code>site/assets/spark-ai-bolt-white.svg</code></p>
+    </section>
+
+    <p class="spark-ai-powered spark-ai-powered--footer">
+      <span id="poweredPreview"></span>
+    </p>
+  </div>
+
+  <script src="spark-ai-brand.js"></script>
+  <script>
+    (function () {
+      var red = document.getElementById("previewRed");
+      var white = document.getElementById("previewWhite");
+      var powered = document.getElementById("poweredPreview");
+
+      if (red && window.sparkAiBoltInline) {
+        red.innerHTML = window.sparkAiBoltInline(96, "spark-ai-bolt", "red");
+      }
+      if (white && window.sparkAiBoltInline) {
+        white.innerHTML = window.sparkAiBoltInline(96, "spark-ai-bolt", "white");
+      }
+      if (powered && window.sparkAiPoweredByHtml) {
+        powered.outerHTML = window.sparkAiPoweredByHtml("spark-ai-powered--footer", "red");
+      }
+
+      function downloadPng(svgMarkup, filename) {
+        var img = new Image();
+        img.onload = function () {
+          var canvas = document.createElement("canvas");
+          canvas.width = 256;
+          canvas.height = 256;
+          var ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, 256, 256);
+          var link = document.createElement("a");
+          link.download = filename;
+          link.href = canvas.toDataURL("image/png");
+          link.click();
+        };
+        img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgMarkup);
+      }
+
+      document.getElementById("downloadRedPng").addEventListener("click", function (e) {
+        e.preventDefault();
+        fetch("assets/spark-ai-bolt.svg")
+          .then(function (r) { return r.text(); })
+          .then(function (svg) { downloadPng(svg, "spark-ai-bolt.png"); });
+      });
+
+      document.getElementById("downloadWhitePng").addEventListener("click", function (e) {
+        e.preventDefault();
+        fetch("assets/spark-ai-bolt-white.svg")
+          .then(function (r) { return r.text(); })
+          .then(function (svg) { downloadPng(svg, "spark-ai-bolt-white.png"); });
+      });
+    })();
+  </script>
+</body>
+</html>

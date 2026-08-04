@@ -1,3 +1,5 @@
+@import url("spark-ai-brand.css");
+
 /* SparkHelper — floating chat widget */
 
 .spark-helper-fab {
@@ -11,7 +13,7 @@
   padding: 0.6rem 1rem 0.6rem 0.7rem;
   border: 2.5px solid var(--eng-red, #d81f26);
   border-radius: 28px;
-  background: #fff;
+  background: var(--surface-card, #fff);
   color: var(--eng-red-deep, #8b1a1a);
   font-family: "Special Elite", "Courier New", Courier, monospace;
   font-size: 0.82rem;
@@ -48,7 +50,7 @@
   max-height: min(520px, calc(100vh - 6rem));
   border: 2px solid var(--eng-red, #d81f26);
   border-radius: 14px;
-  background: #fff;
+  background: var(--surface-card, #fff);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
   flex-direction: column;
   overflow: hidden;
@@ -64,8 +66,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.65rem 0.85rem;
-  border-bottom: 1px solid #eee;
-  background: #fafafa;
+  border-bottom: 1px solid rgba(216, 31, 38, 0.25);
+  background: var(--surface-muted, #fafafa);
 }
 
 .spark-helper-panel__title {
@@ -119,8 +121,8 @@
 
 .spark-helper-msg--assistant {
   align-self: flex-start;
-  background: #f3f3f3;
-  color: #222;
+  background: var(--surface-muted, #f3f3f3);
+  color: var(--eng-red-deep, #8a0000);
   border-bottom-left-radius: 3px;
 }
 
@@ -187,20 +189,22 @@
   display: flex;
   gap: 0.4rem;
   padding: 0.6rem 0.75rem;
-  border-top: 1px solid #eee;
-  background: #fafafa;
+  border-top: 1px solid rgba(216, 31, 38, 0.25);
+  background: var(--surface-muted, #fafafa);
 }
 
 .spark-helper-panel__input {
   flex: 1;
   padding: 0.45rem 0.6rem;
-  border: 1.5px solid #ccc;
+  border: 2px solid rgba(216, 31, 38, 0.35);
   border-radius: 8px;
   font-family: inherit;
   font-size: 0.82rem;
   resize: none;
   min-height: 36px;
   max-height: 72px;
+  background: var(--surface-card, #fff);
+  color: var(--eng-red-deep, #8a0000);
 }
 
 .spark-helper-panel__input:focus {
@@ -229,6 +233,20 @@
 .spark-helper-panel__send:hover:not(:disabled) {
   background: var(--eng-red-deep, #8b1a1a);
   border-color: var(--eng-red-deep, #8b1a1a);
+}
+
+body.has-enginuity-done-bar .spark-helper-fab {
+  bottom: calc(var(--enginuity-done-bar-offset, 7.5rem) + 0.65rem);
+}
+
+body.has-enginuity-done-bar .spark-helper-panel {
+  bottom: calc(var(--enginuity-done-bar-offset, 7.5rem) + 4rem);
+}
+
+@media (max-width: 768px) {
+  body.has-enginuity-done-bar .spark-helper-panel {
+    bottom: calc(var(--enginuity-done-bar-offset, 8.5rem) + 3.5rem);
+  }
 }
 
 @media (max-width: 480px) {

@@ -37,6 +37,9 @@ from core.model_routing import (
     MODEL_SPARK_HELPER,
     should_run_post_safety,
 )
+from concept_render_prompt import build_concept_render_prompt
+from validators.generation_pipeline import run_validated_generation
+from validators.field_alignment import extract_field_from_description
 
 app = FastAPI()
 
@@ -111,6 +114,31 @@ def _generation_error_response(err: dict) -> dict:
     return out
 
 
+def _openai_error_response(exc: Exception) -> dict:
+    """Map OpenAI / network failures to a frontend-friendly JSON error."""
+    name = type(exc).__name__
+    text = str(exc).lower()
+    if name == "RateLimitError" or "insufficient_quota" in text or "rate limit" in text:
+        return {
+            "error": "SparkAI is temporarily unavailable — the API quota has been reached.",
+            "suggestion": "Please try again later or contact the Enginuity team.",
+        }
+    if name == "AuthenticationError" or "invalid api key" in text:
+        return {
+            "error": "SparkAI is not configured on the server.",
+            "suggestion": "Contact the Enginuity team.",
+        }
+    if name in ("APIConnectionError", "APITimeoutError") or "timeout" in text:
+        return {
+            "error": "SparkAI timed out while generating your project.",
+            "suggestion": "Please try again in a moment.",
+        }
+    return {
+        "error": "SparkAI could not complete your request.",
+        "details": str(exc)[:240],
+    }
+
+
 def infer_project_mode(description: str, explicit_mode: str = "") -> str:
     if explicit_mode and explicit_mode.strip():
         return explicit_mode.strip()
@@ -122,12 +150,49 @@ def infer_project_mode(description: str, explicit_mode: str = "") -> str:
     return "Apprentice"
 
 
+def _generation_scale_hint(difficulty: str, mode: str = "") -> str:
+    """Extra instructions so long / hard builds get enough steps and build phases."""
+    m = (mode or "").strip().lower()
+    if "apprentice" in m:
+        return (
+            "SCALE (Apprentice): Keep 8–14 steps in a single part. "
+            "Match difficulty by depth and precision per step — not multi-day phase counts."
+        )
+
+    d = (difficulty or "").strip().lower()
+    if "day" in d:
+        return (
+            "SCALE (mandatory): This is a MULTI-DAY build. Return 25–40 detailed steps split "
+            "across 3–4 build_phases (Design & Planning, Mechanical Assembly, "
+            "Electronics/Wiring, Programming & Testing as applicable). "
+            "Include planning, measurements, dry-fit, wiring, code upload, and testing steps. "
+            "Do NOT return fewer than 20 steps or a single compressed part."
+        )
+    if "hard" in d:
+        if any(x in d for x in ("150", "120", "180", "hour", "hr")):
+            return (
+                "SCALE: Long hard build — 18–28 detailed steps minimum across 2–3 build_phases. "
+                "Separate mechanical, electronics, and testing when motors/Arduino/LEDs are involved."
+            )
+        return (
+            "SCALE: Hard build — 15–22 detailed steps; use 2 build_phases when mixing "
+            "structure with electronics or programming."
+        )
+    if "medium" in d:
+        return (
+            "SCALE: Medium build — 14–22 detailed steps; use build_phases when the project "
+            "has distinct mechanical and electronics stages."
+        )
+    return "SCALE: Easy build — 8–14 clear steps; build_phases optional."
+
+
 class ProjectRequest(BaseModel):
     description: str
     difficulty: str = "beginner"
     age: str = ""
     materials: str = ""
     mode: str = ""
+    engineering_field: str = ""
 
 
 class ChatRequest(BaseModel):
@@ -142,6 +207,9 @@ class ChatRequest(BaseModel):
 class InnovatorLiteRequest(BaseModel):
     materials: List[str] = []
     education: Optional[str] = None
+    tutorial: bool = False
+    difficulty: str = ""
+    description: str = ""
 
 
 def _normalize_innovator_lite_education(value: Optional[str]) -> str:
@@ -154,7 +222,7 @@ def _normalize_innovator_lite_education(value: Optional[str]) -> str:
         "high-schooler": "High-Schooler (15–18)",
         "high school": "High-Schooler (15–18)",
         "student": "Student (18–25)",
-        "adult": "Adult (25+)",
+        "adult": "Student (18–25)",
     }
     if raw in mapping:
         return mapping[raw]
@@ -165,7 +233,7 @@ def _normalize_innovator_lite_education(value: Optional[str]) -> str:
     if "student" in raw or "18" in raw:
         return "Student (18–25)"
     if "adult" in raw or "25" in raw:
-        return "Adult (25+)"
+        return "Student (18–25)"
     if (value or "").strip():
         return (value or "").strip()
     return "High-Schooler (15–18)"
@@ -208,27 +276,56 @@ async def generate_project(request: ProjectRequest):
         }
 
     mode = infer_project_mode(request.description, request.mode)
+    engineering_field = (request.engineering_field or "").strip()
+    if not engineering_field:
+        engineering_field = extract_field_from_description(request.description)
+
+    age = (request.age or "").strip()
+    if age in ("25+", "25-99", "adult"):
+        age = "18-25"
 
     full_input = (
         f"Idea: {request.description}\n"
         f"Difficulty: {request.difficulty}\n"
-        f"Age: {request.age}\n"
+        f"Age: {age}\n"
         f"Materials: {request.materials}\n"
         f"Mode: {mode}\n"
+    )
+    if engineering_field:
+        full_input += (
+            f"Engineering field (STRICT — every project must clearly belong here): "
+            f"{engineering_field}\n"
+        )
+    full_input += (
+        f"{_generation_scale_hint(request.difficulty, mode)}\n"
         "Return 3 JSON projects per system rules."
     )
 
-    projects = await asyncio.to_thread(generate_projects, full_input, mode)
+    def _generate_and_safety_check():
+        raw = generate_projects(full_input, mode, difficulty=request.difficulty)
+        if isinstance(raw, dict) and raw.get("error"):
+            return raw
+        if should_run_post_safety(mode):
+            safe = run_safety_check(raw)
+        else:
+            safe = raw
+            if isinstance(safe, dict) and "safety_warnings" not in safe:
+                safe["safety_warnings"] = safe.get("safety_warnings") or []
+        return safe
 
-    if isinstance(projects, dict) and projects.get("error"):
-        return _generation_error_response(projects)
-
-    if should_run_post_safety(mode):
-        safe_projects = await asyncio.to_thread(run_safety_check, projects)
-    else:
-        safe_projects = projects
-        if isinstance(safe_projects, dict) and "safety_warnings" not in safe_projects:
-            safe_projects["safety_warnings"] = safe_projects.get("safety_warnings") or []
+    try:
+        safe_projects, _validation = await asyncio.to_thread(
+            run_validated_generation,
+            _generate_and_safety_check,
+            mode=mode,
+            difficulty_hint=request.difficulty,
+            concept_render_enabled=True,
+            lite_mode=False,
+            label=mode,
+            engineering_field=engineering_field,
+        )
+    except Exception as exc:
+        return _openai_error_response(exc)
 
     if isinstance(safe_projects, dict) and safe_projects.get("error"):
         return _generation_error_response(safe_projects)
@@ -246,11 +343,36 @@ async def generate_innovator_lite(request: InnovatorLiteRequest):
     if not normalized_materials:
         return {"error": "Please provide at least one material."}
 
-    generated = await asyncio.to_thread(
-        generate_innovator_lite_project,
-        normalized_materials,
-        _normalize_innovator_lite_education(request.education),
-    )
+    education = _normalize_innovator_lite_education(request.education)
+    tutorial = bool(request.tutorial)
+    difficulty = (request.difficulty or "").strip()
+    if not tutorial and not difficulty:
+        difficulty = "Medium: 4–12 hours"
+
+    def _generate_lite():
+        return generate_innovator_lite_project(
+            normalized_materials,
+            education,
+            tutorial=tutorial,
+            difficulty=difficulty,
+            description=(request.description or "").strip(),
+        )
+
+    validation_difficulty = "15-20 minutes" if tutorial else difficulty
+    validation_mode = "Innovator Beta"
+
+    try:
+        generated, _validation = await asyncio.to_thread(
+            run_validated_generation,
+            _generate_lite,
+            mode=validation_mode,
+            difficulty_hint=validation_difficulty,
+            concept_render_enabled=not tutorial,
+            lite_mode=True,
+            label="Innovator Beta tutorial" if tutorial else "Innovator Beta",
+        )
+    except Exception as exc:
+        return _openai_error_response(exc)
     if generated.get("error"):
         return generated
 
@@ -260,16 +382,21 @@ async def generate_innovator_lite(request: InnovatorLiteRequest):
         text = str(value).strip()
         return text if text else default
 
+    default_time = "15-20 minutes" if tutorial else difficulty or "4–12 hours"
+    default_diff = "Beginner" if tutorial else "Intermediate"
+
     result = {
         "title": cleaned_text(generated.get("title", ""), ""),
         "description": cleaned_text(generated.get("description", ""), ""),
-        "estimated_time": cleaned_text(generated.get("estimated_time"), "15-20 minutes"),
-        "difficulty": cleaned_text(generated.get("difficulty"), "Beginner"),
+        "estimated_time": cleaned_text(generated.get("estimated_time"), default_time),
+        "difficulty": cleaned_text(generated.get("difficulty"), default_diff),
         "materials": [
             str(m).strip() for m in generated.get("materials", []) if str(m).strip()
         ],
         "steps": [str(s).strip() for s in generated.get("steps", []) if str(s).strip()],
         "science_explanation": cleaned_text(generated.get("science_explanation", ""), ""),
+        "build_phases": generated.get("build_phases") or [],
+        "tutorial": tutorial,
     }
 
     if not result["materials"]:
@@ -278,7 +405,7 @@ async def generate_innovator_lite(request: InnovatorLiteRequest):
     if not result["steps"]:
         return {"error": "Could not generate onboarding steps. Please try again."}
 
-    if len(result["steps"]) > 7:
+    if tutorial and len(result["steps"]) > 7:
         result["steps"] = result["steps"][:7]
 
     return result
@@ -332,101 +459,38 @@ async def spark_helper(data: ChatRequest):
     return {"reply": reply}
 
 
-@app.post("/generate-diagram")
-async def generate_diagram(data: dict):
-    step = str((data or {}).get("step") or "").strip()
-    if not step:
-        raise HTTPException(status_code=400, detail="Step text is required.")
-
-    title = str((data or {}).get("title") or "").strip()
-    description = str((data or {}).get("description") or "").strip()
-    materials = (data or {}).get("materials") or []
-    if not isinstance(materials, list):
-        materials = [str(materials)]
-    materials = [str(m).strip() for m in materials if str(m).strip()]
-    all_steps = (data or {}).get("all_steps") or []
-    if not isinstance(all_steps, list):
-        all_steps = []
-    all_steps = [str(s).strip() for s in all_steps if str(s).strip()]
-
+async def _generate_concept_render_image(data: dict):
+    prompt = build_concept_render_prompt(data)
     try:
-        step_index = int((data or {}).get("step_index", 0))
-    except (TypeError, ValueError):
-        step_index = 0
-    try:
-        total_steps = int((data or {}).get("total_steps") or len(all_steps) or 1)
-    except (TypeError, ValueError):
-        total_steps = max(1, len(all_steps) or 1)
-
-    step_number = max(1, step_index + 1)
-    is_final = step_number >= total_steps
-    is_late = total_steps > 1 and step_number >= max(1, total_steps - 1)
-    step_lower = step.lower()
-    is_optional = "optional" in step_lower or step_lower.startswith("optionally")
-
-    materials_line = ", ".join(materials) if materials else "household craft materials from the project"
-    prior_steps = all_steps[:step_index]
-    prior_block = "\n".join(f"- {s}" for s in prior_steps) if prior_steps else "- (first step; show only the parts introduced here)"
-
-    stage_rules = []
-    if is_optional:
-        stage_rules.append(
-            "This is an OPTIONAL enhancement. Show the SAME finished project with this optional addition clearly labeled. Do not invent a different object."
+        result = await asyncio.to_thread(
+            lambda: client.images.generate(
+                model="gpt-image-1",
+                prompt=prompt,
+                size="1024x1024",
+            )
         )
-    if is_final or is_late:
-        stage_rules.append(
-            "This is a late/final step. Show the complete finished product of THIS project (overall assembly), like the last pages of a LEGO manual."
-        )
-    else:
-        stage_rules.append(
-            "Show the build progress after THIS step only: prior parts already assembled + the new parts added now. Do not jump to an unrelated finished object."
-        )
-
-    stage_text = "\n".join(f"- {rule}" for rule in stage_rules)
-
-    prompt = f"""Create ONE clean LEGO-instruction-manual style educational diagram for a DIY engineering build.
-
-PROJECT (must match exactly — never invent a different project):
-- Title: {title or "DIY build"}
-- Description: {description or "Follow the step carefully."}
-- Materials ONLY (draw these materials; do not substitute LEGO bricks, plastic people, or unrelated objects): {materials_line}
-
-CURRENT STEP {step_number} of {total_steps}:
-{step}
-
-STEPS ALREADY COMPLETED BEFORE THIS ONE:
-{prior_block}
-
-STAGE RULES:
-{stage_text}
-
-VISUAL STYLE (LEGO / IKEA manual clarity):
-- White background, simple isometric or 3/4 view, soft shadows, crisp outlines
-- Large readable labels with thin callout lines pointing to exact parts
-- Show WHERE each new piece attaches (left/right, between posts, under deck, etc.)
-- Keep the SAME subject and material look across the whole project
-- No people, no faces, no characters, no humanoid figures
-- No LEGO brick studs unless the project materials are literally LEGO
-- No text paragraphs except short labels and a small Step {step_number} heading
-- Easy enough for a beginner to follow at a glance
-
-FORBIDDEN:
-- Drawing a different project (figurines, unrelated toys, random machines)
-- Changing materials mid-build
-- Vague “floating” parts with no attachment location
-"""
-
-    result = await asyncio.to_thread(
-        lambda: client.images.generate(
-            model="gpt-image-1",
-            prompt=prompt,
-            size="1024x1024",
-        )
-    )
+    except Exception as exc:
+        return _openai_error_response(exc)
 
     image_base64 = result.data[0].b64_json
     image_url = f"data:image/png;base64,{image_base64}"
     return {"image_url": image_url}
+
+
+@app.post("/generate-concept-render")
+async def generate_concept_render(data: dict):
+    phase_steps = (data or {}).get("phase_steps") or []
+    if not isinstance(phase_steps, list) or not [
+        s for s in phase_steps if str(s).strip()
+    ]:
+        raise HTTPException(status_code=400, detail="Phase steps are required.")
+    return await _generate_concept_render_image(data)
+
+
+@app.post("/generate-diagram")
+async def generate_diagram_legacy(data: dict):
+    """Legacy alias — redirects to Concept Render."""
+    return await generate_concept_render(data)
 
 
 class BetaFeedbackRequest(BaseModel):
@@ -500,6 +564,7 @@ class UserSyncRequest(BaseModel):
     email: str
     name: Optional[str] = ""
     plan: Optional[str] = "free"
+    preferences: Optional[dict] = None
 
 
 class UserActivityRequest(BaseModel):
@@ -533,6 +598,39 @@ async def sync_user_account(payload: UserSyncRequest):
         email,
         payload.name or "",
         payload.plan or "free",
+        preferences=payload.preferences,
+    )
+    return {"ok": True, "user": user}
+
+
+@app.get("/users/preferences")
+async def get_user_preferences(email: str):
+    from user_store import get_user, sync_user
+
+    key = (email or "").strip().lower()
+    if not key:
+        raise HTTPException(status_code=400, detail="Email is required.")
+
+    user = await asyncio.to_thread(get_user, key)
+    if not user:
+        user = await asyncio.to_thread(sync_user, key, "", "free")
+    return {"ok": True, "preferences": user.get("preferences") or {}}
+
+
+@app.post("/users/preferences")
+async def save_user_preferences(payload: UserSyncRequest):
+    from user_store import update_user_preferences
+
+    email = (payload.email or "").strip()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required.")
+    if not isinstance(payload.preferences, dict):
+        raise HTTPException(status_code=400, detail="Preferences object is required.")
+
+    user = await asyncio.to_thread(
+        update_user_preferences,
+        email,
+        payload.preferences,
     )
     return {"ok": True, "user": user}
 

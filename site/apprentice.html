@@ -6,7 +6,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="enginuity.css" />
+    <script src="enginuity-theme.js"></script>
+  <link rel="stylesheet" href="enginuity.css" />
     <link rel="stylesheet" href="project-output.css" />
     <link rel="stylesheet" href="spark-helper.css" />
     <link rel="stylesheet" href="upgrade.css" />
@@ -16,181 +17,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="alternate icon" href="assets/logo.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            padding: 24px;
-            margin: 0;
-            color: #111;
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        .back {
-            display: inline-block;
-            margin-bottom: 12px;
-            color: #111;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        h1 {
-            margin: 0 0 8px;
-            font-size: 34px;
-        }
-
-        .subtitle {
-            margin: 0 0 22px;
-            color: #333;
-            max-width: 720px;
-            line-height: 1.4;
-        }
-
-        .generator {
-            border: 1px solid #e6e6e6;
-            border-radius: 14px;
-            background: #fafafa;
-            padding: 16px;
-            margin-bottom: 14px;
-        }
-
-        .generator h2 {
-            margin: 0 0 14px;
-            font-size: 18px;
-        }
-
-        label {
-            display: block;
-            margin: 12px 0 6px;
-            font-weight: 700;
-            color: #222;
-        }
-
-        textarea, select {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 10px 12px;
-            border-radius: 12px;
-            border: 1px solid #d9d9d9;
-            font-size: 14px;
-            background: #fff;
-        }
-
-        textarea {
-            min-height: 90px;
-            resize: vertical;
-        }
-
-        .actions {
-            margin-top: 14px;
-        }
-
-        button {
-            border: none;
-            padding: 12px 14px;
-            border-radius: 12px;
-            background: #111;
-            color: #fff;
-            font-weight: 800;
-            cursor: pointer;
-        }
-
-        button:hover {
-            opacity: 0.95;
-        }
-
-        .project {
-            border: 1px solid #e6e6e6;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 12px;
-            background: #fff;
-        }
-
-        .title {
-            font-weight: 900;
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-
-        .section {
-            margin-top: 10px;
-        }
-
-        .pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            margin: 8px 0 0;
-            padding: 10px;
-            border: 1px solid #eee;
-            border-radius: 10px;
-            background: #fcfcfc;
-            font-family: inherit;
-            line-height: 1.4;
-        }
-
-        .safety {
-            border: 1px solid #ffd2a8;
-            background: #fff7ef;
-            color: #6a3b00;
-            padding: 12px 14px;
-            border-radius: 12px;
-            margin-bottom: 16px;
-        }
-
-        .error {
-            border: 1px solid #ffb3b3;
-            background: #fff0f0;
-            color: #8a0000;
-            padding: 12px 14px;
-            border-radius: 12px;
-            margin-bottom: 16px;
-        }
-
-        .thinking-box {
-            border: 1px solid #d7d7d7;
-            background: #fff;
-            border-radius: 12px;
-            padding: 12px 14px;
-            margin-bottom: 12px;
-            animation: ai-pulse 1.6s ease-in-out infinite;
-        }
-
-        .thinking-title {
-            font-weight: 800;
-            margin-bottom: 6px;
-        }
-
-        @keyframes ai-pulse {
-            0%, 100% { box-shadow: 0 0 0 rgba(216, 31, 38, 0); }
-            50% { box-shadow: 0 0 14px rgba(216, 31, 38, 0.12); }
-        }
-
-        .thinking-step {
-            color: #555;
-            font-size: 13px;
-        }
-
-        @media (max-width: 768px) {
-    body {
-        padding: 12px;
-    }
-
-    h1 {
-        font-size: 24px;
-    }
-
-    .mode-grid {
-        grid-template-columns: 1fr;
-    }
-    button {
-        width: 100%;
-    }
-}
-    </style>
+    <link rel="stylesheet" href="mode-pages.css" />
 </head>
 <body class="enginuity-paper">
     <div class="container">
@@ -205,23 +32,10 @@
             <h2>Spark Generator</h2>
 
             <label for="engineeringField">Field of engineering you are most interested in</label>
-            <select id="engineeringField">
-                <option value="">Select a field (optional)</option>
-                <option value="Mechanical Engineering⚙️">Mechanical Engineering</option>
-                <option value="Electrical Engineering⚡">Electrical Engineering</option>
-                <option value="Civil Engineering🏗️">Civil Engineering</option>
-                <option value="Aerospace Engineering✈️">Aerospace Engineering</option>
-                <option value="AI and Software Engineering💻">AI and Software Engineering</option>
-                <option value="Other">Other</option>
-            </select>
+            <select id="engineeringField"></select>
 
             <label for="education">Education / age</label>
-            <select id="education" onchange="updateDifficulty()">
-                <option value="middle">Middle-Schooler (10–14)</option>
-                <option value="high">High-Schooler (15–18)</option>
-                <option value="student">Student (18–25)</option>
-                <option value="adult">Adult (25+)</option>
-            </select>
+            <select id="education" onchange="updateDifficulty()"></select>
             <input type="hidden" id="age" value="" />
 
             <label for="difficulty">Difficulty (estimated time)</label>
@@ -235,20 +49,14 @@
             </div>
         </div>
 
-        <hr />
-        <section class="saved-section" aria-label="Saved projects">
-            <h2>📁 Saved Projects</h2>
-            <p class="saved-section__sub"><a class="saved-projects__link" href="saved.html">View all →</a></p>
-            <div id="savedProjects"></div>
-        </section>
-        <hr />
         <div id="output"></div>
     </div>
 
+    <script src="engineering-fields.js"></script>
     <script src="api-config.js"></script>
     <script src="project-output.js"></script>
     <script src="user-plan.js"></script>
-    <script src="diagram-generator.js"></script>
+    <script src="concept-render.js"></script>
     <script src="saved-projects.js"></script>
     <script>
     const MODE = "Apprentice";
@@ -423,33 +231,39 @@
         const difficulty = document.getElementById("difficulty");
         const ageHidden = document.getElementById("age");
 
-        let options = [];
-        let ageValue = "";
-
-        if (education === "middle") {
-            options = ["Easy: 5–10 min", "Medium: 15–30 min", "Hard: 30–45 min"];
-            ageValue = "10-14";
-        } else if (education === "high") {
-            options = ["Easy: 8–20 min", "Medium: 30–50 min", "Hard: 50–75 min"];
-            ageValue = "15-18";
-        } else if (education === "student") {
-            options = ["Easy: 20–45 min", "Medium: 45–90 min", "Hard: 90–150 min"];
-            ageValue = "18-25";
-        } else {
-            options = ["Easy: 25–50 min", "Medium: 50–120 min", "Hard: 2–4 days"];
-            ageValue = "25+";
-        }
-
-        ageHidden.value = ageValue;
+        const options = ["Easy: 8–20 min", "Medium: 30–50 min", "Hard: 50–75 min"];
+        ageHidden.value = typeof window.ageForEducation === "function"
+            ? window.ageForEducation(education)
+            : "15-18";
         difficulty.innerHTML = options.map(o => `<option>${o}</option>`).join("");
+    }
+
+    function getSelectedEngineeringField() {
+        const el = document.getElementById("engineeringField");
+        const raw = el ? el.value : "";
+        return typeof window.normalizeEngineeringField === "function"
+            ? window.normalizeEngineeringField(raw)
+            : String(raw || "").trim();
+    }
+
+    function clearActiveProjectForFieldChange() {
+        const output = document.getElementById("output");
+        if (output) output.innerHTML = "";
+        window.allProjects = [];
+        window.lastProjectData = null;
+        if (typeof window.clearCurrentProject === "function") {
+            window.clearCurrentProject();
+        }
     }
 
     function renderThinkingState(stepText) {
         const output = document.getElementById("output");
         output.innerHTML = `
             <div class="thinking-box">
+                <img class="thinking-box__bolt" src="assets/spark-ai-bolt.svg" width="36" height="36" alt="" aria-hidden="true" />
                 <div class="thinking-title">SparkAI is designing your project...</div>
                 <div class="thinking-step">${stepText}</div>
+                <span class="spark-ai-powered spark-ai-powered--thinking">Powered by <strong>SparkAI</strong></span>
             </div>
         `;
     }
@@ -469,14 +283,17 @@
         const output = document.getElementById("output");
         output.innerHTML = "";
 
-        const engineeringField = document.getElementById("engineeringField").value;
+        const engineeringField = getSelectedEngineeringField();
         const difficulty = document.getElementById("difficulty").value;
         const age = document.getElementById("age").value;
         const materials = document.getElementById("materials").value;
 
+        const fieldLine = typeof window.engineeringFieldFocusLine === "function"
+            ? window.engineeringFieldFocusLine(engineeringField)
+            : (engineeringField ? `Focus: ${engineeringField}.` : "");
         const descriptionWithField = [
             "3 beginner hands-on projects.",
-            engineeringField ? `Focus: ${engineeringField}.` : null,
+            fieldLine || null,
             "Apprentice mode — full guidance."
         ].filter(Boolean).join(" ");
 
@@ -493,27 +310,25 @@
         }, 900);
 
         try {
-            const apiBase = window.ENGINUITY_API_BASE || "https://enginuity-cpl1.onrender.com";
-            const response = await fetch(apiBase + "/generate-project", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    description: descriptionWithField,
-                    difficulty: difficulty,
-                    age: age,
-                    materials: materials,
-                    mode: MODE
-                })
+            const data = await window.enginuityPostJson("/generate-project", {
+                description: descriptionWithField,
+                difficulty: difficulty,
+                age: age,
+                materials: materials,
+                mode: MODE,
+                engineering_field: engineeringField
             });
-
-            if (!response.ok) {
-                throw new Error("Server returned " + response.status);
-            }
-
-            const data = await response.json();
             clearInterval(thinkingTimer);
 
-            const normalized = normalizeProjects(data);
+            if (data && data.error) {
+                output.innerHTML = `<div class="error">${escapeHtml(data.error)}${data.suggestion ? " " + escapeHtml(data.suggestion) : ""}</div>`;
+                return;
+            }
+
+            const normalized = normalizeProjects(data, {
+                difficulty: difficulty,
+                engineeringField: engineeringField
+            });
             if (normalized.projects.length) {
                 if (typeof window.recordApprenticeGeneration === "function") {
                     window.recordApprenticeGeneration();
@@ -551,7 +366,11 @@
             return;
         }
 
-        const normalized = normalizeProjects(data);
+        const difficultyValue = document.getElementById("difficulty").value;
+        const normalized = normalizeProjects(data, {
+            difficulty: difficultyValue,
+            engineeringField: getSelectedEngineeringField()
+        });
         const projects = normalized.projects;
         const safetyWarnings = normalized.safetyWarnings;
 
@@ -632,22 +451,33 @@
     // -----------------------------
     // Normalize AI Response
     // -----------------------------
-    function normalizeProjects(data) {
+    function normalizeProjects(data, meta) {
+        meta = meta || {};
+        const sessionDifficulty = meta.difficulty || "";
+        const sessionField = meta.engineeringField || "";
         const source = data || {};
         const directPayload = source.projects || {};
         const safetyWarnings = Array.isArray(directPayload.safety_warnings) ? directPayload.safety_warnings : [];
 
+        function mapProject(p) {
+            return {
+                title: p.project_name || p.title || "Untitled",
+                description: p.description || "",
+                materials: toStringList(p.materials_needed || p.materials),
+                materialsSuggested: toStringList(p.materials_suggested),
+                steps: toStringList(p.steps),
+                buildPhases: p.build_phases || p.buildPhases || null,
+                difficulty: p.difficulty || sessionDifficulty,
+                estimatedTime: p.estimated_time || p.estimatedTime || sessionDifficulty,
+                engineeringExplanation: p.engineering_explanation || p.engineeringExplanation || p.engineering || "",
+                physicsExplanation: p.physics_explanation || p.physicsExplanation || p.physics || "",
+                engineeringField: sessionField
+            };
+        }
+
         if (directPayload && Array.isArray(directPayload.projects)) {
             return {
-                projects: directPayload.projects.map((p) => ({
-                    title: p.project_name || p.title || "Untitled",
-                    description: p.description || "",
-                    materials: toStringList(p.materials_needed || p.materials),
-                    materialsSuggested: toStringList(p.materials_suggested),
-                    steps: toStringList(p.steps),
-                    engineeringExplanation: p.engineering_explanation || p.engineeringExplanation || p.engineering || "",
-                    physicsExplanation: p.physics_explanation || p.physicsExplanation || p.physics || ""
-                })),
+                projects: directPayload.projects.map(mapProject),
                 safetyWarnings
             };
         }
@@ -659,8 +489,12 @@
                 materials: toStringList(p && (p.materials_needed || p.materials)),
                 materialsSuggested: toStringList(p && (p.materials_suggested || p.materialsSuggested)),
                 steps: toStringList(p && p.steps),
+                buildPhases: p && (p.build_phases || p.buildPhases) || null,
+                difficulty: (p && p.difficulty) || sessionDifficulty,
+                estimatedTime: (p && (p.estimated_time || p.estimatedTime)) || sessionDifficulty,
                 engineeringExplanation: p ? (p.engineering_explanation || p.engineeringExplanation || p.engineering || "") : "",
-                physicsExplanation: p ? (p.physics_explanation || p.physicsExplanation || p.physics || "") : ""
+                physicsExplanation: p ? (p.physics_explanation || p.physicsExplanation || p.physics || "") : "",
+                engineeringField: sessionField
             }));
 
             return { projects, safetyWarnings: [] };
@@ -739,10 +573,25 @@
     window.renderSavedProject = renderSavedProject;
 
     window.onload = function () {
+        if (typeof window.populateEngineeringFieldSelect === "function") {
+            window.populateEngineeringFieldSelect(document.getElementById("engineeringField"));
+        }
+        if (typeof window.populateEducationSelect === "function") {
+            window.populateEducationSelect(document.getElementById("education"), "high");
+        }
         updateDifficulty();
-
-        if (typeof window.loadSavedProjects === "function") {
-            window.loadSavedProjects();
+        if (typeof window.bindEngineeringFieldGuard === "function") {
+            window.bindEngineeringFieldGuard(document.getElementById("engineeringField"), {
+                getActiveField: function () {
+                    var current = typeof window.getCurrentProject === "function"
+                        ? window.getCurrentProject()
+                        : null;
+                    if (current && current.engineeringField) return current.engineeringField;
+                    var first = (window.allProjects || [])[0];
+                    return first && first.engineeringField ? first.engineeringField : "";
+                },
+                onMismatch: clearActiveProjectForFieldChange
+            });
         }
 
         const name = localStorage.getItem("user_name");
@@ -762,6 +611,7 @@
     <script src="upgrade.js"></script>
     <script src="contact.js"></script>
     <script src="beta-feedback.js"></script>
+    <script src="spark-ai-brand.js"></script>
     <script src="spark-helper.js" defer></script>
     <script src="enginuity-loading-screen.js" defer></script>
 </body>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SparkAI">
+  <title>SparkAI</title>
+  <g fill="none" stroke="#ffffff" stroke-width="0.75" opacity="0.2">
+    <circle cx="32" cy="32" r="27"/>
+    <path d="M32 6 V58 M6 32 H58"/>
+  </g>
+  <path
+    d="M35 5 L21 33 H29 L25 59 L47 27 H39 L53 5 Z"
+    fill="#ffffff"
+    stroke="#ffe0e0"
+    stroke-width="2"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+  />
+</svg>

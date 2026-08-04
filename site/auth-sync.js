@@ -21,6 +21,13 @@
     return (localStorage.getItem("user_name") || "").trim();
   }
 
+  function currentTheme() {
+    if (typeof window.getEnginuityTheme === "function") {
+      return window.getEnginuityTheme();
+    }
+    return localStorage.getItem("enginuity_theme") === "dark" ? "dark" : "light";
+  }
+
   function postJson(path, payload) {
     var base = apiBase();
     if (!base) return Promise.resolve(null);
@@ -33,6 +40,16 @@
     });
   }
 
+  function applyPreferencesFromUser(user) {
+    if (!user || !user.preferences) return;
+    if (
+      user.preferences.theme &&
+      typeof window.applyEnginuityTheme === "function"
+    ) {
+      window.applyEnginuityTheme(user.preferences.theme);
+    }
+  }
+
   function syncCurrentUser(options) {
     options = options || {};
     var email = currentEmail();
@@ -41,12 +58,27 @@
     return postJson("/users/sync", {
       email: email,
       name: currentName(),
-      plan: currentPlan()
+      plan: currentPlan(),
+      preferences: { theme: currentTheme() }
     }).then(function (response) {
       if (response && response.ok && typeof response.json === "function") {
         return response.json();
       }
       return null;
+    }).then(function (result) {
+      if (result && result.user && !options.skipThemeApply) {
+        applyPreferencesFromUser(result.user);
+      }
+      return result;
+    });
+  }
+
+  function syncSparkTheme(theme) {
+    var email = currentEmail();
+    if (!email) return Promise.resolve(null);
+    return postJson("/users/preferences", {
+      email: email,
+      preferences: { theme: theme === "dark" ? "dark" : "light" }
     });
   }
 
@@ -103,6 +135,7 @@
   }
 
   window.syncSparkUser = syncCurrentUser;
+  window.syncSparkTheme = syncSparkTheme;
   window.recordSparkActivity = recordActivity;
   window.fetchSparkUserRole = fetchUserRole;
   window.checkSparkAdminAccess = checkAdminAccess;

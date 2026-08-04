@@ -7,7 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="enginuity.css" />
+    <script src="enginuity-theme.js"></script>
+  <link rel="stylesheet" href="enginuity.css" />
     <link rel="stylesheet" href="project-output.css" />
     <link rel="stylesheet" href="upgrade.css" />
     <link rel="stylesheet" href="contact.css" />
@@ -97,7 +98,7 @@
             padding: 0.55rem 0.7rem 0.6rem;
             border: 2px solid rgba(216, 31, 38, 0.22);
             border-radius: 10px 18px 12px 22px / 14px 10px 18px 12px;
-            background: rgba(255, 255, 255, 0.72);
+            background: var(--mode-tab-bg, rgba(255, 255, 255, 0.72));
             box-shadow: 2px 3px 0 rgba(40, 0, 0, 0.06);
         }
 
@@ -112,8 +113,8 @@
 
         .btn-signout {
             border: 2px solid rgba(216, 31, 38, 0.35);
-            background: rgba(255, 255, 255, 0.92);
-            color: rgba(70, 20, 20, 0.9);
+            background: var(--mode-tab-bg, rgba(255, 255, 255, 0.92));
+            color: var(--eng-red-deep);
             border-radius: 10px;
             padding: 0.25rem 0.65rem;
             font-family: "Special Elite", "Courier New", Courier, monospace;
@@ -123,7 +124,7 @@
         }
 
         .btn-signout:hover {
-            background: #fff;
+            background: rgba(216, 31, 38, 0.1);
         }
 
         /* Saved projects panel — homepage only */
@@ -152,14 +153,14 @@
             font-family: "Special Elite", "Courier New", Courier, monospace;
             font-size: 0.95rem;
             text-decoration: none;
-            background: rgba(255, 255, 255, 0.92);
+            background: var(--mode-tab-bg, rgba(255, 255, 255, 0.92));
             box-shadow: 2px 3px 0 rgba(60, 0, 0, 0.1);
             transform: rotate(1deg);
             white-space: nowrap;
         }
 
         .btn-signin:hover {
-            background: #fff;
+            background: rgba(216, 31, 38, 0.1);
             transform: rotate(0deg) translateY(-1px);
         }
 
@@ -255,13 +256,13 @@
             padding: 1rem 1.1rem 1.15rem;
             border: 3px solid var(--eng-red);
             border-radius: 6px 18px 8px 22px / 14px 8px 20px 10px;
-            background: rgba(255, 255, 255, 0.94);
+            background: var(--mode-tab-bg, rgba(255, 255, 255, 0.94));
             color: var(--eng-red-deep);
             text-decoration: none;
             box-shadow:
                 3px 4px 0 rgba(120, 10, 10, 0.12),
                 inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-            transition: transform 0.14s ease, box-shadow 0.14s ease;
+            transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
         }
 
         .mode-node:hover {
@@ -282,7 +283,7 @@
         }
 
         .mode-node--innovator {
-            bottom: -47%;
+            bottom: -38%;
             right: 38%;
             transform: rotate(-1.1deg);
         }
@@ -298,7 +299,7 @@
             margin: 0 0 0.65rem;
             font-size: 0.92rem;
             line-height: 1.45;
-            color: var(--ink);
+            color: var(--eng-red-deep);
         }
 
         .mode-node__cta {
@@ -400,7 +401,7 @@
             padding: 0.7rem 1.15rem 0.75rem;
             border: 3px solid var(--eng-red);
             border-radius: 6px 18px 8px 22px / 14px 8px 20px 10px;
-            background: rgba(255, 255, 255, 0.94);
+            background: var(--mode-tab-bg, rgba(255, 255, 255, 0.94));
             color: var(--eng-red-deep);
             font-family: "Special Elite", "Courier New", Courier, monospace;
             font-weight: 900;
@@ -431,7 +432,7 @@
             margin: 0 auto;
             border-radius: 14px;
             border: 1px solid rgba(216, 31, 38, 0.35);
-            background: #fff;
+            background: var(--mode-tab-bg, var(--surface-card));
             padding: 1rem 1.05rem 1.2rem;
         }
 
@@ -445,16 +446,18 @@
             width: 100%;
             box-sizing: border-box;
             padding: 0.62rem 0.7rem;
-            border: 1px solid #d8d8d8;
+            border: 2px solid rgba(216, 31, 38, 0.35);
             border-radius: 10px;
             font-size: 0.95rem;
+            background: var(--surface-card);
+            color: var(--eng-red-deep);
         }
 
         .onboarding-progress {
             margin-top: 0.85rem;
-            border: 1px solid #e6e6e6;
+            border: 2px solid rgba(216, 31, 38, 0.35);
             border-radius: 10px;
-            background: #fafafa;
+            background: var(--surface-muted);
             overflow: hidden;
         }
 
@@ -475,7 +478,7 @@
 
         .plan-toggle {
             display: inline-flex;
-            border: 1px solid #d8d8d8;
+            border: 2px solid rgba(216, 31, 38, 0.35);
             border-radius: 999px;
             overflow: hidden;
             margin-top: 0.4rem;
@@ -483,8 +486,8 @@
 
         .plan-toggle button {
             border: none;
-            background: #fff;
-            color: #222;
+            background: var(--surface-card);
+            color: var(--eng-red-deep);
             padding: 0.38rem 0.7rem;
             font-size: 0.8rem;
             font-weight: 700;
@@ -492,7 +495,7 @@
         }
 
         .plan-toggle button.active {
-            background: #111;
+            background: var(--eng-red-deep);
             color: #fff;
         }
 
@@ -504,9 +507,9 @@
         }
 
         .plan-card {
-            border: 1px solid #e2e2e2;
+            border: 2px solid rgba(216, 31, 38, 0.35);
             border-radius: 10px;
-            background: #fff;
+            background: var(--mode-tab-bg, var(--surface-card));
             padding: 0.7rem;
         }
 
@@ -754,8 +757,8 @@
             </a>
 
             <a class="mode-node mode-node--innovator-lite" href="innovator-lite.html" data-mode-href="innovator-lite.html">
-                <div class="mode-node__label">Innovator Lite</div>
-                <p class="mode-node__desc">Quick 15–20 minute builds with items you already have.</p>
+                <div class="mode-node__label" id="innovatorBetaModeLabel">Innovator Beta</div>
+                <p class="mode-node__desc" id="innovatorBetaModeDesc">Signed-in Beta: one project up to 2 days with multi-part builds. Full Innovator launches later.</p>
                 <span class="mode-node__plan-badge mode-node__plan-badge--usage" id="innovatorLitePlanBadge" hidden></span>
                 <span class="mode-node__cta">Start →</span>
             </a>
@@ -772,6 +775,12 @@
                 <a class="site-footer__link" href="index.html">Home</a>
                 <a class="site-footer__link" href="profile.html" id="footerAccountLink">Account</a>
             </nav>
+            <p class="site-footer__powered">
+                <span class="spark-ai-powered spark-ai-powered--footer">
+                    <img class="spark-ai-bolt" src="assets/spark-ai-bolt.svg" width="16" height="16" alt="" aria-hidden="true" />
+                    <span>Powered by <strong>SparkAI</strong></span>
+                </span>
+            </p>
         </footer>
     </div>
 
@@ -783,15 +792,10 @@
                 Find ANY 3 simple items in your house. SparkAI will instantly turn them into a real engineering project you can build in around 15 minutes.
             </p>
             <p style="margin:0 0 0.7rem; color:#444;">
-                You’ll also experience: AI visual diagrams, smart engineering guidance, interactive build tracking, and SparkHelper AI assistance.
+                You’ll also experience: Concept Renders, smart engineering guidance, interactive build tracking, and SparkHelper AI assistance.
             </p>
             <label for="liteEducation" style="display:block;margin:0 0 0.35rem;font-weight:800;">Education / age</label>
-            <select id="liteEducation" style="width:100%;margin:0 0 0.75rem;padding:0.45rem 0.55rem;border:2px solid rgba(216,31,38,0.28);border-radius:8px;font:inherit;background:#fff;">
-                <option value="middle">Middle-Schooler (10–14)</option>
-                <option value="high" selected>High-Schooler (15–18)</option>
-                <option value="student">Student (18–25)</option>
-                <option value="adult">Adult (25+)</option>
-            </select>
+            <select id="liteEducation" class="lite-education" style="width:100%;margin:0 0 0.75rem;"></select>
             <div class="onboarding-grid">
                 <input id="liteMaterial1" type="text" placeholder="Material 1 (e.g., cardboard)" />
                 <input id="liteMaterial2" type="text" placeholder="Material 2 (e.g., tape)" />
@@ -809,13 +813,15 @@
                     Ready to build bigger, smarter, and more advanced projects?
                 </p>
                 <p style="margin:0 0 0.4rem;">
-                    Unlock: unlimited builds, advanced engineering modes, saved projects, unlimited SparkHelper, visual engineering diagrams.
+                    Unlock: unlimited builds, advanced engineering modes, saved projects, unlimited SparkHelper, Concept Renders.
                 </p>
                 <button type="button" id="liteUpgradeBtn" class="eng-upgrade-btn" style="margin-top:0.5rem;">Choose your plan</button>
             </section>
         </div>
     </div>
 
+    <script src="spark-ai-brand.js"></script>
+    <script src="engineering-fields.js"></script>
     <script src="api-config.js"></script>
     <script src="user-plan.js"></script>
     <script src="auth-sync.js"></script>
@@ -824,7 +830,7 @@
     <script src="beta-feedback.js"></script>
     <script src="enginuity-loading-screen.js" defer></script>
     <script src="project-output.js"></script>
-    <script src="diagram-generator.js"></script>
+    <script src="concept-render.js"></script>
     <script src="saved-projects.js" defer></script>
 <script>
 /* --------------------------
@@ -902,12 +908,14 @@ function openInnovatorLiteModal() {
     if (!modal) return;
     modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");
-    window.MODE = "Innovator Lite";
+    window.MODE = "Innovator Beta";
     // Temporary onboarding access without plan gates.
     window.canUseSparkHelper = function () { return { allowed: true }; };
     window.recordSparkHelperUse = function () {};
-    window.canUseDiagram = function () { return { allowed: true }; };
-    window.recordDiagramUse = function () {};
+    window.canUseConceptRender = function () { return { allowed: true }; };
+    window.recordConceptRenderUse = function () {};
+    window.canUseDiagram = window.canUseConceptRender;
+    window.recordDiagramUse = window.recordConceptRenderUse;
     if (typeof window.syncSparkHelperContext === "function") {
         window.syncSparkHelperContext();
     }
@@ -968,14 +976,15 @@ function setLiteError(message) {
 function normalizeLiteProject(payload, materials) {
     return {
         id: "lite-" + Date.now(),
-        title: payload.title || "Innovator Lite Project",
+        title: payload.title || "Innovator Beta Project",
         description: payload.description || "",
         estimatedTime: payload.estimated_time || "15-20 minutes",
         difficulty: payload.difficulty || "Beginner",
         materials: Array.isArray(payload.materials) && payload.materials.length ? payload.materials : materials,
         steps: Array.isArray(payload.steps) ? payload.steps.map(String).filter(Boolean).slice(0, 7) : [],
+        buildPhases: payload.build_phases || payload.buildPhases || null,
         scienceExplanation: payload.science_explanation || "",
-        mode: "Innovator Lite",
+        mode: "Innovator Beta",
         page: "index.html"
     };
 }
@@ -1009,13 +1018,6 @@ function renderLiteProject(project) {
 }
 
 async function generateFirstBuild() {
-    if (typeof window.canUseInnovatorLite === "function") {
-        const liteCheck = window.canUseInnovatorLite();
-        if (!liteCheck.allowed) {
-            setLiteError(liteCheck.message || "Innovator Lite Beta limit reached.");
-            return;
-        }
-    }
     const mat1 = (document.getElementById("liteMaterial1").value || "").trim();
     const mat2 = (document.getElementById("liteMaterial2").value || "").trim();
     const mat3 = (document.getElementById("liteMaterial3").value || "").trim();
@@ -1035,19 +1037,13 @@ async function generateFirstBuild() {
     if (status) status.textContent = "Generating your first build...";
 
     try {
-        const apiBase = window.ENGINUITY_API_BASE || "https://enginuity-cpl1.onrender.com";
-        const response = await fetch(apiBase + "/generate-innovator-lite", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                materials: materials,
-                education: (document.getElementById("liteEducation") || {}).value || "high"
-            })
+        const data = await window.enginuityPostJson("/generate-innovator-lite", {
+            materials: materials,
+            education: (document.getElementById("liteEducation") || {}).value || "high",
+            tutorial: true
         });
-        if (!response.ok) throw new Error("Server returned " + response.status);
-        const data = await response.json();
         if (data && data.error) {
-            setLiteError(data.error);
+            setLiteError(data.error + (data.suggestion ? " " + data.suggestion : ""));
             return;
         }
         const project = normalizeLiteProject(data || {}, materials);
@@ -1262,7 +1258,7 @@ function updateHomePlanUi() {
             if (isFreePlan) {
                 innovatorBadge.textContent =
                     typeof window.isBetaMode === "function" && window.isBetaMode()
-                        ? "Launches after Beta — try Innovator Lite"
+                        ? "Launches after Beta — try Innovator Beta"
                         : "Builder or Pro required";
             } else if (typeof window.getInnovatorMonthlyStatus === "function") {
                 const st = window.getInnovatorMonthlyStatus();
@@ -1355,7 +1351,7 @@ function wireHomePlanUi() {
             var liteCheck = window.canUseInnovatorLite();
             if (!liteCheck.allowed) {
                 e.preventDefault();
-                alert(liteCheck.message || "You've completed the Innovator Lite Beta experience.");
+                alert(liteCheck.message || "You've used your Innovator Beta project for this testing period.");
             }
         });
     }
@@ -1411,6 +1407,10 @@ function signOut() {
 -------------------------- */
 
 window.onload = function () {
+    if (typeof window.populateEducationSelect === "function") {
+        window.populateEducationSelect(document.getElementById("liteEducation"), "high");
+    }
+
     const signOutBtn = document.getElementById("signOutBtn");
     if (signOutBtn) signOutBtn.addEventListener("click", signOut);
 
