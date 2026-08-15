@@ -1,5 +1,6 @@
 /* Enginuity — workshop sketch theme (red / white / graph paper) */
 @import url("spark-ai-brand.css");
+@import url("mobile.css");
 
 :root {
   --eng-red: #d81f26;

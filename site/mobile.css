@@ -1,0 +1,98 @@
+/* Phone & tablet layouts — desktop styles above 901px stay unchanged. */
+
+@media (max-width: 900px) {
+  body.enginuity-paper {
+    padding: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body.enginuity-paper .container,
+  body.enginuity-paper .lite-wrap {
+    padding-left: 0;
+    padding-right: 0;
+    max-width: 100%;
+  }
+
+  body.enginuity-paper h1,
+  .lite-title {
+    font-size: clamp(1.35rem, 5.5vw, 1.75rem);
+    line-height: 1.2;
+  }
+
+  body.enginuity-paper .subtitle,
+  body.enginuity-paper .lite-sub {
+    font-size: 0.95rem;
+  }
+
+  .lite-materials,
+  .lite-education,
+  body.enginuity-paper textarea,
+  body.enginuity-paper input,
+  body.enginuity-paper select {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 768px) {
+  .eng-contact-btn {
+    left: 0.75rem;
+    right: auto;
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100vw - 5.5rem);
+  }
+
+  body.has-enginuity-done-bar .eng-contact-btn {
+    bottom: calc(var(--enginuity-done-bar-offset, 8.5rem) + 0.35rem);
+  }
+
+  .project-output__section--progress {
+    position: relative;
+    top: auto;
+  }
+
+  .concept-render__nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+  }
+
+  .concept-render__phase-label {
+    order: -1;
+    flex: none;
+    text-align: left;
+    padding: 0 0.15rem;
+  }
+
+  .concept-render__nav-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .project-output,
+  .project-output__section {
+    overflow-x: hidden;
+  }
+
+  .onboarding-modal__card {
+    margin: 0.75rem;
+    max-height: calc(100vh - 1.5rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 480px) {
+  .spark-helper-fab {
+    right: 0.75rem;
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  body.has-enginuity-done-bar .spark-helper-fab {
+    bottom: calc(var(--enginuity-done-bar-offset, 8.5rem) + 0.5rem);
+  }
+
+  .enginuity-done-bar {
+    padding-bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px));
+  }
+}
