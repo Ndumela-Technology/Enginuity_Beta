@@ -27,6 +27,8 @@
       </p>
       <label for="liteEducation"><strong>Education / age</strong></label>
       <select id="liteEducation" class="lite-education" style="display:block;width:100%;max-width:420px;margin:0.35rem 0 0.85rem;"></select>
+      <label for="liteField"><strong>Engineering field</strong></label>
+      <select id="liteField" class="lite-education" style="display:block;width:100%;max-width:420px;margin:0.35rem 0 0.85rem;"></select>
       <div id="liteDifficultyWrap" style="display:none;">
         <label for="liteDifficulty"><strong>Difficulty (estimated time)</strong></label>
         <select id="liteDifficulty" class="lite-education" style="display:block;width:100%;max-width:420px;margin:0.35rem 0 0.85rem;">
@@ -36,7 +38,7 @@
         </select>
       </div>
       <label for="liteGoal"><strong>Project goal or idea</strong></label>
-      <textarea id="liteGoal" class="lite-materials" style="min-height:4.5rem;margin-bottom:0.85rem;" placeholder="Example: I want to build something that flies using my materials."></textarea>
+      <textarea id="liteGoal" class="lite-materials" style="min-height:4.5rem;margin-bottom:0.85rem;" placeholder="Example: I want an aerospace project that flies using my materials."></textarea>
       <label for="liteMaterials"><strong>Available materials (comma or new line)</strong></label>
       <textarea id="liteMaterials" class="lite-materials" placeholder="Example: paper cups, tape, string, coins"></textarea>
       <div class="lite-actions">
@@ -115,6 +117,9 @@
       if (typeof window.populateEducationSelect === "function") {
         window.populateEducationSelect(document.getElementById("liteEducation"), "high");
       }
+      if (typeof window.populateEngineeringFieldSelect === "function") {
+        window.populateEngineeringFieldSelect(document.getElementById("liteField"), "");
+      }
 
       window.canUseConceptRender = function () { return { allowed: true }; };
       window.recordConceptRenderUse = function () {
@@ -158,6 +163,12 @@
       function getEducationValue() {
         var el = document.getElementById("liteEducation");
         return el && el.value ? el.value : "high";
+      }
+
+      function getEngineeringField() {
+        var el = document.getElementById("liteField");
+        if (!el || typeof window.normalizeEngineeringField !== "function") return "";
+        return window.normalizeEngineeringField(el.value);
       }
 
       function getProjectGoal() {
@@ -261,7 +272,8 @@
           buildPhases: data.build_phases || data.buildPhases || null,
           scienceExplanation: data.science_explanation || "",
           mode: MODE,
-          page: "innovator-lite.html"
+          page: "innovator-lite.html",
+          engineeringField: data.engineering_field || getEngineeringField() || ""
         };
       }
 
@@ -304,7 +316,8 @@
             materials: materials,
             education: getEducationValue(),
             tutorial: isGuest(),
-            description: getProjectGoal()
+            description: getProjectGoal(),
+            engineering_field: getEngineeringField()
           };
           if (!isGuest()) {
             payload.difficulty = getDifficultyValue();

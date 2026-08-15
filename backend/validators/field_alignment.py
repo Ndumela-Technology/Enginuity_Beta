@@ -19,6 +19,12 @@ _FORBIDDEN_TERMS: dict[str, frozenset[str]] = {
             "highway",
             "culvert",
             "pier foundation",
+            "lava lamp",
+            "lava-lamp",
+            "convection lamp",
+            "density column",
+            "volcano",
+            "slime",
         }
     ),
     "civil": frozenset(
@@ -173,9 +179,9 @@ def check_field_alignment(project_text: str, engineering_field: str) -> tuple[fl
     hints = _POSITIVE_HINTS.get(key, frozenset())
     if hints and not any(hint in text for hint in hints):
         issues.append(
-            f"Project may not clearly reflect {label} — add field-specific concepts."
+            f"Project does not clearly reflect {label} — missing field-specific concepts."
         )
-        return 0.55, issues
+        return 0.0, issues
 
     return 1.0, issues
 
@@ -190,3 +196,81 @@ def extract_field_from_description(description: str) -> str:
         re.I,
     )
     return match.group(1).strip() if match else ""
+
+
+_INFER_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "aerospace",
+        (
+            "aerospace",
+            "aero",
+            "aircraft",
+            "airplane",
+            "aeroplane",
+            "flight",
+            "fly",
+            "flying",
+            "glider",
+            "rocket",
+            "aviation",
+            "spacecraft",
+            "orbit",
+            "drone",
+            "helicopter",
+            "parachute",
+            "airfoil",
+            "propeller",
+            "rotor",
+            "wing",
+        ),
+    ),
+    (
+        "civil",
+        (
+            "civil engineering",
+            "bridge",
+            "truss",
+            "foundation",
+            "retaining wall",
+            "dam",
+            "tower structure",
+            "load path",
+        ),
+    ),
+    (
+        "electrical",
+        (
+            "electrical engineering",
+            "electric engineering",
+            "circuit",
+            "led",
+            "arduino",
+            "sensor",
+            "wiring",
+            "conductivity",
+        ),
+    ),
+    (
+        "mechanical",
+        (
+            "mechanical engineering",
+            "gear",
+            "lever",
+            "pulley",
+            "linkage",
+            "catapult",
+            "simple machine",
+        ),
+    ),
+)
+
+
+def infer_engineering_field_from_text(text: str) -> str:
+    """Infer discipline from free-text project goals (e.g. 'something with aerospace')."""
+    blob = (text or "").lower()
+    if not blob.strip():
+        return ""
+    for key, keywords in _INFER_PATTERNS:
+        if any(kw in blob for kw in keywords):
+            return _FIELD_LABELS.get(key, key)
+    return ""

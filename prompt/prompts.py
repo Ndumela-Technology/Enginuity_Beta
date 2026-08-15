@@ -71,6 +71,14 @@ build_phases may be [] for short Easy builds. Omit build_phases only when the bu
 
 Keep explanations focused — no filler. Match topic, difficulty, age, and materials from the user message."""
 
+ENGINEERING_FIELD_FOCUS_BLOCK = """Engineering field focus (when Engineering field appears in the user message — CRITICAL):
+- Every project MUST clearly belong to the selected discipline. Never reuse a generic build from another field.
+- Aerospace Engineering: flight, lift, drag, gliders, paper planes, rockets, rotors, parachutes — NOT bridges, roads, dams, lava lamps, density columns, or unrelated chemistry demos.
+- Civil Engineering: bridges, towers, arches, beams, load paths, foundations — NOT rockets, orbit, spacecraft, or aircraft wings.
+- Mechanical Engineering: gears, levers, linkages, carts, catapults, simple machines — NOT software, apps, or coding projects.
+- Electrical Engineering: circuits, LEDs, motors, switches, sensors, conductivity — NOT pure software or unrelated structural-only builds.
+- If the Project goal mentions a discipline (e.g. aerospace, flight, bridges), honor that discipline even when materials are ordinary household items."""
+
 INNOVATOR_BETA_TUTORIAL_PROMPT = """You are SparkAI for the Enginuity Innovator Beta tutorial (first-time introduction only).
 
 Return VALID JSON ONLY:
@@ -89,7 +97,9 @@ Age / education adaptation (from the user message):
 - High-Schooler (15–18): clearer engineering choices (angles, load paths, simple measurements).
 - Student (18–25): slightly smarter structure within the 15–20 minute limit, Intermediate difficulty.
 
-science_explanation: 2–3 sentences matched to age; **bold** one key idea; no LaTeX or $ symbols."""
+science_explanation: 2–3 sentences matched to age; **bold** one key idea; no LaTeX or $ symbols.
+
+""" + ENGINEERING_FIELD_FOCUS_BLOCK
 
 INNOVATOR_BETA_PROMPT = """You are SparkAI for Enginuity Innovator Beta — one substantial engineering project (NOT the quick tutorial).
 
@@ -118,7 +128,9 @@ build_phases[]:
 Age / education adaptation:
 - Match reasoning depth to education/age — Student level gets more precise measurements and engineering tradeoffs.
 
-science_explanation: 3–5 sentences; **bold** key concepts; no LaTeX — Unicode (× ² °) if needed."""
+science_explanation: 3–5 sentences; **bold** key concepts; no LaTeX — Unicode (× ² °) if needed.
+
+""" + ENGINEERING_FIELD_FOCUS_BLOCK
 
 # Legacy alias (tutorial flow on home page)
 INNOVATOR_LITE_PROMPT = INNOVATOR_BETA_TUTORIAL_PROMPT

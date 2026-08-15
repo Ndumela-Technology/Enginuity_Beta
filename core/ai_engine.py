@@ -374,15 +374,24 @@ def generate_innovator_lite_project(
     tutorial: bool = False,
     difficulty: str = "",
     description: str = "",
+    engineering_field: str = "",
 ):
     materials_text = ", ".join(materials)
     education_text = (education or "").strip() or "High-Schooler (15–18)"
     goal_text = (description or "").strip()
     goal_block = f"Project goal: {goal_text}\n" if goal_text else ""
+    field_text = (engineering_field or "").strip()
+    field_block = ""
+    if field_text:
+        field_block = (
+            f"Engineering field (STRICT — project must clearly belong here): "
+            f"{field_text}\n"
+        )
     if tutorial:
         system_prompt = INNOVATOR_BETA_TUTORIAL_PROMPT
         user_prompt = (
             f"{goal_block}"
+            f"{field_block}"
             f"Materials available: {materials_text}\n"
             f"Education / age: {education_text}\n"
             "Create one tutorial Innovator Beta project using mostly these items.\n"
@@ -394,6 +403,7 @@ def generate_innovator_lite_project(
         diff_label = (difficulty or "").strip() or "Medium: 4–12 hours"
         user_prompt = (
             f"{goal_block}"
+            f"{field_block}"
             f"Materials available: {materials_text}\n"
             f"Education / age: {education_text}\n"
             f"Difficulty: {diff_label}\n"

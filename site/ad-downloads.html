@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enginuity & SparkAI · Ad Downloads</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="enginuity.css" />
+  <style>
+    .ads-page { max-width: 980px; margin: 0 auto; padding: 1.25rem 1rem 2.5rem; }
+    .ads-page h1 { color: var(--eng-red, #d81f26); margin-bottom: 0.35rem; }
+    .ads-grid { display: grid; gap: 1rem; margin-top: 1rem; }
+    .ad-card {
+      border: 2px solid rgba(216, 31, 38, 0.35);
+      border-radius: 14px;
+      background: var(--surface-card, #fff);
+      padding: 1rem;
+    }
+    .ad-card h2 { margin: 0 0 0.65rem; color: var(--eng-red-deep, #8b1a1a); }
+    .ad-card img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid rgba(216, 31, 38, 0.2);
+      border-radius: 10px;
+      margin-bottom: 0.75rem;
+      background: #f7f3eb;
+    }
+    .ad-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .ad-links a {
+      font-family: "Special Elite", "Courier New", Courier, monospace;
+      font-weight: 800;
+      color: var(--eng-red-deep, #8b1a1a);
+      text-decoration: none;
+      border: 2px solid rgba(216, 31, 38, 0.35);
+      border-radius: 999px;
+      padding: 0.45rem 0.85rem;
+      background: #fff;
+    }
+    .ad-links a:hover { text-decoration: underline; }
+    .ad-note { font-size: 0.82rem; color: rgba(30, 30, 30, 0.65); margin-top: 0.45rem; }
+  </style>
+</head>
+<body class="enginuity-paper">
+  <div class="ads-page">
+    <a class="back" href="index.html">← Back to Home</a>
+    <h1>Ad &amp; Promo Downloads</h1>
+    <p>Graph-paper workshop style ads — no “Beta” label. Landscape (1200×630) and square (1080×1080) formats.</p>
+
+    <div class="ads-grid">
+      <section class="ad-card">
+        <h2>Enginuity · Landscape</h2>
+        <img src="assets/ads/enginuity-ad-1200x630.png" alt="Enginuity landscape ad" />
+        <div class="ad-links">
+          <a href="assets/ads/enginuity-ad-1200x630.png" download="enginuity-ad-1200x630.png">Download PNG</a>
+          <a href="assets/ads/enginuity-ad-1200x630.jpg" download="enginuity-ad-1200x630.jpg">Download JPEG</a>
+        </div>
+      </section>
+
+      <section class="ad-card">
+        <h2>Enginuity · Square</h2>
+        <img src="assets/ads/enginuity-ad-1080x1080.png" alt="Enginuity square ad" />
+        <div class="ad-links">
+          <a href="assets/ads/enginuity-ad-1080x1080.png" download="enginuity-ad-1080x1080.png">Download PNG</a>
+          <a href="assets/ads/enginuity-ad-1080x1080.jpg" download="enginuity-ad-1080x1080.jpg">Download JPEG</a>
+        </div>
+      </section>
+
+      <section class="ad-card">
+        <h2>SparkAI · Landscape</h2>
+        <img src="assets/ads/spark-ai-ad-1200x630.png" alt="SparkAI landscape ad" />
+        <div class="ad-links">
+          <a href="assets/ads/spark-ai-ad-1200x630.png" download="spark-ai-ad-1200x630.png">Download PNG</a>
+          <a href="assets/ads/spark-ai-ad-1200x630.jpg" download="spark-ai-ad-1200x630.jpg">Download JPEG</a>
+        </div>
+      </section>
+
+      <section class="ad-card">
+        <h2>SparkAI · Square</h2>
+        <img src="assets/ads/spark-ai-ad-1080x1080.png" alt="SparkAI square ad" />
+        <div class="ad-links">
+          <a href="assets/ads/spark-ai-ad-1080x1080.png" download="spark-ai-ad-1080x1080.png">Download PNG</a>
+          <a href="assets/ads/spark-ai-ad-1080x1080.jpg" download="spark-ai-ad-1080x1080.jpg">Download JPEG</a>
+        </div>
+      </section>
+    </div>
+
+    <p class="ad-note">Files live in <code>site/assets/ads/</code>. Re-export anytime with <code>python scripts/generate_ads.py</code>.</p>
+  </div>
+</body>
+</html>

@@ -39,7 +39,10 @@ from core.model_routing import (
 )
 from concept_render_prompt import build_concept_render_prompt
 from validators.generation_pipeline import run_validated_generation
-from validators.field_alignment import extract_field_from_description
+from validators.field_alignment import (
+    extract_field_from_description,
+    infer_engineering_field_from_text,
+)
 
 app = FastAPI()
 
@@ -210,6 +213,7 @@ class InnovatorLiteRequest(BaseModel):
     tutorial: bool = False
     difficulty: str = ""
     description: str = ""
+    engineering_field: str = ""
 
 
 def _normalize_innovator_lite_education(value: Optional[str]) -> str:
@@ -349,13 +353,21 @@ async def generate_innovator_lite(request: InnovatorLiteRequest):
     if not tutorial and not difficulty:
         difficulty = "Medium: 4–12 hours"
 
+    description = (request.description or "").strip()
+    engineering_field = (request.engineering_field or "").strip()
+    if not engineering_field:
+        engineering_field = extract_field_from_description(description)
+    if not engineering_field:
+        engineering_field = infer_engineering_field_from_text(description)
+
     def _generate_lite():
         return generate_innovator_lite_project(
             normalized_materials,
             education,
             tutorial=tutorial,
             difficulty=difficulty,
-            description=(request.description or "").strip(),
+            description=description,
+            engineering_field=engineering_field,
         )
 
     validation_difficulty = "15-20 minutes" if tutorial else difficulty
@@ -370,6 +382,7 @@ async def generate_innovator_lite(request: InnovatorLiteRequest):
             concept_render_enabled=not tutorial,
             lite_mode=True,
             label="Innovator Beta tutorial" if tutorial else "Innovator Beta",
+            engineering_field=engineering_field,
         )
     except Exception as exc:
         return _openai_error_response(exc)
@@ -397,6 +410,7 @@ async def generate_innovator_lite(request: InnovatorLiteRequest):
         "science_explanation": cleaned_text(generated.get("science_explanation", ""), ""),
         "build_phases": generated.get("build_phases") or [],
         "tutorial": tutorial,
+        "engineering_field": engineering_field,
     }
 
     if not result["materials"]:

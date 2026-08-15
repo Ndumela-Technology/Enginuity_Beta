@@ -796,6 +796,10 @@
             </p>
             <label for="liteEducation" style="display:block;margin:0 0 0.35rem;font-weight:800;">Education / age</label>
             <select id="liteEducation" class="lite-education" style="width:100%;margin:0 0 0.75rem;"></select>
+            <label for="liteField" style="display:block;margin:0 0 0.35rem;font-weight:800;">Engineering field</label>
+            <select id="liteField" class="lite-education" style="width:100%;margin:0 0 0.75rem;"></select>
+            <label for="liteGoal" style="display:block;margin:0 0 0.35rem;font-weight:800;">Project goal (optional)</label>
+            <textarea id="liteGoal" rows="2" style="width:100%;margin:0 0 0.75rem;padding:0.55rem 0.65rem;border:1px solid #ccc;border-radius:6px;font:inherit;" placeholder="Example: aerospace — build something that flies"></textarea>
             <div class="onboarding-grid">
                 <input id="liteMaterial1" type="text" placeholder="Material 1 (e.g., cardboard)" />
                 <input id="liteMaterial2" type="text" placeholder="Material 2 (e.g., tape)" />
@@ -1040,6 +1044,10 @@ async function generateFirstBuild() {
         const data = await window.enginuityPostJson("/generate-innovator-lite", {
             materials: materials,
             education: (document.getElementById("liteEducation") || {}).value || "high",
+            engineering_field: typeof window.normalizeEngineeringField === "function"
+                ? window.normalizeEngineeringField((document.getElementById("liteField") || {}).value || "")
+                : "",
+            description: ((document.getElementById("liteGoal") || {}).value || "").trim(),
             tutorial: true
         });
         if (data && data.error) {
@@ -1409,6 +1417,9 @@ function signOut() {
 window.onload = function () {
     if (typeof window.populateEducationSelect === "function") {
         window.populateEducationSelect(document.getElementById("liteEducation"), "high");
+    }
+    if (typeof window.populateEngineeringFieldSelect === "function") {
+        window.populateEngineeringFieldSelect(document.getElementById("liteField"), "");
     }
 
     const signOutBtn = document.getElementById("signOutBtn");
