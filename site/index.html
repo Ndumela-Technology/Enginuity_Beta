@@ -169,6 +169,12 @@
             padding: 0 1rem 2.5rem;
         }
 
+        .home-path-viewport {
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+        }
+
         .home-tagline {
             text-align: center;
             margin: 0.25rem 0 1.25rem;
@@ -550,8 +556,15 @@
         }
 
         @media (max-width: 900px) {
+            :root {
+                --home-mini-scale: 0.30;
+                --home-canvas-w: 1100px;
+                --home-canvas-h: 780px;
+            }
+
             .home-wrap {
-                padding: 0 0.65rem 1.5rem;
+                padding: 0 0.25rem 1rem;
+                overflow-x: hidden;
             }
 
             .onboarding-modal__card {
@@ -562,98 +575,190 @@
             }
 
             .site-header {
-                grid-template-columns: 1fr;
-                row-gap: 0.65rem;
-                padding: 0.85rem 0.75rem 0.35rem;
+                padding: 0.45rem 0.35rem 0.25rem;
+                column-gap: 0.35rem;
+                transform: scale(0.72);
+                transform-origin: top center;
+                width: calc(100% / 0.72);
+                max-width: calc(1100px / 0.72);
+                margin-left: auto;
+                margin-right: auto;
+                margin-bottom: calc(-2.2rem * (1 - 0.72));
             }
 
             .brand-mark,
             body.is-guest .brand-mark {
-                justify-self: center;
-                transform: none;
+                transform: translate(4px, 6px) rotate(-1.2deg);
+            }
+
+            .brand-mark img {
+                width: clamp(72px, 19vw, 96px);
             }
 
             .site-title {
-                font-size: clamp(1.65rem, 7vw, 2.35rem);
+                font-size: clamp(1.15rem, 4.8vw, 1.55rem);
             }
 
             .header-right {
-                justify-self: center;
-                transform: none;
-                flex-wrap: wrap;
-                justify-content: center;
+                transform: translateX(18px);
             }
 
             .header-account-stack {
-                align-items: center;
-                max-width: min(520px, 92vw);
+                max-width: min(220px, 40vw);
             }
 
             .auth-area {
-                max-width: 100%;
-                white-space: normal;
-                flex-wrap: wrap;
-                justify-content: center;
+                max-width: min(240px, 40vw);
+                padding: 0.35rem 0.45rem;
+                gap: 6px;
+            }
+
+            #welcome {
+                font-size: 0.68rem;
+            }
+
+            .btn-signout {
+                padding: 0.18rem 0.45rem;
+                font-size: 0.72rem;
+            }
+
+            .home-tagline {
+                font-size: clamp(0.72rem, 2.8vw, 0.88rem);
+                margin: 0.1rem 0 0.45rem;
             }
 
             body.is-guest .home-tagline {
-                transform: none;
+                transform: translateY(-1vh);
             }
 
-            .path-layer {
-                display: none;
-            }
-
-            body:not(.is-guest) .path-layer {
-                display: none;
-            }
-
-            .home-path {
-                min-height: auto;
-                display: flex;
-                flex-direction: column;
-                gap: 0.85rem;
-                margin-top: 0;
-                padding-bottom: 0.5rem;
-            }
-
-            .saved-section--panel {
-                position: static;
+            .home-path-viewport {
+                height: calc(var(--home-canvas-h) * var(--home-mini-scale) + 1.25rem);
+                overflow: hidden;
                 margin: 0 auto;
-                width: min(520px, 92vw);
-                transform: none;
+            }
+
+            .home-path-viewport .home-path {
+                position: absolute;
+                left: 50%;
+                top: 0;
+                width: var(--home-canvas-w);
+                min-height: var(--home-canvas-h);
+                margin-top: -12px;
+                transform: translateX(-50%) scale(var(--home-mini-scale));
+                transform-origin: top center;
+            }
+
+            .home-path-viewport .path-layer {
+                display: block;
+                top: -24%;
+                height: 128%;
+            }
+
+            body:not(.is-guest) .home-path-viewport .path-layer {
+                display: block;
+                bottom: -10%;
+                height: 138%;
+            }
+
+            .home-path-viewport .path-layer svg {
+                width: 118%;
+                height: 118%;
+                transform: translate(-7%, 4%);
+            }
+
+            .home-path-viewport .path-main {
+                stroke-width: calc(5 / var(--home-mini-scale));
+            }
+
+            .home-path-viewport .path-shadow {
+                stroke-width: calc(7 / var(--home-mini-scale));
+            }
+
+            .home-path-viewport .saved-section--panel {
+                top: 4%;
+                left: 1%;
+                min-width: calc(320px / var(--home-mini-scale));
+                max-width: calc(360px / var(--home-mini-scale));
+                transform: translate(-8%, -8%);
+            }
+
+            .home-path-viewport .saved-section > h2 {
+                font-size: calc(1rem / var(--home-mini-scale));
+            }
+
+            .home-path-viewport #savedProjects {
+                max-height: calc(160px / var(--home-mini-scale));
+                font-size: calc(0.9rem / var(--home-mini-scale));
+            }
+
+            .home-path-viewport .mode-node {
+                width: calc(300px / var(--home-mini-scale));
+                padding: calc(1rem / var(--home-mini-scale)) calc(1.1rem / var(--home-mini-scale))
+                    calc(1.15rem / var(--home-mini-scale));
+                border-width: calc(3px / var(--home-mini-scale));
+            }
+
+            .home-path-viewport .mode-node__label {
+                font-size: calc(1.35rem / var(--home-mini-scale));
+                margin-bottom: calc(0.35rem / var(--home-mini-scale));
+            }
+
+            .home-path-viewport .mode-node__desc {
+                font-size: calc(0.92rem / var(--home-mini-scale));
+                line-height: 1.45;
+                margin-bottom: calc(0.65rem / var(--home-mini-scale));
+            }
+
+            .home-path-viewport .mode-node__cta {
+                font-size: calc(0.82rem / var(--home-mini-scale));
+            }
+
+            .home-path-viewport .mode-node__plan-badge {
+                font-size: calc(0.72rem / var(--home-mini-scale));
+            }
+
+            .home-path-viewport .mode-node--apprentice {
+                top: 24%;
+                right: -2%;
+            }
+
+            .home-path-viewport .mode-node--associate {
+                top: 58%;
+                left: -2%;
+            }
+
+            .home-path-viewport .mode-node--innovator {
+                bottom: -30%;
+                right: 34%;
+            }
+
+            .home-path-viewport .mode-node--innovator-lite {
+                bottom: -4%;
+                left: 72%;
+            }
+
+            body.is-guest .home-path-viewport .mode-node--innovator-lite {
+                bottom: 4%;
+                right: -2%;
                 left: auto;
             }
 
-            .mode-node,
-            .mode-node--apprentice,
-            .mode-node--associate,
-            .mode-node--innovator,
-            .mode-node--innovator-lite,
-            body.is-guest .mode-node--innovator-lite {
-                position: static;
-                top: auto;
-                right: auto;
-                bottom: auto;
-                left: auto;
-                width: min(520px, 92vw);
-                margin: 0 auto;
-                transform: none !important;
+            .home-path-viewport .guest-cta {
+                left: 46%;
+                bottom: -20%;
+                font-size: calc(0.95rem / var(--home-mini-scale));
+                padding: calc(0.7rem / var(--home-mini-scale)) calc(1.15rem / var(--home-mini-scale));
+                border-width: calc(3px / var(--home-mini-scale));
+            }
+
+            body.onboarding-pending .home-path-viewport .guest-cta {
+                display: inline-block;
             }
 
             .footer-note {
-                margin: 1.5rem auto 0;
-            }
-
-            .guest-cta {
-                position: static;
-                transform: none;
-                display: none;
-                margin: 0.75rem auto 0;
-            }
-
-            body.onboarding-pending .guest-cta {
-                display: inline-block;
+                margin: 0.35rem auto 0;
+                font-size: 0.72rem;
+                line-height: 1.35;
             }
 
             .plan-cards {
@@ -662,8 +767,12 @@
         }
 
         @media (max-width: 720px) {
-            .header-account-stack {
-                max-width: min(260px, 92vw);
+            :root {
+                --home-mini-scale: 0.28;
+            }
+
+            .header-right {
+                transform: translateX(8px);
             }
         }
 
@@ -726,6 +835,7 @@
     <div class="home-wrap">
         <p class="home-tagline">Turning dreams into a reality.</p>
 
+        <div class="home-path-viewport">
         <main class="home-path" aria-label="Choose your learning path">
             <div class="path-layer" aria-hidden="true">
                 <svg
@@ -806,6 +916,7 @@
 
             <a class="guest-cta" id="guestTryFirstProject" href="tutorial.html">Try Your First Build →</a>
         </main>
+        </div>
 
         <p class="footer-note">
             MVP: the project generator is shared across modes for now. More SparkAI-powered features are planned.
