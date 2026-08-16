@@ -2,7 +2,7 @@
 (function () {
   "use strict";
 
-  var API_BASE = window.ENGINUITY_API_BASE || "https://enginuity-cpl1.onrender.com";
+  var API_BASE = window.ENGINUITY_API_BASE || "https://enginuity-beta.onrender.com";
   var SPARK_HELPER_PAGES = [
     "apprentice.html",
     "associate.html",

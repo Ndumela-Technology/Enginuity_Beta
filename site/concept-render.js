@@ -2,7 +2,7 @@
 (function () {
   "use strict";
 
-  var REMOTE_API_BASE = "https://enginuity-cpl1.onrender.com";
+  var REMOTE_API_BASE = "https://enginuity-beta.onrender.com";
   var renderCache = {};
 
   function getApiBase() {
@@ -212,7 +212,7 @@
         var msg = err && err.message ? err.message : "Try again.";
         if (/Failed to fetch|NetworkError|Load failed/i.test(String(msg))) {
           msg =
-            "Could not reach the API. Start the backend on http://127.0.0.1:8000 " +
+            "Could not reach the API at https://enginuity-beta.onrender.com " +
             "(or check your internet if using the hosted API).";
         } else {
           msg = "Could not generate Concept Render. " + msg;

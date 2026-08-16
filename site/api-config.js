@@ -2,7 +2,7 @@
 (function () {
   "use strict";
 
-  var REMOTE_API_BASE = "https://enginuity-cpl1.onrender.com";
+  var REMOTE_API_BASE = "https://enginuity-beta.onrender.com";
 
   function isLocalApiBase(base) {
     var b = String(base || "");
@@ -13,7 +13,7 @@
     var msg = err && err.message ? err.message : String(err);
     if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
       return new Error(
-        "Could not reach the Enginuity API. Start the backend at http://127.0.0.1:8000 if testing locally, or check your internet connection."
+        "Could not reach the Enginuity API at https://enginuity-beta.onrender.com. Check your internet connection."
       );
     }
     return err instanceof Error ? err : new Error(msg);
@@ -30,7 +30,7 @@
       return REMOTE_API_BASE;
     }
     if (!host || host === "localhost" || host === "127.0.0.1") {
-      return "http://127.0.0.1:8000";
+      return REMOTE_API_BASE;
     }
     return REMOTE_API_BASE;
   }

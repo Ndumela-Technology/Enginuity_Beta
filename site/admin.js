@@ -50,7 +50,7 @@
   }
 
   function apiBase() {
-    return window.ENGINUITY_API_BASE || "http://127.0.0.1:8000";
+    return window.ENGINUITY_API_BASE || "https://enginuity-beta.onrender.com";
   }
 
   function userEmail() {

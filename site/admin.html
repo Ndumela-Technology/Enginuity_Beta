@@ -129,7 +129,7 @@
       };
 
       function el(id) { return document.getElementById(id); }
-      function apiBase() { return window.ENGINUITY_API_BASE || "http://127.0.0.1:8000"; }
+      function apiBase() { return window.ENGINUITY_API_BASE || "https://enginuity-beta.onrender.com"; }
       function userEmail() { return (localStorage.getItem("user_email") || "").trim(); }
       function setMeta(text) { var node = el("adminMeta"); if (node) node.textContent = text; }
       function esc(v) {

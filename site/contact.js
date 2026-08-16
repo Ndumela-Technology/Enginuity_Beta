@@ -3,7 +3,7 @@
   "use strict";
 
   function getApiBase() {
-    return window.ENGINUITY_API_BASE || "https://enginuity-cpl1.onrender.com";
+    return window.ENGINUITY_API_BASE || "https://enginuity-beta.onrender.com";
   }
 
   function mountContactButton(email) {
