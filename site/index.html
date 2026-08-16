@@ -560,6 +560,26 @@
         }
 
         @media (max-width: 900px) {
+            /*
+             * MOBILE WIDGET POSITIONS — change these variables to move nodes.
+             * --mob-node-size: width/height of square mode tiles
+             * --mob-*-top + --mob-*-side: position (use left OR right per node rules below)
+             */
+            :root {
+                --mob-node-size: min(34vw, 118px);
+                --mob-saved-top: 0.5rem;
+                --mob-saved-left: 2%;
+                --mob-apprentice-top: 11%;
+                --mob-apprentice-right: 2%;
+                --mob-associate-top: 33%;
+                --mob-associate-left: 2%;
+                --mob-innovator-lite-top: 55%;
+                --mob-innovator-lite-right: 2%;
+                --mob-innovator-top: 74%;
+                --mob-innovator-left: 2%;
+                --mob-guest-cta-bottom: 2%;
+            }
+
             .home-wrap {
                 padding: 0 0.5rem 1rem;
                 overflow-x: hidden;
@@ -670,10 +690,12 @@
                 pointer-events: none;
             }
 
-            .path-layer--mobile svg {
+            .path-layer--mobile svg,
+            .path-layer--mobile .mobile-path-art {
                 width: 100%;
                 height: 100%;
                 display: block;
+                object-fit: fill;
             }
 
             .path-main--mobile {
@@ -685,15 +707,15 @@
                 opacity: 0.92;
             }
 
-            /* Saved — top left */
+            /* Saved — top left (rectangular) */
             .home-path-viewport .saved-section--panel {
                 position: absolute;
-                top: 0.5rem;
-                left: 2%;
+                top: var(--mob-saved-top);
+                left: var(--mob-saved-left);
                 right: auto;
-                width: 44%;
+                width: var(--mob-node-size);
                 min-width: 0;
-                max-width: 44%;
+                max-width: var(--mob-node-size);
                 transform: none;
                 padding: 0.4rem 0.45rem 0.45rem;
                 z-index: 2;
@@ -711,20 +733,33 @@
                 margin-top: 0.25rem;
             }
 
-            /* Compact title-only mode nodes */
+            /* Square title-only mode tiles — same size for Apprentice, Associate, Innovator Beta */
             .home-path-viewport .mode-node {
                 position: absolute;
-                width: 44%;
-                min-width: 0;
-                padding: 0.45rem 0.5rem;
+                width: var(--mob-node-size);
+                height: var(--mob-node-size);
+                min-width: var(--mob-node-size);
+                max-width: var(--mob-node-size);
+                min-height: var(--mob-node-size);
+                max-height: var(--mob-node-size);
+                padding: 0.35rem;
                 border-width: 2px;
                 z-index: 2;
+                box-sizing: border-box;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
             }
 
             .home-path-viewport .mode-node__label {
-                font-size: 0.88rem;
+                font-size: 0.7rem;
                 margin: 0;
-                line-height: 1.2;
+                line-height: 1.15;
+            }
+
+            .home-path-viewport .mode-node--innovator-lite .mode-node__label {
+                font-size: 0.62rem;
             }
 
             .home-path-viewport .mode-node__desc,
@@ -735,31 +770,38 @@
 
             /* Zigzag: right, left, right, (left for Innovator signed-in) */
             .home-path-viewport .mode-node--apprentice {
-                top: 11%;
-                right: 2%;
+                top: var(--mob-apprentice-top);
+                right: var(--mob-apprentice-right);
                 left: auto;
+                bottom: auto;
                 transform: rotate(-0.5deg);
             }
 
             .home-path-viewport .mode-node--associate {
-                top: 33%;
-                left: 2%;
+                top: var(--mob-associate-top);
+                left: var(--mob-associate-left);
                 right: auto;
+                bottom: auto;
                 transform: rotate(0.5deg);
             }
 
             .home-path-viewport .mode-node--innovator-lite {
-                top: 55%;
-                right: 2%;
+                top: var(--mob-innovator-lite-top);
+                right: var(--mob-innovator-lite-right);
                 left: auto;
                 bottom: auto;
+                width: var(--mob-node-size);
+                height: var(--mob-node-size);
                 transform: rotate(-0.4deg);
             }
 
             body.is-guest .home-path-viewport .mode-node--innovator-lite {
-                top: 55%;
-                right: 2%;
+                top: var(--mob-innovator-lite-top);
+                right: var(--mob-innovator-lite-right);
                 left: auto;
+                bottom: auto;
+                width: var(--mob-node-size);
+                height: var(--mob-node-size);
             }
 
             body.is-guest .home-path-viewport .mode-node--innovator {
@@ -767,9 +809,9 @@
             }
 
             body:not(.is-guest) .home-path-viewport .mode-node--innovator {
-                display: block;
-                top: 74%;
-                left: 2%;
+                display: flex;
+                top: var(--mob-innovator-top);
+                left: var(--mob-innovator-left);
                 right: auto;
                 bottom: auto;
                 transform: rotate(0.5deg);
@@ -779,7 +821,7 @@
                 position: absolute;
                 left: 50%;
                 right: auto;
-                bottom: 2%;
+                bottom: var(--mob-guest-cta-bottom);
                 top: auto;
                 transform: translateX(-50%);
                 z-index: 2;
@@ -916,34 +958,14 @@
             </div>
 
             <div class="path-layer path-layer--mobile" aria-hidden="true">
-                <svg viewBox="0 0 400 720" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <marker
-                            id="MobilePathArrow"
-                            refX="0"
-                            refY="0"
-                            orient="auto"
-                            markerWidth="6"
-                            markerHeight="6"
-                            viewBox="-3 -3 6 6"
-                        >
-                            <path d="M -2 0 L 2 0 M 0 -2 L 2 0 L 0 2" fill="none" stroke="context-stroke" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
-                        </marker>
-                    </defs>
-                    <!-- Zigzag down the screen: saved → modes alternating L/R → arrow at bottom -->
-                    <path
-                        class="path-main path-main--mobile"
-                        d="M 88 48
-                           C 150 48, 240 72, 332 100
-                           S 95 205, 88 255
-                           S 305 330, 332 395
-                           S 95 490, 88 545
-                           S 280 610, 332 640
-                           L 200 680
-                           L 200 710"
-                        marker-end="url(#MobilePathArrow)"
-                    />
-                </svg>
+                <img
+                    class="mobile-path-art"
+                    src="assets/mobile-home-path.svg"
+                    alt=""
+                    width="400"
+                    height="720"
+                    decoding="async"
+                />
             </div>
 
             <section class="saved-section saved-section--panel" aria-label="Saved projects">

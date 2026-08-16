@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Mobile homepage zigzag arrow  edit the path "d" attribute to move the line.
+  Coordinates: viewBox="0 0 400 720" (width 400, height 720).
+  Tip: (88, y) H left column center, (332, y) H right column center.
+-->
+<svg viewBox="0 0 400 720" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker
+      id="MobilePathArrow"
+      refX="0"
+      refY="0"
+      orient="auto"
+      markerWidth="6"
+      markerHeight="6"
+      viewBox="-3 -3 6 6"
+    >
+      <path
+        d="M -2 0 L 2 0 M 0 -2 L 2 0 L 0 2"
+        fill="none"
+        stroke="context-stroke"
+        stroke-width="1.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </marker>
+  </defs>
+  <path
+    fill="none"
+    stroke="#d81f26"
+    stroke-width="3.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.92"
+    d="M 88 48
+       C 150 48, 240 72, 332 100
+       S 95 205, 88 255
+       S 305 330, 332 395
+       S 95 490, 88 545
+       S 280 610, 332 640
+       L 200 680
+       L 200 710"
+    marker-end="url(#MobilePathArrow)"
+  />
+</svg>
