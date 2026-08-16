@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Portrait mobile path: viewBox 400 x 700 matches the phone layout (do not use a wide Inkscape page). -->
-<svg viewBox="0 0 400 700" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 400 720" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
   <title>Mobile home path</title>
   <defs>
     <marker
@@ -8,8 +7,8 @@
       refX="0"
       refY="0"
       orient="auto"
-      markerWidth="5"
-      markerHeight="5"
+      markerWidth="6"
+      markerHeight="6"
       viewBox="-3 -3 6 6"
     >
       <path
@@ -30,13 +29,7 @@
     stroke-linecap="round"
     stroke-linejoin="round"
     opacity="0.92"
-    d="M 52 42
-       C 120 42, 280 68, 348 88
-       S 70 200, 52 248
-       S 310 340, 348 392
-       S 90 520, 52 568
-       L 200 648
-       L 200 678"
+    d="M -15.219741,29.386604 C 348.82491,31.078731 435.54519,46.320782 384.86651,99.859108 349.80045,136.90384 146.39943,147.1788 76.202688,173.97445 c -93.338005,35.62918 -61.054198,79.38358 -5.772026,102.89388 68.688378,29.21168 308.203278,-0.37508 318.853848,50.11929 5.03541,23.87291 -23.72846,28.06421 -46.06105,33.03023 -70.60152,15.69942 -163.19721,76.49017 -163.25996,85.00114 -0.22096,29.96939 -1.052,14.30648 -0.66063,8.92311 0.55328,-7.61035 -0.35373,-22.98749 0.58218,20.76986"
     marker-end="url(#MobilePathArrow)"
   />
 </svg>
