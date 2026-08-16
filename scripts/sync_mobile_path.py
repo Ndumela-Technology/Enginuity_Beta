@@ -16,10 +16,11 @@ SVG_NS = "http://www.w3.org/2000/svg"
 
 
 def extract_path_d(svg_text: str) -> str:
-    match = re.search(r'\bd="([^"]+)"', svg_text)
-    if not match:
-        raise SystemExit("Could not find path d= in SVG.")
-    return match.group(1).strip()
+    root = ET.fromstring(svg_text)
+    for el in root.iter(f"{{{SVG_NS}}}path"):
+        if el.get("marker-end") and el.get("d"):
+            return el.get("d", "").strip()
+    raise SystemExit("Could not find main path (path with marker-end) in SVG.")
 
 
 def write_clean_svg(path_d: str) -> str:
