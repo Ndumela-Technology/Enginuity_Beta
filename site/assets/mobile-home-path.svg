@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  Mobile homepage path — edit in Inkscape, then keep in sync with site/index.html (path-layer--mobile).
-  viewBox fits the path bounds so the line fills the phone layout.
--->
-<svg viewBox="-25 25 470 165" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="-25 25 470 185" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Mobile home path</title>
   <defs>
     <marker
       id="MobilePathArrow"
