@@ -285,21 +285,58 @@
     scheduleFeedbackPrompt(normalized);
   }
 
+  function isSignedIn() {
+    return !!(localStorage.getItem("user_email") || "").trim();
+  }
+
   function mountFeedbackButton() {
-    if (document.querySelector(".eng-beta-feedback-btn")) return;
+    var existing = document.querySelector(".eng-beta-feedback-btn");
+    if (existing) return existing;
     var btn = document.createElement("button");
     btn.type = "button";
     btn.className = "eng-beta-feedback-btn";
     btn.setAttribute("aria-label", "Give feedback");
     btn.textContent = "Feedback";
+    btn.hidden = true;
     btn.addEventListener("click", function () {
       openFeedbackModal(true);
     });
     document.body.appendChild(btn);
+    return btn;
+  }
+
+  function syncFeedbackButton() {
+    var btn = document.querySelector(".eng-beta-feedback-btn");
+    if (!isSignedIn()) {
+      if (btn) btn.hidden = true;
+      return;
+    }
+    btn = mountFeedbackButton();
+    if (btn) btn.hidden = false;
+  }
+
+  function watchAuthChanges() {
+    document.addEventListener("enginuity:auth-changed", syncFeedbackButton);
+    document.addEventListener("enginuity:identity-changed", syncFeedbackButton);
+    window.addEventListener("storage", function (e) {
+      if (!e.key || e.key === "user_email") syncFeedbackButton();
+    });
+
+    var originalSetItem = localStorage.setItem.bind(localStorage);
+    var originalRemoveItem = localStorage.removeItem.bind(localStorage);
+    localStorage.setItem = function (key, value) {
+      originalSetItem(key, value);
+      if (key === "user_email") syncFeedbackButton();
+    };
+    localStorage.removeItem = function (key) {
+      originalRemoveItem(key);
+      if (key === "user_email") syncFeedbackButton();
+    };
   }
 
   function init() {
-    mountFeedbackButton();
+    syncFeedbackButton();
+    watchAuthChanges();
   }
 
   window.openBetaFeedbackModal = openFeedbackModal;

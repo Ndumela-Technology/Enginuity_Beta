@@ -164,6 +164,10 @@
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
 }
 
+.eng-beta-feedback-btn[hidden] {
+  display: none !important;
+}
+
 .eng-beta-feedback-btn:hover {
   background: rgba(216, 31, 38, 0.08);
 }

@@ -1460,6 +1460,7 @@ function updateAuthUi() {
     document.body.classList.toggle("is-guest", isGuest);
     document.body.classList.toggle("onboarding-pending", isFirstVisitOnboarding);
     setWelcomeMessage();
+    document.dispatchEvent(new CustomEvent("enginuity:auth-changed"));
 
     // Toggle sign-in / sign-out controls
     const signInBtn = document.querySelector(".g_id_signin");
