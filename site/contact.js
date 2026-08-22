@@ -37,11 +37,23 @@
     fillContactPage(email || FALLBACK_EMAIL);
   }
 
+  function removeLegacyContactButton() {
+    document.querySelectorAll(".eng-contact-btn").forEach(function (node) {
+      node.remove();
+    });
+  }
+
   window.ENGINUITY_CONTACT_EMAIL = FALLBACK_EMAIL;
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initContactPage);
-  } else {
+  function init() {
+    removeLegacyContactButton();
     initContactPage();
   }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+  setTimeout(removeLegacyContactButton, 400);
 })();

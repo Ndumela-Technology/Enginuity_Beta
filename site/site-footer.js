@@ -9,8 +9,8 @@
     footer.className = "site-footer";
     footer.innerHTML =
       '<nav class="site-footer__nav" aria-label="Site footer">' +
-      '<a class="site-footer__link" href="about.html">About</a>' +
       '<a class="site-footer__link" href="index.html">Home</a>' +
+      '<a class="site-footer__link" href="about.html">About</a>' +
       '<a class="site-footer__link" href="profile.html">Account</a>' +
       '<a class="site-footer__link" href="contact.html">Contact</a>' +
       "</nav>" +
