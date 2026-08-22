@@ -1,43 +1,47 @@
-// Global contact entry point
+// Contact page helpers — floating Contact button removed in favor of contact.html
 (function () {
   "use strict";
+
+  var FALLBACK_EMAIL = "ndumela.bonolo@gmail.com";
 
   function getApiBase() {
     return window.ENGINUITY_API_BASE || "https://enginuity-beta.onrender.com";
   }
 
-  function mountContactButton(email) {
-    var safeEmail = String(email || "").trim();
-    if (!safeEmail) return;
-    if (document.querySelector(".eng-contact-btn")) return;
-    var link = document.createElement("a");
-    link.className = "eng-contact-btn";
-    link.href = "mailto:" + safeEmail + "?subject=Enginuity%20Beta%20Feedback";
-    link.setAttribute("aria-label", "Contact support");
-    link.textContent = "Contact";
-    document.body.appendChild(link);
-  }
-
   async function loadContactConfig() {
     try {
       var res = await fetch(getApiBase() + "/public-config/contact", { method: "GET" });
-      if (!res.ok) return null;
+      if (!res.ok) return FALLBACK_EMAIL;
       var data = await res.json();
-      return data && data.email ? String(data.email).trim() : "";
+      return data && data.email ? String(data.email).trim() : FALLBACK_EMAIL;
     } catch (_) {
-      return null;
+      return FALLBACK_EMAIL;
     }
   }
 
-  async function initContactButton() {
-    var email = await loadContactConfig();
-    if (!email) return;
-    mountContactButton(email);
+  function fillContactPage(email) {
+    var safeEmail = String(email || FALLBACK_EMAIL).trim() || FALLBACK_EMAIL;
+    var mailLink = document.getElementById("contactEmailLink");
+    var mailText = document.getElementById("contactEmailText");
+    if (mailLink) {
+      mailLink.href = "mailto:" + safeEmail + "?subject=Enginuity%20Beta";
+    }
+    if (mailText) {
+      mailText.textContent = safeEmail;
+    }
   }
 
+  async function initContactPage() {
+    if (!document.getElementById("contactEmailLink")) return;
+    var email = await loadContactConfig();
+    fillContactPage(email || FALLBACK_EMAIL);
+  }
+
+  window.ENGINUITY_CONTACT_EMAIL = FALLBACK_EMAIL;
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initContactButton);
+    document.addEventListener("DOMContentLoaded", initContactPage);
   } else {
-    initContactButton();
+    initContactPage();
   }
 })();

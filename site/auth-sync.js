@@ -18,7 +18,54 @@
   }
 
   function currentName() {
-    return (localStorage.getItem("user_name") || "").trim();
+    return getDisplayName();
+  }
+
+  function getDisplayName() {
+    return (
+      localStorage.getItem("user_display_name") ||
+      localStorage.getItem("user_name") ||
+      ""
+    ).trim();
+  }
+
+  function getGamertag() {
+    return (localStorage.getItem("user_gamertag") || "").trim().replace(/^@+/, "");
+  }
+
+  function normalizeGamertag(value) {
+    return String(value || "")
+      .trim()
+      .replace(/^@+/, "")
+      .replace(/[^a-zA-Z0-9_]/g, "")
+      .slice(0, 16);
+  }
+
+  function applyIdentityFromUser(user) {
+    if (!user) return;
+    var prefs = user.preferences || {};
+    var displayName = String(prefs.display_name || user.name || "").trim();
+    var gamertag = normalizeGamertag(prefs.gamertag || "");
+    if (displayName) {
+      localStorage.setItem("user_display_name", displayName);
+    }
+    if (gamertag) {
+      localStorage.setItem("user_gamertag", gamertag);
+    } else if (prefs.gamertag === "") {
+      localStorage.removeItem("user_gamertag");
+    }
+    document.dispatchEvent(new CustomEvent("enginuity:identity-changed"));
+  }
+
+  function saveUserIdentity(displayName, gamertag) {
+    var name = String(displayName || "").trim().slice(0, 40);
+    var tag = normalizeGamertag(gamertag);
+    if (name) localStorage.setItem("user_display_name", name);
+    else localStorage.removeItem("user_display_name");
+    if (tag) localStorage.setItem("user_gamertag", tag);
+    else localStorage.removeItem("user_gamertag");
+    document.dispatchEvent(new CustomEvent("enginuity:identity-changed"));
+    return syncCurrentUser({ skipThemeApply: true });
   }
 
   function currentTheme() {
@@ -41,8 +88,10 @@
   }
 
   function applyPreferencesFromUser(user) {
-    if (!user || !user.preferences) return;
+    if (!user) return;
+    applyIdentityFromUser(user);
     if (
+      user.preferences &&
       user.preferences.theme &&
       typeof window.applyEnginuityTheme === "function"
     ) {
@@ -59,7 +108,11 @@
       email: email,
       name: currentName(),
       plan: currentPlan(),
-      preferences: { theme: currentTheme() }
+      preferences: {
+        theme: currentTheme(),
+        display_name: getDisplayName(),
+        gamertag: getGamertag()
+      }
     }).then(function (response) {
       if (response && response.ok && typeof response.json === "function") {
         return response.json();
@@ -139,6 +192,9 @@
   window.recordSparkActivity = recordActivity;
   window.fetchSparkUserRole = fetchUserRole;
   window.checkSparkAdminAccess = checkAdminAccess;
+  window.getUserDisplayName = getDisplayName;
+  window.getUserGamertag = getGamertag;
+  window.saveUserIdentity = saveUserIdentity;
 
   document.addEventListener("DOMContentLoaded", function () {
     if (currentEmail()) {

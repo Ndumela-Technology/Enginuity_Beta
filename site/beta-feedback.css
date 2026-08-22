@@ -144,6 +144,39 @@
   color: #444;
 }
 
+.eng-beta-feedback-btn {
+  position: fixed;
+  left: 0.95rem;
+  bottom: 0.95rem;
+  z-index: 120;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 2px solid var(--eng-red, #d81f26);
+  border-radius: 999px;
+  padding: 0.46rem 0.78rem;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--eng-red-deep, #8a0000);
+  font-family: "Special Elite", "Courier New", Courier, monospace;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.14);
+}
+
+.eng-beta-feedback-btn:hover {
+  background: rgba(216, 31, 38, 0.08);
+}
+
+[data-theme="dark"] .eng-beta-feedback-btn {
+  background: var(--mode-tab-bg, rgba(28, 28, 28, 0.96));
+  color: var(--eng-red-deep, #ffb4b4);
+}
+
+body.has-enginuity-done-bar .eng-beta-feedback-btn {
+  bottom: calc(var(--enginuity-done-bar-offset, 7.5rem) + 0.45rem);
+}
+
 @media (max-width: 640px) {
   .eng-beta-feedback-modal {
     padding: 0.75rem;
@@ -163,6 +196,13 @@
 
   .eng-beta-feedback-actions button {
     width: 100%;
+  }
+
+  .eng-beta-feedback-btn {
+    left: 0.7rem;
+    bottom: calc(0.7rem + env(safe-area-inset-bottom, 0px));
+    font-size: 0.76rem;
+    padding: 0.45rem 0.7rem;
   }
 }
 

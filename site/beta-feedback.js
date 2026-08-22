@@ -232,8 +232,8 @@
   }
 
   function openFeedbackModal(force) {
-    if (!isBetaMode()) return false;
-    if (alreadySubmitted()) return false;
+    if (!force && !isBetaMode()) return false;
+    if (!force && alreadySubmitted()) return false;
     if (!force && !shouldOfferAfterSession()) return false;
 
     pendingSessionType =
@@ -285,9 +285,21 @@
     scheduleFeedbackPrompt(normalized);
   }
 
+  function mountFeedbackButton() {
+    if (document.querySelector(".eng-beta-feedback-btn")) return;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "eng-beta-feedback-btn";
+    btn.setAttribute("aria-label", "Give feedback");
+    btn.textContent = "Feedback";
+    btn.addEventListener("click", function () {
+      openFeedbackModal(true);
+    });
+    document.body.appendChild(btn);
+  }
+
   function init() {
-    if (!isBetaMode()) return;
-    // Feedback is scheduled only from recordBetaSessionCompleted after a finished session.
+    mountFeedbackButton();
   }
 
   window.openBetaFeedbackModal = openFeedbackModal;

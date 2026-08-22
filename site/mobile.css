@@ -3,7 +3,7 @@
 @media (max-width: 900px) {
   body.enginuity-paper {
     padding: 12px;
-    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
   }
 
   body.enginuity-paper .container,
@@ -35,14 +35,14 @@
 }
 
 @media (max-width: 768px) {
-  .eng-contact-btn {
+  .eng-beta-feedback-btn {
     left: 0.75rem;
     right: auto;
     bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
     max-width: calc(100vw - 5.5rem);
   }
 
-  body.has-enginuity-done-bar .eng-contact-btn {
+  body.has-enginuity-done-bar .eng-beta-feedback-btn {
     bottom: calc(var(--enginuity-done-bar-offset, 8.5rem) + 0.35rem);
   }
 

@@ -12,6 +12,7 @@
       '<a class="site-footer__link" href="about.html">About</a>' +
       '<a class="site-footer__link" href="index.html">Home</a>' +
       '<a class="site-footer__link" href="profile.html">Account</a>' +
+      '<a class="site-footer__link" href="contact.html">Contact</a>' +
       "</nav>" +
       '<p class="site-footer__note">Spark on Enginuity Beta — intelligent AI tools for building and learning.</p>' +
       '<p class="site-footer__powered">' +

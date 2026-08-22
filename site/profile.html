@@ -22,13 +22,28 @@
     <a class="profile-page__back" href="index.html">← Back to Home</a>
     <div class="profile-page__links">
       <a class="profile-saved__link" href="about.html">About Spark</a>
+      <a class="profile-saved__link" href="contact.html">Contact</a>
       <a id="profileAdminLink" class="profile-saved__link" href="admin.html" hidden>Admin Dashboard</a>
     </div>
     <h1 class="profile-page__title">Account</h1>
 
     <section class="profile-card" aria-labelledby="profileNameLabel">
-      <p class="profile-card__label" id="profileNameLabel">Name</p>
-      <p class="profile-card__value" id="profileUserName">Guest</p>
+      <p class="profile-card__label" id="profileNameLabel">Your name</p>
+      <p class="profile-page__hint" style="margin-bottom:0.65rem;">
+        Choose the name and gamer-tag people see on Enginuity. Your Google account stays the same.
+      </p>
+      <label class="profile-field-label" for="profileDisplayName">Display name</label>
+      <input id="profileDisplayName" class="profile-input" type="text" maxlength="40" autocomplete="nickname" placeholder="Your name" />
+      <label class="profile-field-label" for="profileGamertag">Gamer-tag</label>
+      <div class="profile-gamertag">
+        <span class="profile-gamertag__prefix" aria-hidden="true">@</span>
+        <input id="profileGamertag" class="profile-input profile-input--gamertag" type="text" maxlength="16" autocomplete="username" placeholder="your_tag" />
+      </div>
+      <p class="profile-page__hint">Letters, numbers, and underscores. 3–16 characters.</p>
+      <div class="profile-tutorial-actions" style="margin-top:0.75rem;">
+        <button type="button" id="saveIdentityBtn" class="profile-action-btn">Save name</button>
+      </div>
+      <p id="identitySaveStatus" class="profile-page__hint" style="margin-top:0.55rem;" hidden></p>
     </section>
 
     <section class="profile-card" aria-labelledby="profilePlanLabel">
@@ -49,7 +64,7 @@
       <p id="themeSaveStatus" class="profile-page__hint" style="margin-top:0.55rem;" hidden></p>
     </section>
 
-    <section class="profile-card" aria-labelledby="profileTutorialLabel">
+    <section class="profile-card profile-card--admin-only" id="profileTutorialCard" hidden aria-labelledby="profileTutorialLabel">
       <p class="profile-card__label" id="profileTutorialLabel">Tutorial</p>
       <p class="profile-page__hint" style="margin-bottom:0.65rem;">
         The tutorial still opens automatically only on first launch. Use these options for testing or to revisit it.
@@ -61,7 +76,7 @@
       <p id="tutorialResetStatus" class="profile-page__hint" style="margin-top:0.55rem;" hidden></p>
     </section>
 
-    <section class="profile-card" aria-labelledby="profileBetaTrialsLabel">
+    <section class="profile-card profile-card--admin-only" id="profileBetaTrialsCard" hidden aria-labelledby="profileBetaTrialsLabel">
       <p class="profile-card__label" id="profileBetaTrialsLabel">Beta trials</p>
       <p class="profile-page__hint" style="margin-bottom:0.65rem;">
         Restore your Associate and Innovator Beta trial builds (3 and 1 during Beta).
@@ -156,15 +171,62 @@
         });
       }
 
-      function renderProfile() {
-        var nameEl = document.getElementById("profileUserName");
-        var name = localStorage.getItem("user_name") || "";
-        if (nameEl) {
-          nameEl.textContent = name || "Guest";
+      function fillIdentityFields() {
+        var nameInput = document.getElementById("profileDisplayName");
+        var tagInput = document.getElementById("profileGamertag");
+        var signedIn = !!localStorage.getItem("user_email");
+        var name =
+          typeof window.getUserDisplayName === "function"
+            ? window.getUserDisplayName()
+            : localStorage.getItem("user_display_name") || localStorage.getItem("user_name") || "";
+        var tag =
+          typeof window.getUserGamertag === "function"
+            ? window.getUserGamertag()
+            : (localStorage.getItem("user_gamertag") || "");
+        if (nameInput) {
+          nameInput.value = signedIn ? name : "";
+          nameInput.disabled = !signedIn;
+          nameInput.placeholder = signedIn ? "Your name" : "Sign in to set your name";
         }
+        if (tagInput) {
+          tagInput.value = signedIn ? tag : "";
+          tagInput.disabled = !signedIn;
+        }
+        var saveBtn = document.getElementById("saveIdentityBtn");
+        if (saveBtn) saveBtn.disabled = !signedIn;
+      }
+
+      function renderProfile() {
+        fillIdentityFields();
         updatePlanLabel();
         renderSavedPreview();
         maybeShowAdminLink();
+        maybeShowAdminTools();
+      }
+
+      function maybeShowAdminTools() {
+        var tutorialCard = document.getElementById("profileTutorialCard");
+        var trialsCard = document.getElementById("profileBetaTrialsCard");
+        var email = localStorage.getItem("user_email");
+        function setAdminVisible(isAdmin) {
+          if (tutorialCard) tutorialCard.hidden = !isAdmin;
+          if (trialsCard) trialsCard.hidden = !isAdmin;
+        }
+        if (!email) {
+          setAdminVisible(false);
+          return;
+        }
+        var checker =
+          typeof window.checkSparkAdminAccess === "function"
+            ? window.checkSparkAdminAccess
+            : window.fetchSparkUserRole;
+        if (typeof checker !== "function") {
+          setAdminVisible(false);
+          return;
+        }
+        checker(email).then(function (info) {
+          setAdminVisible(Boolean(info && info.is_admin));
+        });
       }
 
       function maybeShowAdminLink() {
@@ -270,9 +332,58 @@
         }
       }
 
+      function wireIdentityControls() {
+        var saveBtn = document.getElementById("saveIdentityBtn");
+        var statusEl = document.getElementById("identitySaveStatus");
+        var nameInput = document.getElementById("profileDisplayName");
+        var tagInput = document.getElementById("profileGamertag");
+        if (!saveBtn) return;
+
+        saveBtn.addEventListener("click", function () {
+          var name = nameInput ? String(nameInput.value || "").trim() : "";
+          var tag = tagInput ? String(tagInput.value || "").trim().replace(/^@+/, "") : "";
+          if (!localStorage.getItem("user_email")) {
+            if (statusEl) {
+              statusEl.hidden = false;
+              statusEl.textContent = "Sign in to save your name and gamer-tag.";
+            }
+            return;
+          }
+          if (!name) {
+            if (statusEl) {
+              statusEl.hidden = false;
+              statusEl.textContent = "Please enter a display name.";
+            }
+            return;
+          }
+          if (tag && !/^[a-zA-Z0-9_]{3,16}$/.test(tag)) {
+            if (statusEl) {
+              statusEl.hidden = false;
+              statusEl.textContent = "Gamer-tag must be 3–16 letters, numbers, or underscores.";
+            }
+            return;
+          }
+          var savePromise =
+            typeof window.saveUserIdentity === "function"
+              ? window.saveUserIdentity(name, tag)
+              : Promise.resolve(null);
+          Promise.resolve(savePromise).then(function () {
+            fillIdentityFields();
+            if (statusEl) {
+              statusEl.hidden = false;
+              statusEl.textContent = tag
+                ? "Saved. You'll show up as " + name + " (@" + tag + ")."
+                : "Saved. You'll show up as " + name + ".";
+            }
+          });
+        });
+      }
+
       document.addEventListener("enginuity:plan-changed", renderProfile);
+      document.addEventListener("enginuity:identity-changed", fillIdentityFields);
       renderProfile();
       wireThemeControls();
+      wireIdentityControls();
       wireTutorialControls();
       wireBetaTrialControls();
     })();

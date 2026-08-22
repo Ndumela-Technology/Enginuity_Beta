@@ -250,7 +250,7 @@ def root():
 
 @app.get("/public-config/contact")
 def public_contact_config():
-    email = (os.getenv("CONTACT_EMAIL", "") or "").strip()
+    email = (os.getenv("CONTACT_EMAIL", "ndumela.bonolo@gmail.com") or "").strip()
     return {"email": email}
 
 
