@@ -583,16 +583,18 @@ async def sync_user_account(payload: UserSyncRequest):
     """Register or refresh a user profile (called after sign-in or guest use)."""
     from user_store import sync_user
 
-    key = _user_identifier(payload.email, payload.guest_id)
-    if not key:
+    email = (payload.email or "").strip()
+    guest_id = (payload.guest_id or "").strip()
+    if not email and not guest_id:
         raise HTTPException(status_code=400, detail="Email or guest id is required.")
 
     user = await asyncio.to_thread(
         sync_user,
-        key,
+        email,
         payload.name or "",
         payload.plan or "free",
         preferences=payload.preferences,
+        guest_id=guest_id,
     )
     return {"ok": True, "user": user}
 
@@ -632,10 +634,15 @@ async def save_user_preferences(payload: UserSyncRequest):
 @app.post("/users/activity")
 async def record_user_activity(payload: UserActivityRequest):
     """Track user activity for admin analytics."""
-    from user_store import touch_activity
+    from user_store import merge_guest_into_signed_user, resolve_user_key, touch_activity
 
-    email = _user_identifier(payload.email, payload.guest_id)
-    if not email:
+    email = (payload.email or "").strip()
+    guest_id = (payload.guest_id or "").strip()
+    if email and guest_id:
+        await asyncio.to_thread(merge_guest_into_signed_user, email, guest_id)
+
+    key = resolve_user_key(_user_identifier(email, guest_id))
+    if not key:
         raise HTTPException(status_code=400, detail="Email or guest id is required.")
 
     metadata = {}
@@ -644,7 +651,7 @@ async def record_user_activity(payload: UserActivityRequest):
 
     user = await asyncio.to_thread(
         touch_activity,
-        email,
+        key,
         payload.event_type or "activity",
         metadata,
     )

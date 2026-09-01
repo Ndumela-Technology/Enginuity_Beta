@@ -148,7 +148,11 @@
           "<td>" + escapeHtml(u.plan || "free") + "</td>" +
           "<td>" + formatDate(u.created_at) + "</td>" +
           "<td>" + formatDate(u.last_activity) + "</td>" +
-          "<td>" + escapeHtml(u.account_type === "guest" ? "Guest visit" : "Synced on sign-in") + "</td>" +
+          "<td>" + escapeHtml(
+            u.account_type === "guest"
+              ? "Guest visit"
+              : ((u.linked_guest_ids && u.linked_guest_ids.length) ? "Signed in · linked guest" : "Synced on sign-in")
+          ) + "</td>" +
           "<td>" + escapeHtml((u.plan || "free") === "free" ? "Free" : "Active") + "</td>" +
           "<td>" + escapeHtml(u.role || "user") + "</td>" +
           "</tr>"

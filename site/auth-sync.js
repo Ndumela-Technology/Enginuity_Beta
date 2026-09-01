@@ -11,17 +11,21 @@
     return (localStorage.getItem("user_email") || "").trim();
   }
 
+  function peekGuestId() {
+    return (localStorage.getItem("enginuity_guest_id") || "").trim();
+  }
+
   function ensureGuestId() {
-    if (currentEmail()) return "";
-    var existing = (localStorage.getItem("enginuity_guest_id") || "").trim();
+    var existing = peekGuestId();
     if (existing) return existing;
+    if (currentEmail()) return "";
     var id = "guest-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
     localStorage.setItem("enginuity_guest_id", id);
     return id;
   }
 
   function currentGuestId() {
-    return ensureGuestId();
+    return peekGuestId() || ensureGuestId();
   }
 
   function currentPlan() {
@@ -117,7 +121,7 @@
   function syncCurrentUser(options) {
     options = options || {};
     var email = currentEmail();
-    var guestId = email ? "" : currentGuestId();
+    var guestId = peekGuestId() || (!email ? ensureGuestId() : "");
     if (!email && !guestId) return Promise.resolve(null);
 
     return postJson("/users/sync", {
@@ -154,7 +158,7 @@
 
   function recordActivity(eventType, mode) {
     var email = currentEmail();
-    var guestId = email ? "" : currentGuestId();
+    var guestId = peekGuestId() || (!email ? ensureGuestId() : "");
     if (!email && !guestId) return Promise.resolve(null);
     return postJson("/users/activity", {
       email: email,
@@ -216,7 +220,8 @@
   window.saveUserIdentity = saveUserIdentity;
 
   document.addEventListener("DOMContentLoaded", function () {
-    syncCurrentUser();
-    recordActivity("page_view", window.MODE || "");
+    syncCurrentUser().then(function () {
+      recordActivity("page_view", window.MODE || "");
+    });
   });
 })();

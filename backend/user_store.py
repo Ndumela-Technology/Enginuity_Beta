@@ -55,6 +55,139 @@ def is_guest_id(value: str) -> bool:
     return normalize_email(value).startswith("guest-")
 
 
+def _linked_guest_ids(user: Optional[Dict[str, Any]]) -> List[str]:
+    if not user:
+        return []
+    values = user.get("linked_guest_ids") or []
+    out: List[str] = []
+    for item in values:
+        key = normalize_email(str(item))
+        if key and key not in out:
+            out.append(key)
+    return out
+
+
+def _earlier_ts(left: str, right: str) -> str:
+    left_dt = _parse_ts(left)
+    right_dt = _parse_ts(right)
+    if left_dt and right_dt:
+        return left if left_dt <= right_dt else right
+    return left or right
+
+
+def _rewrite_jsonl_identity(path: Path, old_id: str, new_id: str, field: str) -> None:
+    if not path.exists():
+        return
+    old_key = normalize_email(old_id)
+    new_key = normalize_email(new_id)
+    if not old_key or not new_key or old_key == new_key:
+        return
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return
+    rewritten: List[str] = []
+    changed = False
+    for line in lines:
+        raw = line.strip()
+        if not raw:
+            continue
+        try:
+            record = json.loads(raw)
+        except json.JSONDecodeError:
+            rewritten.append(line)
+            continue
+        if normalize_email(str(record.get(field) or "")) == old_key:
+            record[field] = new_key
+            record["merged_from_guest"] = old_key
+            changed = True
+        rewritten.append(json.dumps(record, ensure_ascii=False))
+    if changed:
+        path.write_text("\n".join(rewritten) + "\n", encoding="utf-8")
+
+
+def resolve_user_key(identifier: str) -> str:
+    key = normalize_email(identifier)
+    if not key:
+        return ""
+    users = _read_users_doc().get("users", {})
+    if key in users and not is_guest_id(key):
+        return key
+    for email, user in users.items():
+        if is_guest_id(str(email)):
+            continue
+        if key in _linked_guest_ids(user):
+            return normalize_email(str(email))
+    return key
+
+
+def merge_guest_into_signed_user(email: str, guest_id: str) -> Optional[Dict[str, Any]]:
+    email_key = normalize_email(email)
+    guest_key = normalize_email(guest_id)
+    if not email_key or not guest_key or is_guest_id(email_key) or not is_guest_id(guest_key):
+        return None
+    if email_key == guest_key:
+        return None
+
+    doc = _read_users_doc()
+    users = doc.setdefault("users", {})
+    for other_email, other in users.items():
+        other_key = normalize_email(str(other_email))
+        if other_key in (email_key, guest_key) or is_guest_id(other_key):
+            continue
+        if guest_key in _linked_guest_ids(other):
+            return users.get(email_key)
+
+    guest = users.get(guest_key) or {}
+    signed = users.get(email_key) or {}
+    now = utc_now()
+    linked = _linked_guest_ids(signed)
+    if guest_key not in linked:
+        linked.append(guest_key)
+    for extra in _linked_guest_ids(guest):
+        if extra not in linked:
+            linked.append(extra)
+
+    guest_prefs = dict(guest.get("preferences") or {})
+    signed_prefs = dict(signed.get("preferences") or {})
+    merged_preferences = dict(guest_prefs)
+    merged_preferences.update(signed_prefs)
+
+    signed_name = str(signed.get("name") or "").strip()
+    guest_name = str(guest.get("name") or "").strip()
+    display_name = signed_name
+    if not display_name or display_name.lower() == "guest":
+        display_name = guest_name if guest_name.lower() != "guest" else signed_name or guest_name
+
+    merged = {
+        "id": signed.get("id") or guest.get("id") or str(uuid.uuid4()),
+        "name": display_name,
+        "email": email_key,
+        "account_type": "signed_in",
+        "role": resolve_role(email_key, signed.get("role") or guest.get("role")),
+        "plan": (
+            (signed.get("plan") if str(signed.get("plan") or "free").lower() != "free" else None)
+            or (guest.get("plan") if str(guest.get("plan") or "free").lower() != "free" else None)
+            or signed.get("plan")
+            or guest.get("plan")
+            or "free"
+        ),
+        "created_at": _earlier_ts(str(signed.get("created_at") or ""), str(guest.get("created_at") or "")) or now,
+        "last_activity": now,
+        "sessions_completed": int(signed.get("sessions_completed", 0) or 0)
+        + int(guest.get("sessions_completed", 0) or 0),
+        "preferences": merged_preferences,
+        "linked_guest_ids": linked,
+    }
+    users[email_key] = merged
+    if guest_key in users:
+        del users[guest_key]
+    _write_users_doc(doc)
+    _rewrite_jsonl_identity(FEEDBACK_FILE, guest_key, email_key, "user_id")
+    _rewrite_jsonl_identity(ACTIVITY_FILE, guest_key, email_key, "email")
+    return merged
+
+
 def resolve_role(email: str, existing_role: Optional[str] = None) -> str:
     if normalize_email(email) in admin_emails():
         return "admin"
@@ -70,8 +203,18 @@ def sync_user(
     *,
     increment_sessions: int = 0,
     preferences: Optional[Dict[str, Any]] = None,
+    guest_id: str = "",
 ) -> Dict[str, Any]:
-    key = normalize_email(email)
+    email_key = normalize_email(email)
+    guest_key = normalize_email(guest_id)
+    if email_key and is_guest_id(email_key) and not guest_key:
+        guest_key = email_key
+        email_key = ""
+
+    if email_key and guest_key and is_guest_id(guest_key):
+        merge_guest_into_signed_user(email_key, guest_key)
+
+    key = email_key or resolve_user_key(guest_key)
     if not key:
         raise ValueError("email is required")
 
@@ -93,6 +236,10 @@ def sync_user(
     if not display_name and is_guest_id(key):
         display_name = "Guest"
 
+    linked = _linked_guest_ids(existing)
+    if guest_key and is_guest_id(guest_key) and not is_guest_id(key) and guest_key not in linked:
+        linked.append(guest_key)
+
     user = {
         "id": existing.get("id") or str(uuid.uuid4()),
         "name": display_name,
@@ -104,6 +251,7 @@ def sync_user(
         "last_activity": now,
         "sessions_completed": sessions,
         "preferences": merged_preferences,
+        "linked_guest_ids": linked,
     }
     users[key] = user
     _write_users_doc(doc)
@@ -130,7 +278,7 @@ def update_user_preferences(email: str, preferences: Dict[str, Any]) -> Dict[str
 
 
 def touch_activity(email: str, event_type: str = "activity", metadata: Optional[dict] = None) -> Optional[Dict[str, Any]]:
-    key = normalize_email(email)
+    key = resolve_user_key(email)
     if not key:
         return None
 
@@ -160,7 +308,7 @@ def touch_activity(email: str, event_type: str = "activity", metadata: Optional[
 
 
 def get_user(email: str) -> Optional[Dict[str, Any]]:
-    key = normalize_email(email)
+    key = resolve_user_key(email)
     if not key:
         return None
     return _read_users_doc().get("users", {}).get(key)
@@ -177,16 +325,26 @@ def is_admin(email: str) -> bool:
 
 
 def list_users() -> List[Dict[str, Any]]:
-    users = list(_read_users_doc().get("users", {}).values())
+    users_map = _read_users_doc().get("users", {})
+    linked = set()
+    for user in users_map.values():
+        linked.update(_linked_guest_ids(user))
+    users = [
+        item
+        for key, item in users_map.items()
+        if normalize_email(str(key)) not in linked
+    ]
     users.sort(key=lambda item: item.get("created_at", ""), reverse=True)
     return users
 
 
 def append_feedback(record: Dict[str, Any]) -> Dict[str, Any]:
+    user_id = resolve_user_key(str(record.get("user_id") or "").strip())
+    if user_id:
+        record["user_id"] = user_id
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     with FEEDBACK_FILE.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(record, ensure_ascii=False) + "\n")
-    user_id = str(record.get("user_id") or "").strip()
     if user_id and user_id.lower() != "anonymous":
         session_type = str(record.get("session_type") or "")
         sync_user(user_id, increment_sessions=1)
