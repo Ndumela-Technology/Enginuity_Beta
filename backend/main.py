@@ -49,7 +49,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -519,7 +519,6 @@ class BetaFeedbackRequest(BaseModel):
 async def submit_beta_feedback(payload: BetaFeedbackRequest):
     """Store beta feedback for analytics / future admin dashboard."""
     from datetime import datetime, timezone
-    from pathlib import Path
 
     session_type = (payload.session_type or "Associate").strip()
     if session_type not in ("Associate", "Innovator"):
@@ -543,48 +542,29 @@ async def submit_beta_feedback(payload: BetaFeedbackRequest):
         or datetime.now(timezone.utc).isoformat(),
     }
 
-    data_dir = Path(__file__).resolve().parent / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    out_path = data_dir / "beta_feedback.jsonl"
+    from user_store import append_feedback
 
-    def _append():
-        with out_path.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
-
-    await asyncio.to_thread(_append)
-
-    user_id = record["user_id"]
-    if user_id and "@" in user_id:
-        from user_store import sync_user, touch_activity
-
-        await asyncio.to_thread(
-            sync_user,
-            user_id,
-            "",
-            "free",
-            increment_sessions=1,
-        )
-        await asyncio.to_thread(
-            touch_activity,
-            user_id,
-            "session_complete",
-            {"mode": session_type},
-        )
-
-    return {"ok": True, "record": record}
+    stored = await asyncio.to_thread(append_feedback, record)
+    return {"ok": True, "record": stored}
 
 
 class UserSyncRequest(BaseModel):
-    email: str
+    email: Optional[str] = ""
+    guest_id: Optional[str] = ""
     name: Optional[str] = ""
     plan: Optional[str] = "free"
     preferences: Optional[dict] = None
 
 
 class UserActivityRequest(BaseModel):
-    email: str
+    email: Optional[str] = ""
+    guest_id: Optional[str] = ""
     event_type: Optional[str] = "activity"
     mode: Optional[str] = None
+
+
+def _user_identifier(email: Optional[str] = None, guest_id: Optional[str] = None) -> str:
+    return ((email or "").strip() or (guest_id or "").strip())
 
 
 def _require_admin_email(x_user_email: Optional[str] = Header(None, alias="X-User-Email")) -> str:
@@ -600,16 +580,16 @@ def _require_admin_email(x_user_email: Optional[str] = Header(None, alias="X-Use
 
 @app.post("/users/sync")
 async def sync_user_account(payload: UserSyncRequest):
-    """Register or refresh a user profile (called after Google sign-in)."""
+    """Register or refresh a user profile (called after sign-in or guest use)."""
     from user_store import sync_user
 
-    email = (payload.email or "").strip()
-    if not email:
-        raise HTTPException(status_code=400, detail="Email is required.")
+    key = _user_identifier(payload.email, payload.guest_id)
+    if not key:
+        raise HTTPException(status_code=400, detail="Email or guest id is required.")
 
     user = await asyncio.to_thread(
         sync_user,
-        email,
+        key,
         payload.name or "",
         payload.plan or "free",
         preferences=payload.preferences,
@@ -654,9 +634,9 @@ async def record_user_activity(payload: UserActivityRequest):
     """Track user activity for admin analytics."""
     from user_store import touch_activity
 
-    email = (payload.email or "").strip()
+    email = _user_identifier(payload.email, payload.guest_id)
     if not email:
-        raise HTTPException(status_code=400, detail="Email is required.")
+        raise HTTPException(status_code=400, detail="Email or guest id is required.")
 
     metadata = {}
     if payload.mode:

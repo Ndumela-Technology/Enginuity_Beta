@@ -39,18 +39,8 @@
     return "★★★★★".slice(0, rating) + "☆☆☆☆☆".slice(0, 5 - rating);
   }
 
-  function readLocalFeedback() {
-    try {
-      var raw = localStorage.getItem("beta_feedback_responses") || "[]";
-      var parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (_) {
-      return [];
-    }
-  }
-
   function apiBase() {
-    return window.ENGINUITY_API_BASE || "https://enginuity-beta.onrender.com";
+    return String(window.ENGINUITY_API_BASE || "https://enginuity-beta.onrender.com").replace(/\/$/, "");
   }
 
   function userEmail() {
@@ -71,13 +61,26 @@
     });
   }
 
+  function panelFromHash() {
+    var id = (window.location.hash || "").replace(/^#/, "");
+    if (id && document.getElementById(id)) return id;
+    return "adminPanelOverview";
+  }
+
   function bindNav() {
     document.querySelectorAll(".admin-nav__btn[data-panel]").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        switchPanel(btn.getAttribute("data-panel"));
+        var panelId = btn.getAttribute("data-panel");
+        if (panelId) {
+          window.location.hash = panelId;
+          switchPanel(panelId);
+        }
       });
     });
-    switchPanel("adminPanelOverview");
+    window.addEventListener("hashchange", function () {
+      switchPanel(panelFromHash());
+    });
+    switchPanel(panelFromHash());
   }
 
   function fetchJson(path) {
@@ -145,7 +148,7 @@
           "<td>" + escapeHtml(u.plan || "free") + "</td>" +
           "<td>" + formatDate(u.created_at) + "</td>" +
           "<td>" + formatDate(u.last_activity) + "</td>" +
-          "<td>Synced on sign-in</td>" +
+          "<td>" + escapeHtml(u.account_type === "guest" ? "Guest visit" : "Synced on sign-in") + "</td>" +
           "<td>" + escapeHtml((u.plan || "free") === "free" ? "Free" : "Active") + "</td>" +
           "<td>" + escapeHtml(u.role || "user") + "</td>" +
           "</tr>"
@@ -232,6 +235,7 @@
       "<p><strong>Platform:</strong> " + escapeHtml(settings.platform_name || "Spark") + "</p>" +
       "<p><strong>Beta mode:</strong> " + escapeHtml(settings.beta_mode ? "Enabled" : "Disabled") + "</p>" +
       "<p><strong>Admin accounts configured:</strong> " + escapeHtml(settings.admin_accounts_configured || 0) + "</p>" +
+      "<p><strong>API:</strong> " + escapeHtml(apiBase()) + "</p>" +
       "</div>";
   }
 
@@ -276,9 +280,7 @@
     ]).then(function (results) {
       state.overview = results[0].status === "fulfilled" ? (results[0].value.overview || {}) : {};
       state.users = results[1].status === "fulfilled" ? (results[1].value.users || []) : [];
-      state.feedback = results[2].status === "fulfilled"
-        ? (results[2].value.feedback || [])
-        : readLocalFeedback();
+      state.feedback = results[2].status === "fulfilled" ? (results[2].value.feedback || []) : [];
       state.analytics = results[3].status === "fulfilled" ? (results[3].value.analytics || {}) : {};
       state.payments = results[4].status === "fulfilled" ? (results[4].value.payments || {}) : {};
       state.settings = results[5].status === "fulfilled" ? (results[5].value.settings || {}) : {};
@@ -290,11 +292,12 @@
       renderPayments();
       renderSettings();
 
-      var failed = results.filter(function (r) { return r.status === "rejected"; }).length;
-      if (failed > 0) {
-        setMeta("Signed in as " + userEmail() + " · partial data loaded");
+      var failed = results.filter(function (r) { return r.status === "rejected"; });
+      if (failed.length > 0) {
+        var reasons = failed.map(function (r) { return r.reason && r.reason.message ? r.reason.message : "request failed"; });
+        setMeta("Signed in as " + userEmail() + " · API errors: " + reasons.join("; "));
       } else {
-        setMeta("Signed in as " + userEmail());
+        setMeta("Signed in as " + userEmail() + " · " + apiBase());
       }
     });
   }

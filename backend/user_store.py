@@ -9,7 +9,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-DATA_DIR = Path(__file__).resolve().parent / "data"
+DATA_DIR = Path(
+    os.getenv("ENGINUITY_DATA_DIR") or (Path(__file__).resolve().parent / "data")
+)
 USERS_FILE = DATA_DIR / "users.json"
 FEEDBACK_FILE = DATA_DIR / "beta_feedback.jsonl"
 ACTIVITY_FILE = DATA_DIR / "activity_events.jsonl"
@@ -49,6 +51,10 @@ def normalize_email(email: str) -> str:
     return (email or "").strip().lower()
 
 
+def is_guest_id(value: str) -> bool:
+    return normalize_email(value).startswith("guest-")
+
+
 def resolve_role(email: str, existing_role: Optional[str] = None) -> str:
     if normalize_email(email) in admin_emails():
         return "admin"
@@ -83,10 +89,15 @@ def sync_user(
             if pref_value is not None:
                 merged_preferences[pref_key] = pref_value
 
+    display_name = (name or existing.get("name") or "").strip()
+    if not display_name and is_guest_id(key):
+        display_name = "Guest"
+
     user = {
         "id": existing.get("id") or str(uuid.uuid4()),
-        "name": (name or existing.get("name") or "").strip(),
+        "name": display_name,
         "email": key,
+        "account_type": "guest" if is_guest_id(key) else "signed_in",
         "role": resolve_role(key, existing.get("role")),
         "plan": (plan or existing.get("plan") or "free").strip() or "free",
         "created_at": existing.get("created_at") or now,
@@ -169,6 +180,18 @@ def list_users() -> List[Dict[str, Any]]:
     users = list(_read_users_doc().get("users", {}).values())
     users.sort(key=lambda item: item.get("created_at", ""), reverse=True)
     return users
+
+
+def append_feedback(record: Dict[str, Any]) -> Dict[str, Any]:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with FEEDBACK_FILE.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+    user_id = str(record.get("user_id") or "").strip()
+    if user_id and user_id.lower() != "anonymous":
+        session_type = str(record.get("session_type") or "")
+        sync_user(user_id, increment_sessions=1)
+        touch_activity(user_id, "session_complete", {"mode": session_type})
+    return record
 
 
 def read_feedback_records() -> List[Dict[str, Any]]:
@@ -317,6 +340,7 @@ def get_settings_snapshot() -> Dict[str, Any]:
         "platform_name": "Spark",
         "beta_mode": True,
         "admin_accounts_configured": len(admin_emails()),
-        "feedback_storage": "beta_feedback.jsonl",
-        "user_storage": "users.json",
+        "feedback_storage": str(FEEDBACK_FILE),
+        "user_storage": str(USERS_FILE),
+        "data_dir": str(DATA_DIR),
     }

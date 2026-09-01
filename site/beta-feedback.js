@@ -198,14 +198,15 @@
   }
 
   function postFeedbackToBackend(record) {
-    var apiBase = window.ENGINUITY_API_BASE || "";
-    if (!apiBase) return;
+    var apiBase = String(window.ENGINUITY_API_BASE || "https://enginuity-beta.onrender.com").replace(/\/$/, "");
     try {
       fetch(apiBase + "/beta-feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(record)
-      }).catch(function () {});
+      }).catch(function (err) {
+        console.warn("[Spark] Could not submit feedback:", err && err.message ? err.message : err);
+      });
     } catch (_) {}
   }
 
@@ -282,6 +283,9 @@
     }
 
     localStorage.setItem(LAST_SESSION_TYPE_KEY, normalized);
+    if (typeof window.recordSparkActivity === "function") {
+      window.recordSparkActivity("session_complete", normalized);
+    }
     scheduleFeedbackPrompt(normalized);
   }
 

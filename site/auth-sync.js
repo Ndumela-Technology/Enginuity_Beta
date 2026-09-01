@@ -3,11 +3,25 @@
   "use strict";
 
   function apiBase() {
-    return window.ENGINUITY_API_BASE || "";
+    var base = window.ENGINUITY_API_BASE || "https://enginuity-beta.onrender.com";
+    return String(base).replace(/\/$/, "");
   }
 
   function currentEmail() {
     return (localStorage.getItem("user_email") || "").trim();
+  }
+
+  function ensureGuestId() {
+    if (currentEmail()) return "";
+    var existing = (localStorage.getItem("enginuity_guest_id") || "").trim();
+    if (existing) return existing;
+    var id = "guest-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem("enginuity_guest_id", id);
+    return id;
+  }
+
+  function currentGuestId() {
+    return ensureGuestId();
   }
 
   function currentPlan() {
@@ -82,7 +96,8 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload || {})
-    }).catch(function () {
+    }).catch(function (err) {
+      console.warn("[Spark] Could not reach API:", err && err.message ? err.message : err);
       return null;
     });
   }
@@ -102,10 +117,12 @@
   function syncCurrentUser(options) {
     options = options || {};
     var email = currentEmail();
-    if (!email) return Promise.resolve(null);
+    var guestId = email ? "" : currentGuestId();
+    if (!email && !guestId) return Promise.resolve(null);
 
     return postJson("/users/sync", {
       email: email,
+      guest_id: guestId,
       name: currentName(),
       plan: currentPlan(),
       preferences: {
@@ -137,9 +154,11 @@
 
   function recordActivity(eventType, mode) {
     var email = currentEmail();
-    if (!email) return Promise.resolve(null);
+    var guestId = email ? "" : currentGuestId();
+    if (!email && !guestId) return Promise.resolve(null);
     return postJson("/users/activity", {
       email: email,
+      guest_id: guestId,
       event_type: eventType || "activity",
       mode: mode || ""
     });
@@ -197,9 +216,7 @@
   window.saveUserIdentity = saveUserIdentity;
 
   document.addEventListener("DOMContentLoaded", function () {
-    if (currentEmail()) {
-      syncCurrentUser();
-      recordActivity("page_view", window.MODE || "");
-    }
+    syncCurrentUser();
+    recordActivity("page_view", window.MODE || "");
   });
 })();
