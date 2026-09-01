@@ -4,6 +4,7 @@
   var state = {
     overview: {},
     users: [],
+    activeUsers: [],
     feedback: [],
     analytics: {},
     payments: {},
@@ -99,8 +100,9 @@
     if (!root) return;
     var overview = state.overview || {};
     var cards = [
-      ["Total users", overview.total_users || 0],
-      ["Active beta users", overview.active_beta_users || 0],
+      ["Lifetime users", overview.total_users || 0],
+      ["Active now", overview.active_now || 0],
+      ["Active this week", overview.active_beta_users || 0],
       ["Feedback submissions", overview.total_feedback || 0],
       ["Average feedback rating", overview.average_feedback_rating || 0],
       ["Total sessions completed", overview.total_sessions_completed || 0],
@@ -118,47 +120,65 @@
       .join("");
   }
 
-  function renderUsers() {
-    var tbody = el("adminUsersBody");
-    if (!tbody) return;
-
-    var query = ((el("adminUserSearch") && el("adminUserSearch").value) || "").trim().toLowerCase();
-    var plan = ((el("adminUserPlanFilter") && el("adminUserPlanFilter").value) || "all").toLowerCase();
-
-    var list = (state.users || []).filter(function (u) {
-      var name = String(u.name || "").toLowerCase();
-      var email = String(u.email || "").toLowerCase();
-      var uPlan = String(u.plan || "free").toLowerCase();
-      var matchesQuery = !query || name.indexOf(query) !== -1 || email.indexOf(query) !== -1;
-      var matchesPlan = plan === "all" || uPlan === plan;
-      return matchesQuery && matchesPlan;
+  function formatDateTime(value) {
+    if (!value) return "—";
+    var date = new Date(value);
+    if (isNaN(date.getTime())) return escapeHtml(value);
+    return date.toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
     });
+  }
 
+  function userRows(list, emptyMessage, lastSeenKey) {
     if (!list.length) {
-      tbody.innerHTML = '<tr><td colspan="8"><p class="admin-empty">No users found.</p></td></tr>';
-      return;
+      return '<tr><td colspan="8"><p class="admin-empty">' + escapeHtml(emptyMessage) + "</p></td></tr>";
     }
-
-    tbody.innerHTML = list
+    return list
       .map(function (u) {
+        var seen = u[lastSeenKey] || u.last_seen || u.last_activity;
+        var status = u.is_online ? "Online" : (u.account_type === "guest" ? "Guest visit" : ((u.linked_guest_ids && u.linked_guest_ids.length) ? "Signed in · linked guest" : "Synced on sign-in"));
         return (
           "<tr>" +
           "<td>" + escapeHtml(u.name || "—") + "</td>" +
           "<td>" + escapeHtml(u.email || "—") + "</td>" +
           "<td>" + escapeHtml(u.plan || "free") + "</td>" +
           "<td>" + formatDate(u.created_at) + "</td>" +
-          "<td>" + formatDate(u.last_activity) + "</td>" +
-          "<td>" + escapeHtml(
-            u.account_type === "guest"
-              ? "Guest visit"
-              : ((u.linked_guest_ids && u.linked_guest_ids.length) ? "Signed in · linked guest" : "Synced on sign-in")
-          ) + "</td>" +
+          "<td>" + formatDateTime(seen) + "</td>" +
+          "<td>" + escapeHtml(status) + "</td>" +
           "<td>" + escapeHtml((u.plan || "free") === "free" ? "Free" : "Active") + "</td>" +
           "<td>" + escapeHtml(u.role || "user") + "</td>" +
           "</tr>"
         );
       })
       .join("");
+  }
+
+  function matchesUserFilters(u) {
+    var query = ((el("adminUserSearch") && el("adminUserSearch").value) || "").trim().toLowerCase();
+    var plan = ((el("adminUserPlanFilter") && el("adminUserPlanFilter").value) || "all").toLowerCase();
+    var name = String(u.name || "").toLowerCase();
+    var email = String(u.email || "").toLowerCase();
+    var uPlan = String(u.plan || "free").toLowerCase();
+    var matchesQuery = !query || name.indexOf(query) !== -1 || email.indexOf(query) !== -1;
+    var matchesPlan = plan === "all" || uPlan === plan;
+    return matchesQuery && matchesPlan;
+  }
+
+  function renderUsers() {
+    var tbody = el("adminUsersBody");
+    if (!tbody) return;
+    var list = (state.users || []).filter(matchesUserFilters);
+    tbody.innerHTML = userRows(list, "No users yet. They appear here the first time someone opens the app.", "last_activity");
+  }
+
+  function renderActiveUsers() {
+    var tbody = el("adminActiveBody");
+    if (!tbody) return;
+    tbody.innerHTML = userRows(state.activeUsers || [], "Nobody is on the site right now.", "last_seen");
   }
 
   function renderFeedback() {
@@ -277,6 +297,7 @@
     return Promise.allSettled([
       fetchJson("/admin/overview"),
       fetchJson("/admin/users"),
+      fetchJson("/admin/users/active"),
       fetchJson("/admin/feedback"),
       fetchJson("/admin/analytics"),
       fetchJson("/admin/payments"),
@@ -284,13 +305,15 @@
     ]).then(function (results) {
       state.overview = results[0].status === "fulfilled" ? (results[0].value.overview || {}) : {};
       state.users = results[1].status === "fulfilled" ? (results[1].value.users || []) : [];
-      state.feedback = results[2].status === "fulfilled" ? (results[2].value.feedback || []) : [];
-      state.analytics = results[3].status === "fulfilled" ? (results[3].value.analytics || {}) : {};
-      state.payments = results[4].status === "fulfilled" ? (results[4].value.payments || {}) : {};
-      state.settings = results[5].status === "fulfilled" ? (results[5].value.settings || {}) : {};
+      state.activeUsers = results[2].status === "fulfilled" ? (results[2].value.users || []) : [];
+      state.feedback = results[3].status === "fulfilled" ? (results[3].value.feedback || []) : [];
+      state.analytics = results[4].status === "fulfilled" ? (results[4].value.analytics || {}) : {};
+      state.payments = results[5].status === "fulfilled" ? (results[5].value.payments || {}) : {};
+      state.settings = results[6].status === "fulfilled" ? (results[6].value.settings || {}) : {};
 
       renderOverview();
       renderUsers();
+      renderActiveUsers();
       renderFeedback();
       renderAnalytics();
       renderPayments();
@@ -327,7 +350,9 @@
           return;
         }
         setMeta("Loading dashboard data…");
-        return loadData();
+        return loadData().then(function () {
+          setInterval(loadData, 30000);
+        });
       })
       .catch(function (err) {
         console.error("[Spark Admin] Boot failed:", err);

@@ -223,5 +223,23 @@
     syncCurrentUser().then(function () {
       recordActivity("page_view", window.MODE || "");
     });
+
+    setInterval(function () {
+      if (document.visibilityState === "visible") {
+        recordActivity("heartbeat", window.MODE || "");
+      }
+    }, 25000);
+
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden") {
+        recordActivity("page_leave", window.MODE || "");
+      } else {
+        recordActivity("heartbeat", window.MODE || "");
+      }
+    });
+
+    window.addEventListener("pagehide", function () {
+      recordActivity("page_leave", window.MODE || "");
+    });
   });
 })();

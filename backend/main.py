@@ -702,6 +702,13 @@ async def admin_users(_admin: str = Depends(_require_admin_email)):
     return {"ok": True, "users": await asyncio.to_thread(list_users)}
 
 
+@app.get("/admin/users/active")
+async def admin_active_users(_admin: str = Depends(_require_admin_email)):
+    from user_store import list_active_users
+
+    return {"ok": True, "users": await asyncio.to_thread(list_active_users)}
+
+
 @app.get("/admin/feedback")
 async def admin_feedback(_admin: str = Depends(_require_admin_email)):
     from user_store import read_feedback_records

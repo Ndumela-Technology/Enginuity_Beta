@@ -22,6 +22,7 @@
       <nav class="admin-nav">
         <a class="admin-nav__btn is-active" data-panel="adminPanelOverview" href="#adminPanelOverview">Overview</a>
         <a class="admin-nav__btn" data-panel="adminPanelUsers" href="#adminPanelUsers">Users</a>
+        <a class="admin-nav__btn" data-panel="adminPanelActive" href="#adminPanelActive">Active now</a>
         <a class="admin-nav__btn" data-panel="adminPanelFeedback" href="#adminPanelFeedback">Feedback</a>
         <a class="admin-nav__btn" data-panel="adminPanelAnalytics" href="#adminPanelAnalytics">Analytics</a>
         <a class="admin-nav__btn" data-panel="adminPanelPayments" href="#adminPanelPayments">Payments</a>
@@ -42,7 +43,8 @@
       </section>
 
       <section id="adminPanelUsers" class="admin-panel" aria-labelledby="adminUsersHeading">
-        <h3 id="adminUsersHeading" class="admin-main__title" style="font-size:1.1rem;">Users</h3>
+        <h3 id="adminUsersHeading" class="admin-main__title" style="font-size:1.1rem;">All users</h3>
+        <p class="admin-main__meta">Everyone who has opened the app. This list is kept even after they leave.</p>
         <div class="admin-toolbar">
           <input id="adminUserSearch" class="admin-input" type="search" placeholder="Search users…" aria-label="Search users" />
           <select id="adminUserPlanFilter" class="admin-select" aria-label="Filter by plan">
@@ -72,6 +74,28 @@
           </table>
         </div>
         <div id="adminUserDetail" class="admin-detail" hidden></div>
+      </section>
+
+      <section id="adminPanelActive" class="admin-panel" aria-labelledby="adminActiveHeading">
+        <h3 id="adminActiveHeading" class="admin-main__title" style="font-size:1.1rem;">Active now</h3>
+        <p class="admin-main__meta">People currently using the website. They leave this list when they close or leave the app.</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Account type</th>
+                <th>Join date</th>
+                <th>Last seen</th>
+                <th>Status</th>
+                <th>Subscription</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="adminActiveBody"></tbody>
+          </table>
+        </div>
       </section>
 
       <section id="adminPanelFeedback" class="admin-panel" aria-labelledby="adminFeedbackHeading">

@@ -13,8 +13,11 @@ DATA_DIR = Path(
     os.getenv("ENGINUITY_DATA_DIR") or (Path(__file__).resolve().parent / "data")
 )
 USERS_FILE = DATA_DIR / "users.json"
+USERS_LEDGER = DATA_DIR / "users_ledger.jsonl"
 FEEDBACK_FILE = DATA_DIR / "beta_feedback.jsonl"
+FEEDBACK_LEDGER = DATA_DIR / "beta_feedback_ledger.jsonl"
 ACTIVITY_FILE = DATA_DIR / "activity_events.jsonl"
+ONLINE_WINDOW_SECONDS = 120
 
 
 def utc_now() -> str:
@@ -26,25 +29,67 @@ def admin_emails() -> set[str]:
     return {email.strip().lower() for email in raw.split(",") if email.strip()}
 
 
+def _append_jsonl(path: Path, record: Dict[str, Any]) -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _read_jsonl(path: Path) -> List[Dict[str, Any]]:
+    if not path.exists():
+        return []
+    records: List[Dict[str, Any]] = []
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            raw = line.strip()
+            if not raw:
+                continue
+            try:
+                item = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(item, dict):
+                records.append(item)
+    except OSError:
+        return []
+    return records
+
+
+def _restore_users_from_ledger(users: Dict[str, Any]) -> Dict[str, Any]:
+    for item in _read_jsonl(USERS_LEDGER):
+        user = item.get("user") if isinstance(item.get("user"), dict) else item
+        if not isinstance(user, dict):
+            continue
+        key = normalize_email(str(user.get("email") or ""))
+        if key and key not in users:
+            users[key] = user
+    return users
+
+
 def _read_users_doc() -> Dict[str, Any]:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    if not USERS_FILE.exists():
-        return {"users": {}}
-    try:
-        data = json.loads(USERS_FILE.read_text(encoding="utf-8"))
-        if isinstance(data, dict) and isinstance(data.get("users"), dict):
-            return data
-    except (json.JSONDecodeError, OSError):
-        pass
-    return {"users": {}}
+    users: Dict[str, Any] = {}
+    if USERS_FILE.exists():
+        try:
+            data = json.loads(USERS_FILE.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and isinstance(data.get("users"), dict):
+                users = data["users"]
+        except (json.JSONDecodeError, OSError):
+            users = {}
+    users = _restore_users_from_ledger(users)
+    return {"users": users}
 
 
 def _write_users_doc(doc: Dict[str, Any]) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    USERS_FILE.write_text(
-        json.dumps(doc, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    payload = json.dumps(doc, indent=2, ensure_ascii=False) + "\n"
+    tmp_path = USERS_FILE.with_suffix(".json.tmp")
+    tmp_path.write_text(payload, encoding="utf-8")
+    tmp_path.replace(USERS_FILE)
+
+
+def _persist_user_record(user: Dict[str, Any]) -> None:
+    _append_jsonl(USERS_LEDGER, {"timestamp": utc_now(), "user": user})
 
 
 def normalize_email(email: str) -> str:
@@ -178,13 +223,17 @@ def merge_guest_into_signed_user(email: str, guest_id: str) -> Optional[Dict[str
         + int(guest.get("sessions_completed", 0) or 0),
         "preferences": merged_preferences,
         "linked_guest_ids": linked,
+        "last_seen": signed.get("last_seen") or guest.get("last_seen") or now,
     }
     users[email_key] = merged
-    if guest_key in users:
-        del users[guest_key]
+    if guest:
+        guest_copy = dict(guest)
+        guest_copy["merged_into"] = email_key
+        guest_copy["last_activity"] = guest.get("last_activity") or now
+        users[guest_key] = guest_copy
+        _persist_user_record(guest_copy)
     _write_users_doc(doc)
-    _rewrite_jsonl_identity(FEEDBACK_FILE, guest_key, email_key, "user_id")
-    _rewrite_jsonl_identity(ACTIVITY_FILE, guest_key, email_key, "email")
+    _persist_user_record(merged)
     return merged
 
 
@@ -252,9 +301,12 @@ def sync_user(
         "sessions_completed": sessions,
         "preferences": merged_preferences,
         "linked_guest_ids": linked,
+        "last_seen": now,
+        "merged_into": existing.get("merged_into") or "",
     }
     users[key] = user
     _write_users_doc(doc)
+    _persist_user_record(user)
     return user
 
 
@@ -272,8 +324,10 @@ def update_user_preferences(email: str, preferences: Dict[str, Any]) -> Dict[str
     merged.update(preferences)
     existing["preferences"] = merged
     existing["last_activity"] = utc_now()
+    existing["last_seen"] = utc_now()
     users[key] = existing
     _write_users_doc(doc)
+    _persist_user_record(existing)
     return existing
 
 
@@ -287,22 +341,27 @@ def touch_activity(email: str, event_type: str = "activity", metadata: Optional[
     existing = users.get(key)
     now = utc_now()
 
+    event_name = (event_type or "activity").strip() or "activity"
     if existing:
-        existing["last_activity"] = now
+        if event_name == "page_leave":
+            left_at = datetime.now(timezone.utc) - timedelta(seconds=ONLINE_WINDOW_SECONDS + 1)
+            existing["last_seen"] = left_at.isoformat()
+        else:
+            existing["last_seen"] = now
+            existing["last_activity"] = now
         users[key] = existing
         _write_users_doc(doc)
+        _persist_user_record(existing)
     else:
         existing = sync_user(key, plan="free")
 
     record = {
         "email": key,
-        "event_type": (event_type or "activity").strip() or "activity",
+        "event_type": event_name,
         "timestamp": now,
         "metadata": metadata or {},
     }
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    with ACTIVITY_FILE.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+    _append_jsonl(ACTIVITY_FILE, record)
 
     return existing
 
@@ -324,27 +383,53 @@ def is_admin(email: str) -> bool:
     return bool(user and user.get("role") == "admin")
 
 
+def _is_online(user: Optional[Dict[str, Any]]) -> bool:
+    if not user:
+        return False
+    last = _parse_ts(str(user.get("last_seen") or ""))
+    if not last:
+        return False
+    now = datetime.now(timezone.utc)
+    if last.tzinfo is None:
+        last = last.replace(tzinfo=timezone.utc)
+    return (now - last) <= timedelta(seconds=ONLINE_WINDOW_SECONDS)
+
+
+def _decorate_user(user: Dict[str, Any]) -> Dict[str, Any]:
+    decorated = dict(user)
+    decorated["is_online"] = _is_online(user)
+    return decorated
+
+
 def list_users() -> List[Dict[str, Any]]:
     users_map = _read_users_doc().get("users", {})
     linked = set()
     for user in users_map.values():
         linked.update(_linked_guest_ids(user))
-    users = [
-        item
-        for key, item in users_map.items()
-        if normalize_email(str(key)) not in linked
-    ]
+    users = []
+    for key, item in users_map.items():
+        key_norm = normalize_email(str(key))
+        if key_norm in linked:
+            continue
+        if str(item.get("merged_into") or "").strip():
+            continue
+        users.append(_decorate_user(item))
     users.sort(key=lambda item: item.get("created_at", ""), reverse=True)
     return users
+
+
+def list_active_users() -> List[Dict[str, Any]]:
+    active = [user for user in list_users() if user.get("is_online")]
+    active.sort(key=lambda item: item.get("last_seen") or item.get("last_activity") or "", reverse=True)
+    return active
 
 
 def append_feedback(record: Dict[str, Any]) -> Dict[str, Any]:
     user_id = resolve_user_key(str(record.get("user_id") or "").strip())
     if user_id:
         record["user_id"] = user_id
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    with FEEDBACK_FILE.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+    _append_jsonl(FEEDBACK_FILE, record)
+    _append_jsonl(FEEDBACK_LEDGER, record)
     if user_id and user_id.lower() != "anonymous":
         session_type = str(record.get("session_type") or "")
         sync_user(user_id, increment_sessions=1)
@@ -353,20 +438,25 @@ def append_feedback(record: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def read_feedback_records() -> List[Dict[str, Any]]:
-    if not FEEDBACK_FILE.exists():
-        return []
+    combined = _read_jsonl(FEEDBACK_LEDGER) + _read_jsonl(FEEDBACK_FILE)
+    seen = set()
     records: List[Dict[str, Any]] = []
-    try:
-        for line in FEEDBACK_FILE.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                records.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-    except OSError:
-        return []
+    for item in combined:
+        identity = (
+            str(item.get("timestamp") or ""),
+            str(item.get("user_id") or ""),
+            str(item.get("rating") or ""),
+            str(item.get("feedback") or ""),
+            str(item.get("session_type") or ""),
+        )
+        if identity in seen:
+            continue
+        seen.add(identity)
+        display = dict(item)
+        resolved = resolve_user_key(str(item.get("user_id") or ""))
+        if resolved:
+            display["user_id"] = resolved
+        records.append(display)
     records.sort(key=lambda item: item.get("timestamp", ""), reverse=True)
     return records
 
@@ -422,6 +512,7 @@ def get_overview_stats() -> Dict[str, Any]:
 
     return {
         "total_users": len(users),
+        "active_now": len(list_active_users()),
         "active_beta_users": active_beta_users,
         "total_feedback": len(feedback),
         "average_feedback_rating": avg_rating,
@@ -498,7 +589,7 @@ def get_settings_snapshot() -> Dict[str, Any]:
         "platform_name": "Spark",
         "beta_mode": True,
         "admin_accounts_configured": len(admin_emails()),
-        "feedback_storage": str(FEEDBACK_FILE),
-        "user_storage": str(USERS_FILE),
+        "feedback_storage": str(FEEDBACK_LEDGER),
+        "user_storage": str(USERS_LEDGER),
         "data_dir": str(DATA_DIR),
     }
